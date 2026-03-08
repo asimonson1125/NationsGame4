@@ -1,0 +1,20 @@
+{% set gp_rows = [
+    ('Population', nation.population_gp),
+    ('Land',       nation.land_gp),
+    ('Factories',  nation.factory_gp),
+    ('Buildings',  nation.building_gp),
+    ('Military',   nation.military_gp),
+] %}
+
+<div>
+    {% for label, value in gp_rows %}
+    <div class="flex justify-between py-2 border-b border-gray-100 text-sm">
+        <span class="text-gray-600">{{ label }}</span>
+        <span class="text-gray-800 font-medium">{{ "{:,}".format(value) }}</span>
+    </div>
+    {% endfor %}
+    <div class="flex justify-between pt-2.5 mt-1 font-bold text-sm border-t-2 border-gray-200">
+        <span class="text-gray-800">Total GP</span>
+        <span class="text-gray-900">{{ "{:,}".format(nation.total_gp) }}</span>
+    </div>
+</div>

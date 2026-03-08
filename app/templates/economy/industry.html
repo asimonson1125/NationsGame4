@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Industry — {{ nation.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-6xl mx-auto">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">Industry</h1>
+
+    {# Overclock Placeholder #}
+    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 text-center text-gray-400 text-sm">
+        <i class="fas fa-bolt mr-1"></i> Overclock — Coming soon
+    </div>
+
+    {% include 'economy/partials/industry_content.html' %}
+</div>
+{% endblock %}

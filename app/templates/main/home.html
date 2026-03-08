@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ nation.name if nation else 'Home' }}{% endblock %}
+
+{% block content %}
+{% if not nation %}
+<div class="p-10 text-center text-gray-500">No nation found for your account. Please contact support.</div>
+{% else %}
+
+{# ===== NATION HEADER ===== #}
+<div class="relative bg-cover bg-center"
+     style="background-image: url('{{ url_for('static', filename='images/tind.png') }}'); padding: 100px 20px;">
+    <div class="max-w-5xl mx-auto flex items-center text-white"
+         style="text-shadow: 1px 1px 4px rgba(0,0,0,.7)">
+
+        {# Left: flag + nation name #}
+        <div class="flex-1 flex flex-col items-center pr-4">
+            {% if nation.flag_url %}
+            <img src="{{ nation.flag_url }}" alt="{{ nation.name }} Flag"
+                 class="w-48 h-28 object-cover border-2 border-white/50 mb-4">
+            {% else %}
+            <div class="w-48 h-28 bg-white/20 border-2 border-white/50 mb-4 flex items-center justify-center text-white/60 text-sm">
+                No Flag Set
+            </div>
+            {% endif %}
+            <h1 class="text-3xl font-bold text-center">{{ nation.name }}</h1>
+        </div>
+
+        {# Right: stats #}
+        <div class="flex-1 pl-5 border-l-2 border-white/50 flex flex-col justify-center gap-4">
+            <div class="text-center">
+                <div class="text-sm opacity-80 mb-0.5">Leader</div>
+                <div class="text-2xl font-bold">{{ nation.leader or 'Unknown' }}</div>
+            </div>
+            <div class="text-center">
+                <div class="text-sm opacity-80 mb-0.5">Population</div>
+                <div class="text-2xl font-bold flex items-center justify-center gap-2">
+                    <img src="{{ url_for('static', filename='images/tier.png') }}" alt="Tier" class="h-5 w-auto">
+                    <span class="text-yellow-300 text-sm font-bold">{{ nation.tier }}</span>
+                    {{ "{:,}".format(nation.population) }}
+                </div>
+            </div>
+            <div class="text-center cursor-pointer group" onclick="showGPBreakdown()">
+                <div class="text-sm opacity-80 mb-0.5 underline underline-offset-2">GP</div>
+                <div class="text-2xl font-bold underline underline-offset-2 group-hover:text-yellow-200 transition-colors">
+                    {{ "{:,}".format(nation.total_gp) }}
+                </div>
+            </div>
+            <div class="text-center">
+                <div class="text-sm opacity-80 mb-0.5">Founded</div>
+                <div class="text-2xl font-bold">
+                    {{ nation.founded_date.strftime('%b %-d, %Y') if nation.founded_date else 'Unknown' }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ===== PANELS ===== #}
+<div class="p-5 space-y-5">
+
+    {# Alliance status #}
+    <div class="bg-white rounded-lg shadow p-5 max-w-2xl mx-auto">
+        <p class="text-center text-base text-gray-700">
+            {% if nation.alliance %}
+                {{ nation.name }} is a member of
+                <a href="#" class="text-blue-600 hover:underline">{{ nation.alliance.name }}.</a>
+            {% else %}
+                {{ nation.name }} is not a member of any alliance.
+            {% endif %}
+        </p>
+    </div>
+
+    {# Continent #}
+    <div class="bg-white rounded-lg shadow p-5 max-w-2xl mx-auto">
+        <p class="text-center text-base text-gray-700">
+            {{ nation.name }} is located in {{ nation.continent or 'an unknown region' }}.
+        </p>
+    </div>
+
+    {# Change Flag #}
+    <div class="bg-white rounded-lg shadow p-5 max-w-2xl mx-auto">
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Change Flag</h2>
+        <form hx-post="{{ url_for('main.update_flag') }}" hx-swap="none" class="flex flex-col gap-4">
+            <input type="text" name="new_flag"
+                   placeholder="Enter flag URL (must end with .jpg, .jpeg, .png, or .webp)"
+                   class="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/25"
+                   required>
+            <button type="submit"
+                    class="px-5 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium">
+                Update Flag
+            </button>
+        </form>
+    </div>
+
+    {# Country Description #}
+    <div class="bg-white rounded-lg shadow p-5 max-w-2xl mx-auto">
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Country Description</h2>
+        <form hx-post="{{ url_for('main.update_description') }}" hx-swap="none" class="flex flex-col gap-4">
+            <textarea name="new_description" rows="6"
+                      placeholder="Enter your country's description..."
+                      class="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/25 resize-y font-sans">{{ nation.description }}</textarea>
+            <button type="submit"
+                    class="px-5 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium">
+                Update Description
+            </button>
+        </form>
+    </div>
+
+    {# Update Email #}
+    <div class="bg-white rounded-lg shadow p-5 max-w-2xl mx-auto">
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Update Email Address</h2>
+        <p class="text-sm text-gray-500 mb-4 p-2.5 bg-gray-50 rounded border-l-4 border-blue-500">
+            Your email address is kept private and will never be displayed publicly.
+        </p>
+        <form hx-post="{{ url_for('auth.update_email') }}" hx-swap="none" class="flex flex-col gap-4">
+            <input type="email" name="new_email"
+                   placeholder="Enter your new email address"
+                   class="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/25"
+                   required>
+            <button type="submit"
+                    class="px-5 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium">
+                Update Email
+            </button>
+        </form>
+    </div>
+
+    {# Notification Settings #}
+    <div class="bg-white rounded-lg shadow p-5 max-w-2xl mx-auto">
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Notification Settings</h2>
+        <form hx-post="{{ url_for('auth.update_notifications') }}" hx-swap="none" class="flex flex-col gap-4">
+            <div>
+                <label class="flex items-center gap-3 text-base cursor-pointer">
+                    <input type="checkbox" name="notifications_enabled"
+                           class="w-4 h-4 cursor-pointer rounded"
+                           {% if current_user.notifications_enabled %}checked{% endif %}>
+                    Enable Notifications
+                </label>
+                <p class="text-sm text-gray-400 mt-1 ml-7">
+                    When enabled, you'll receive notifications about important events in the game.
+                </p>
+            </div>
+            <button type="submit"
+                    class="px-5 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium">
+                Update Settings
+            </button>
+        </form>
+    </div>
+
+    {# Vacation Mode #}
+    <div class="bg-white rounded-lg shadow p-5 max-w-2xl mx-auto">
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Vacation Mode</h2>
+        <form hx-post="{{ url_for('auth.toggle_vacation') }}" hx-swap="none" class="flex flex-col gap-4">
+            <div>
+                <label class="flex items-center gap-3 text-base cursor-pointer">
+                    <input type="checkbox" name="vacation_mode"
+                           class="w-4 h-4 cursor-pointer rounded"
+                           {% if current_user.vacation_mode %}checked{% endif %}>
+                    Enable Vacation Mode
+                </label>
+                <p class="text-sm text-gray-400 mt-1 ml-7">
+                    When enabled, your nation will be paused and protected from all updates until your next login.
+                </p>
+            </div>
+            <button type="submit"
+                    class="px-5 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium">
+                Update Vacation Mode
+            </button>
+        </form>
+    </div>
+
+</div>
+{% endif %}
+{% endblock %}

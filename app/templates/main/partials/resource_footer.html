@@ -1,0 +1,30 @@
+{% set resources = [
+    ('money',              nation.money,              'Money',              'money_icon.png',              'text-green-600'),
+    ('food',               nation.food,               'Food',               'food_icon.png',               'text-red-500'),
+    ('power',              nation.power,              'Power',              'power_icon.png',              'text-red-500'),
+    ('building_materials', nation.building_materials, 'Building Materials', 'building_materials_icon.png', 'text-gray-700'),
+    ('consumer_goods',     nation.consumer_goods,     'Consumer Goods',     'consumer_goods_icon.png',     'text-red-500'),
+    ('metal',              nation.metal,              'Metal',              'metal_icon.png',              'text-gray-700'),
+    ('fuel',               nation.fuel,               'Fuel',               'fuel_icon.png',               'text-gray-700'),
+    ('ammunition',         nation.ammunition,         'Ammunition',         'ammunition_icon.png',         'text-gray-700'),
+    ('uranium',            nation.uranium,            'Uranium',            'uranium_icon.png',            'text-gray-700'),
+    ('whz',                nation.whz,                'WHZ',                'whz_icon.png',                'text-gray-700'),
+] %}
+<div class="flex justify-around flex-wrap max-w-screen-xl mx-auto px-4">
+    {% for _field, value, label, icon, color_class in resources %}
+    {% set rate = (net_income.get(_field, 0) if net_income is defined else 0) %}
+    <div class="flex items-center gap-1.5 px-1">
+        <img src="{{ url_for('static', filename='images/' ~ icon) }}"
+             alt="{{ label }}" title="{{ label }}"
+             class="w-4 h-4 inline-block">
+        <div class="flex flex-col items-center">
+            <span class="text-sm font-medium {{ color_class }}">{{ value | format_resource }}</span>
+            {% if rate != 0 %}
+            <span class="text-xs {{ 'text-green-500' if rate > 0 else 'text-red-400' }}">
+                {{ '+' if rate > 0 else '' }}{{ rate | format_resource }}/h
+            </span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>

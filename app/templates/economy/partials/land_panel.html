@@ -1,0 +1,29 @@
+{% set land_types = [
+    ('cleared_land',  'Cleared Land',  'cleared_land_icon.png'),
+    ('urban_areas',   'Urban Areas',   'urban_areas_icon.png'),
+    ('used_land',     'Used Land',     'used_land_icon.png'),
+    ('forest',        'Forest',        'forest_icon.png'),
+    ('grassland',     'Grassland',     'grassland_icon.png'),
+    ('jungle',        'Jungle',        'jungle_icon.png'),
+    ('desert',        'Desert',        'desert_icon.png'),
+    ('mountain',      'Mountain',      'mountain_icon.png'),
+    ('tundra',        'Tundra',        'tundra_icon.png'),
+    ('river',         'River',         'river_icon.png'),
+    ('lake',          'Lake',          'lake_icon.png'),
+] %}
+
+<div id="land-panel" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+    {% for field, label, icon in land_types %}
+    {% set tile_amount = nation | attr(field) or 0 %}
+    {% if tile_amount > 0 or field in ('cleared_land', 'urban_areas') %}
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-3 flex flex-col items-center text-center">
+        <img src="{{ url_for('static', filename='images/' ~ icon) }}"
+             alt="{{ label }}"
+             class="w-8 h-8 mb-2"
+             onerror="this.style.display='none'">
+        <div class="text-xs text-gray-500 mb-1">{{ label }}</div>
+        <div class="text-sm font-bold text-gray-800">{{ tile_amount | format_resource }}</div>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
