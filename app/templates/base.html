@@ -83,11 +83,7 @@
         {% endcall %}
 
         {# Leaderboards dropdown #}
-        {% call(items) nav_dropdown('fas fa-trophy', 'Leaderboards', [], []) %}
-            {{ dropdown_link(url_for('main.leaderboard'), 'fas fa-medal', 'Nation Leaderboard') }}
-            {{ dropdown_link('#', 'fas fa-medal', 'Military Leaderboard') }}
-            {{ dropdown_link('#', 'fas fa-users', 'Alliance Leaderboard') }}
-        {% endcall %}
+        {{ nav_link(url_for('main.leaderboard', tab='national'),  'fas fa-medal', 'National', 'main.leaderboard') }}
         {% endif %}
     </div>
 
@@ -149,9 +145,9 @@
                 <i class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
             </button>
             <div x-show="open" x-cloak class="ml-4 mt-0.5 space-y-0.5">
-                <a href="{{ url_for('main.leaderboard') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-medal w-5"></i> Nation Leaderboard</a>
-                <a href="#" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-medal w-5"></i> Military Leaderboard</a>
-                <a href="#" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-users w-5"></i> Alliance Leaderboard</a>
+                <a href="{{ url_for('main.leaderboard', tab='national') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-medal w-5"></i> National</a>
+                <a href="{{ url_for('main.leaderboard', tab='military') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-shield-alt w-5"></i> Military</a>
+                <a href="{{ url_for('main.leaderboard', tab='alliance') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-users w-5"></i> Alliance</a>
             </div>
         </div>
 

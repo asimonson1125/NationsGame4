@@ -8,7 +8,7 @@
                 <th class="px-4 py-3">Leader</th>
                 <th class="px-4 py-3">Continent</th>
                 <th class="px-4 py-3 text-right">Population</th>
-                <th class="px-4 py-3 text-right">GP</th>
+                <th class="px-4 py-3 text-right">{{ 'Military GP' if lb_type == 'military' else 'GP' }}</th>
             </tr>
         </thead>
         <tbody>
@@ -46,7 +46,7 @@
                 <td class="px-4 py-3 text-slate-300">{{ nation.leader or '—' }}</td>
                 <td class="px-4 py-3 text-slate-500">{{ nation.continent or '—' }}</td>
                 <td class="px-4 py-3 text-right text-slate-300">{{ '{:,}'.format(nation.population | int) }}</td>
-                <td class="px-4 py-3 text-right font-semibold text-amber-400">{{ '{:,}'.format(nation.total_gp | int) }}</td>
+                <td class="px-4 py-3 text-right font-semibold text-amber-400">{{ '{:,}'.format((nation.military_gp if lb_type == 'military' else nation.total_gp) | int) }}</td>
             </tr>
             {% else %}
             <tr>

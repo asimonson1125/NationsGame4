@@ -187,6 +187,7 @@ def move_unit(unit_id):
     target_div_id = request.form.get('division_id', '').strip()
     if target_div_id == '' or target_div_id == 'none':
         unit.division_id = None
+        unit.division_joined_at = None
     else:
         div = Division.query.filter_by(id=int(target_div_id), nation_id=nation.id).first()
         if not div:
@@ -194,6 +195,7 @@ def move_unit(unit_id):
         if div.mobilization_state == 'mobilized':
             return _error_response('Cannot move units into a mobilized division.')
         unit.division_id = div.id
+        unit.division_joined_at = datetime.now(timezone.utc)
     db.session.commit()
     return _division_list_response(nation, 'Unit moved.')
 

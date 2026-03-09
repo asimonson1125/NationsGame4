@@ -191,6 +191,10 @@ def cleanup_pve_battles():
 
 
 def register_tasks(app):
+    # If scheduler is already initialized/running, don't re-register
+    if scheduler.app is not None or scheduler.running:
+        return
+
     scheduler.init_app(app)
 
     # ── Hourly tasks (every hour at :00 UTC) ──

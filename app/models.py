@@ -147,7 +147,7 @@ class Division(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     __table_args__ = ({'postgresql_partition_by': 'HASH (nation_id)'},)
 
-    units = db.relationship('Unit', backref=db.backref('division_ref', overlaps="nation_ref,units"), lazy='dynamic', order_by='Unit.id', overlaps="division_ref,nation_ref,units")
+    units = db.relationship('Unit', backref=db.backref('division_ref', overlaps="nation_ref,units"), lazy='dynamic', order_by='Unit.division_joined_at', overlaps="division_ref,nation_ref,units")
 
 
 class Unit(db.Model):
@@ -155,6 +155,7 @@ class Unit(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), primary_key=True)
     division_id = db.Column(db.Integer, nullable=True)
+    division_joined_at = db.Column(db.DateTime, nullable=True)
     unit_key = db.Column(db.String(50), nullable=False)
     custom_name = db.Column(db.String(120), default='')
     level = db.Column(db.Integer, default=1)

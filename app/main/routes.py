@@ -52,14 +52,14 @@ ADMIN_RESOURCES = {
 
 
 @main.route('/')
-@cache.cached(timeout=3600)
+@cache.cached(timeout=3600, unless=lambda: current_user.is_authenticated)
 def index():
     """Landing / index page — always accessible."""
     return render_template('main/landing.html', layout='base.html')
 
 
 @main.route('/changelog')
-@cache.cached(timeout=3600)
+@cache.cached(timeout=3600, unless=lambda: current_user.is_authenticated)
 def changelog_page():
     """Full version history — always accessible."""
     return render_template('main/changelog.html', layout='base.html')
@@ -235,22 +235,43 @@ VALID_CONTINENTS = {'Westberg', 'Amarino', 'San Sebastian', 'Tind', 'Zaheria'}
 @main.route('/leaderboard')
 @login_required
 def leaderboard():
-    return render_template('main/leaderboard.html', nation=current_user.nation)
+    tab = request.args.get('tab', 'national').strip()
+    return render_template('main/leaderboard.html', nation=current_user.nation, default_tab=tab)
 
 
 @main.route('/leaderboard/table')
 @login_required
 def leaderboard_table():
     continent = request.args.get('continent', 'all').strip()
+    lb_type = request.args.get('type', 'nation').strip()
     query = Nation.query.options(db.joinedload(Nation.alliance))
     continent_label = 'Global'
     if continent in VALID_CONTINENTS:
         query = query.filter(Nation.continent == continent)
         continent_label = continent
-    nations = query.order_by(Nation.total_gp.desc()).limit(100).all()
+    if lb_type == 'military':
+        nations = query.order_by(Nation.military_gp.desc()).limit(100).all()
+    else:
+        nations = query.order_by(Nation.total_gp.desc()).limit(100).all()
     return render_template('main/partials/leaderboard_table.html',
                            nations=nations, current_nation=current_user.nation,
-                           continent_label=continent_label)
+                           continent_label=continent_label, lb_type=lb_type)
+
+
+@main.route('/leaderboard/alliance-table')
+@login_required
+def leaderboard_alliance_table():
+    from sqlalchemy import func
+    results = (db.session.query(
+        Alliance,
+        func.count(Nation.id).label('member_count'),
+        func.sum(Nation.total_gp).label('total_gp')
+    ).join(Nation, Nation.alliance_id == Alliance.id)
+     .group_by(Alliance.id)
+     .order_by(func.sum(Nation.total_gp).desc())
+     .limit(50).all())
+    return render_template('main/partials/leaderboard_alliance_table.html',
+                           results=results, current_nation=current_user.nation)
 
 
 @main.route('/leaderboard/search')

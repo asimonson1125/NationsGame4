@@ -137,12 +137,14 @@
                     <span class="text-amber-400 text-sm font-bold">{{ nation.tier }}</span>
                     {{ "{:,}".format(nation.population) }}
                     <template x-if="delta > 0">
-                        <span class="text-emerald-400 text-sm font-semibold flex items-center gap-0.5">
+                        <span class="rv text-emerald-400 text-sm font-semibold flex items-center gap-0.5"
+                              :data-raw="'+' + delta.toLocaleString('en-US') + '/hr'">
                             <i class="fas fa-caret-up"></i><span x-text="fmt(delta) + '/hr'"></span>
                         </span>
                     </template>
                     <template x-if="delta < 0">
-                        <span class="text-red-400 text-sm font-semibold flex items-center gap-0.5">
+                        <span class="rv text-red-400 text-sm font-semibold flex items-center gap-0.5"
+                              :data-raw="'-' + Math.abs(delta).toLocaleString('en-US') + '/hr'">
                             <i class="fas fa-caret-down"></i><span x-text="fmt(delta) + '/hr'"></span>
                         </span>
                     </template>
