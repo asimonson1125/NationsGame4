@@ -1,6 +1,6 @@
 {# ===== NATION HEADER BANNER ===== #}
 <div class="relative bg-cover bg-center"
-     style="background-image: url('{{ url_for('static', filename='images/tind.png') }}'); padding: 100px 20px;">
+     style="background-image: url('{{ url_for('static', filename='images/continents/tind.png') }}'); padding: 100px 20px;">
     <div class="absolute inset-0 bg-slate-950/60"></div>
     <div class="relative max-w-5xl mx-auto flex items-center text-white"
          style="text-shadow: 1px 1px 4px rgba(0,0,0,.7)">
@@ -184,7 +184,7 @@
             {% set tile_amount = nation | attr(field) or 0 %}
             {% if tile_amount > 0 %}
             <div class="bg-slate-800 rounded-lg border border-slate-700 p-3 flex flex-col items-center text-center">
-                <img src="{{ url_for('static', filename='images/' ~ icon) }}"
+                <img src="{{ url_for('static', filename='images/icons/' ~ icon) }}"
                      alt="{{ label }}"
                      class="w-8 h-8 mb-2"
                      onerror="this.style.display='none'">
@@ -203,7 +203,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {% for nr in natural_resources %}
             <div class="bg-slate-800 rounded-lg border border-slate-700 p-3 flex flex-col items-center text-center">
-                <img src="{{ url_for('static', filename='images/' ~ nr.resource_key ~ '_icon.png') }}"
+                <img src="{{ url_for('static', filename='images/icons/' ~ nr.resource_key ~ '_icon.png') }}"
                      alt="{{ nr.resource_key }}"
                      class="w-8 h-8 mb-2"
                      onerror="this.style.display='none'">

@@ -15,11 +15,48 @@
         </button>
     </div>
 
+    {# Buff filter #}
+    {% set _picker_url = url_for('military.equipment_picker', unit_id=unit.id, slot=slot) %}
+    {% set _picker_include = "#picker-buff-type, #picker-buff-min" %}
+    <div class="mb-4 flex items-end gap-2" x-data="{ buffFilter: '{{ buff_type }}' }">
+        <div>
+            <label class="block text-xs text-slate-500 mb-1">Filter by buff</label>
+            <select id="picker-buff-type" name="buff_type"
+                    x-model="buffFilter"
+                    class="text-sm bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1.5"
+                    hx-get="{{ _picker_url }}"
+                    hx-target="#eq-picker-content"
+                    hx-swap="innerHTML"
+                    hx-include="{{ _picker_include }}">
+                <option value="">Any Buff</option>
+                {% for code, label in buff_filter_options %}
+                <option value="{{ code }}" {% if buff_type == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div x-show="buffFilter !== ''" x-cloak>
+            <label class="block text-xs text-slate-500 mb-1">
+                <span x-text="['Firepower','Armour','Maneuver'].includes(buffFilter) ? 'Min (+N)' : 'Min (×N)'"></span>
+            </label>
+            <input id="picker-buff-min" name="buff_min" type="number" step="any" min="0"
+                   value="{{ buff_min or '' }}"
+                   placeholder="any"
+                   class="text-sm bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1.5 w-24"
+                   hx-get="{{ _picker_url }}"
+                   hx-target="#eq-picker-content"
+                   hx-swap="innerHTML"
+                   hx-include="{{ _picker_include }}"
+                   hx-trigger="change">
+        </div>
+    </div>
+
     {% if not compatible %}
     <div class="text-center py-8 text-slate-500">
         <i class="fas fa-box-open text-3xl mb-3"></i>
-        <p class="text-sm">No compatible {{ slot_type | lower }} equipment available.</p>
+        <p class="text-sm">No compatible {{ slot_type | lower }} equipment{% if buff_type %} with that buff{% endif %} available.</p>
+        {% if not buff_type %}
         <p class="text-xs mt-1">Open loot crates from the <a href="/equipment?tab=crates" class="text-amber-500 hover:text-amber-400">Equipment page</a> to get some.</p>
+        {% endif %}
     </div>
     {% else %}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[55vh] overflow-y-auto pr-1">

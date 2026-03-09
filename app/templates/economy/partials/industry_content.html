@@ -110,7 +110,7 @@
                             <div class="space-y-1">
                                 {% for res, rate in fdef.inputs.items() %}
                                 <div class="flex items-center gap-2 text-sm text-slate-300">
-                                    <img src="{{ url_for('static', filename='images/' ~ res ~ '_icon.png') }}"
+                                    <img src="{{ url_for('static', filename='images/icons/' ~ res ~ '_icon.png') }}"
                                          alt="{{ res }}" class="w-4 h-4" onerror="this.style.display='none'">
                                     <span><span x-text="fmt(cap * {{ nf.count }} * {{ rate }})"></span></span>
                                 </div>
@@ -126,7 +126,7 @@
                             <div class="space-y-1">
                                 {% for res, rate in fdef.outputs.items() %}
                                 <div class="flex items-center gap-2 text-sm text-slate-300">
-                                    <img src="{{ url_for('static', filename='images/' ~ res ~ '_icon.png') }}"
+                                    <img src="{{ url_for('static', filename='images/icons/' ~ res ~ '_icon.png') }}"
                                          alt="{{ res }}" class="w-4 h-4" onerror="this.style.display='none'">
                                     <span><span x-text="fmt(cap * {{ nf.count }} * {{ rate }})"></span></span>
                                 </div>
@@ -248,7 +248,7 @@
                             {% set avail = nation | attr(land_type) | default(0) or 0 %}
                             <div class="flex items-center gap-1.5 text-sm"
                                  :class="qty * {{ tiles }} > {{ avail }} ? 'text-red-400 font-semibold' : 'text-slate-300'">
-                                <img src="{{ url_for('static', filename='images/' ~ land_type ~ '_icon.png') }}"
+                                <img src="{{ url_for('static', filename='images/icons/' ~ land_type ~ '_icon.png') }}"
                                      alt="{{ land_type }}" class="w-4 h-4" onerror="this.style.display='none'">
                                 <span x-html="fmt(qty * {{ tiles }})"></span>
                             </div>
@@ -264,7 +264,7 @@
                             {% set stock = nation | attr(res) | default(0) or 0 %}
                             <div class="flex items-center gap-1.5 text-sm"
                                  :class="qty * {{ cost_per }} > {{ stock }} ? 'text-red-400 font-semibold' : 'text-slate-300'">
-                                <img src="{{ url_for('static', filename='images/' ~ res ~ '_icon.png') }}"
+                                <img src="{{ url_for('static', filename='images/icons/' ~ res ~ '_icon.png') }}"
                                      alt="{{ res }}" class="w-4 h-4" onerror="this.style.display='none'">
                                 <span x-html="fmt(qty * {{ cost_per }})"></span>
                             </div>
@@ -278,7 +278,7 @@
                         <div class="flex flex-wrap gap-x-3 gap-y-1">
                             {% for res, rate in fdef.inputs.items() %}
                             <div class="flex items-center gap-1.5 text-sm {{ rate | cost_class(nation | attr(res)) }}">
-                                <img src="{{ url_for('static', filename='images/' ~ res ~ '_icon.png') }}"
+                                <img src="{{ url_for('static', filename='images/icons/' ~ res ~ '_icon.png') }}"
                                      alt="{{ res }}" class="w-4 h-4" onerror="this.style.display='none'">
                                 <span>{{ rate | format_resource }}</span>
                             </div>
@@ -292,7 +292,7 @@
                         <div class="flex flex-wrap gap-x-3 gap-y-1">
                             {% for res, rate in fdef.outputs.items() %}
                             <div class="flex items-center gap-1.5 text-sm {{ rate | cost_class(nation | attr(res)) }}">
-                                <img src="{{ url_for('static', filename='images/' ~ res ~ '_icon.png') }}"
+                                <img src="{{ url_for('static', filename='images/icons/' ~ res ~ '_icon.png') }}"
                                      alt="{{ res }}" class="w-4 h-4" onerror="this.style.display='none'">
                                 <span>{{ rate | format_resource }}</span>
                             </div>

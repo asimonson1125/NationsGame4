@@ -64,9 +64,9 @@ def register():
             db.session.add(user)
             db.session.flush()
 
-            # Distribute 100 uncleared land tiles by continent weights (excluding cleared_land)
+            # Distribute 500 uncleared land tiles by continent weights (excluding cleared_land)
             weights = {k: v for k, v in LAND_WEIGHTS[continent].items() if k != 'cleared_land'}
-            starting_land = _weighted_distribute(weights, 100)
+            starting_land = _weighted_distribute(weights, 500)
 
             nation = Nation(
                 user_id=user.id,
@@ -78,15 +78,13 @@ def register():
                 population=50_000,
                 urban_areas=50,
                 cleared_land=20,
-                total_land=170,  # 50 urban + 20 cleared + 100 uncleared
+                total_land=170,  # 50 urban + 20 cleared + 500 uncleared
                 **starting_land,
             )
             db.session.add(nation)
             db.session.flush()
-            from ..models import NationFactory
-            starters = [('farm', 10), ('windmill', 5), ('quarry', 5)]
-            for factory_key, count in starters:
-                db.session.add(NationFactory(nation_id=nation.id, factory_key=factory_key, count=count, production_capacity=6))
+            from ..helpers import grant_factories
+            grant_factories(nation, [('farm', 2), ('windmill', 1), ('quarry', 1)], production_capacity=6)
             db.session.commit()
             login_user(user)
             return redirect(url_for('main.home'))

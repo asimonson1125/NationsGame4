@@ -46,7 +46,7 @@
                     <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Cost</div>
                     {% for res, amount in expand_cost.items() %}
                     <div class="flex items-center gap-2 text-sm">
-                        <img src="{{ url_for('static', filename='images/' ~ res ~ '_icon.png') }}" alt="{{ res | replace('_', ' ') | title }}" class="w-4 h-4">
+                        <img src="{{ url_for('static', filename='images/icons/' ~ res ~ '_icon.png') }}" alt="{{ res | replace('_', ' ') | title }}" class="w-4 h-4">
                         <span class="{{ amount | cost_class(nation | attr(res)) }}">{{ amount | format_resource }} {{ res | replace('_', ' ') }}</span>
                     </div>
                     {% endfor %}
@@ -79,7 +79,7 @@
                     <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Cost</div>
                     {% for res, amount in colonize_cost.items() %}
                     <div class="flex items-center gap-2 text-sm">
-                        <img src="{{ url_for('static', filename='images/' ~ res ~ '_icon.png') }}" alt="{{ res | replace('_', ' ') | title }}" class="w-4 h-4">
+                        <img src="{{ url_for('static', filename='images/icons/' ~ res ~ '_icon.png') }}" alt="{{ res | replace('_', ' ') | title }}" class="w-4 h-4">
                         <span class="{{ amount | cost_class(nation | attr(res)) }}">{{ amount | format_resource }} {{ res | replace('_', ' ') }}</span>
                     </div>
                     {% endfor %}
@@ -163,7 +163,7 @@
             {% if natural_resources %}
                 {% for nr in natural_resources %}
                 <div class="bg-slate-800 rounded-lg border border-slate-700 p-3 flex flex-col items-center text-center">
-                    <img src="{{ url_for('static', filename='images/' ~ nr.resource_key ~ '_icon.png') }}"
+                    <img src="{{ url_for('static', filename='images/icons/' ~ nr.resource_key ~ '_icon.png') }}"
                          alt="{{ nr.resource_key }}"
                          class="w-8 h-8 mb-2"
                          onerror="this.style.display='none'">

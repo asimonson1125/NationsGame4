@@ -16,7 +16,7 @@
     {% for field, label, icon in land_types %}
     {% set tile_amount = nation | attr(field) or 0 %}
     <div class="bg-slate-800 rounded-lg border border-slate-700 p-3 flex flex-col items-center text-center">
-        <img src="{{ url_for('static', filename='images/' ~ icon) }}"
+        <img src="{{ url_for('static', filename='images/icons/' ~ icon) }}"
              alt="{{ label }}"
              class="w-8 h-8 mb-2"
              onerror="this.style.display='none'">

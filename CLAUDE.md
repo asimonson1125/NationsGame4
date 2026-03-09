@@ -55,7 +55,7 @@ The SQLite DB (`ng4.db`) is created in the project root on first run via `db.cre
 
 Resource key aliases used in definitions: `_M=money`, `_P=power`, `_F=food`, `_BM=building_materials`, `_CG=consumer_goods`, `_ME=metal`, `_AM=ammunition`, `_FU=fuel`, `_UR=uranium`, `_WH=whz`.
 
-**Starter factories** seeded on registration: 10 farms, 5 windmills, 5 quarries (in `auth/routes.py`).
+**Starter factories** seeded on registration: 2 farms, 1 windmill, 1 quarry (in `auth/routes.py`).
 
 **Natural resource inputs** (coal, iron, uranium as raw ore, etc.) are on `NationFactory` definitions but the `NaturalResource` collection system isn't wired — `getattr(nation, 'coal', 0)` returns 0, so affected factories will always fail the input check until that system is built.
 

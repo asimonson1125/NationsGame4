@@ -25,6 +25,23 @@
 {%- endmacro %}
 
 
+{# ── Unit type icon: renders the webp icon for a unit type ───────────
+   unit_type: 'Infantry', 'Armour', 'Static', 'Air', 'Special Forces'
+   cls:       CSS classes on the <img> tag
+#}
+{% macro unit_type_icon(unit_type, cls='w-4 h-4 inline-block') -%}
+{%- if unit_type == 'Armour' -%}
+<img src="{{ url_for('static', filename='images/icons/ArmorIcon.webp') }}" alt="Armour" class="{{ cls }}">
+{%- elif unit_type == 'Static' -%}
+<img src="{{ url_for('static', filename='images/icons/StaticIcon.webp') }}" alt="Static" class="{{ cls }}">
+{%- elif unit_type == 'Air' -%}
+<img src="{{ url_for('static', filename='images/icons/AirIcon.webp') }}" alt="Air" class="{{ cls }}">
+{%- elif unit_type in ('Infantry', 'Special Forces') -%}
+<img src="{{ url_for('static', filename='images/icons/InfantryIcon.webp') }}" alt="{{ unit_type }}" class="{{ cls }}">
+{%- endif -%}
+{%- endmacro %}
+
+
 {# ── Foil overlay: tiled diamond background for foil items ────────── #}
 {% macro foil_overlay() -%}
 <div class="absolute inset-0 pointer-events-none opacity-50 z-0" style="background-image:url('{{ url_for('static', filename='images/diamonds.png') }}'); background-repeat:repeat; filter:invert(0.5)"></div>

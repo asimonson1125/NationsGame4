@@ -35,14 +35,16 @@
         </div>
 
         {# Filters #}
-        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-4">
+        {% set _hx_include = "#filter-type, #filter-rarity, #filter-foil, #filter-equipped, #filter-buff-type, #filter-buff-min" %}
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-4"
+             x-data="{ buffFilter: '' }">
             <div class="flex flex-wrap gap-3 items-end">
                 <div>
                     <label class="block text-xs text-slate-500 mb-1">Type</label>
                     <select id="filter-type" class="text-sm bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1.5"
                             hx-get="{{ url_for('equipment.equipment_grid') }}"
                             hx-target="#equipment-grid"
-                            hx-include="#filter-type, #filter-rarity, #filter-foil, #filter-equipped"
+                            hx-include="{{ _hx_include }}"
                             name="type">
                         <option value="">All Types</option>
                         {% for cat, slots in equipment_slots.items() %}
@@ -59,7 +61,7 @@
                     <select id="filter-rarity" class="text-sm bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1.5"
                             hx-get="{{ url_for('equipment.equipment_grid') }}"
                             hx-target="#equipment-grid"
-                            hx-include="#filter-type, #filter-rarity, #filter-foil, #filter-equipped"
+                            hx-include="{{ _hx_include }}"
                             name="rarity">
                         <option value="">All Rarities</option>
                         {% for r in rarity_order %}
@@ -72,7 +74,7 @@
                     <select id="filter-foil" class="text-sm bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1.5"
                             hx-get="{{ url_for('equipment.equipment_grid') }}"
                             hx-target="#equipment-grid"
-                            hx-include="#filter-type, #filter-rarity, #filter-foil, #filter-equipped"
+                            hx-include="{{ _hx_include }}"
                             name="foil">
                         <option value="">Any</option>
                         <option value="yes">Foil Only</option>
@@ -84,12 +86,41 @@
                     <select id="filter-equipped" class="text-sm bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1.5"
                             hx-get="{{ url_for('equipment.equipment_grid') }}"
                             hx-target="#equipment-grid"
-                            hx-include="#filter-type, #filter-rarity, #filter-foil, #filter-equipped"
+                            hx-include="{{ _hx_include }}"
                             name="equipped">
                         <option value="">Any</option>
                         <option value="yes">Equipped</option>
                         <option value="no">Unequipped</option>
                     </select>
+                </div>
+                {# Buff filter — type select + conditional min value input #}
+                <div class="flex items-end gap-2">
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Buff</label>
+                        <select id="filter-buff-type" name="buff_type"
+                                x-model="buffFilter"
+                                class="text-sm bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1.5"
+                                hx-get="{{ url_for('equipment.equipment_grid') }}"
+                                hx-target="#equipment-grid"
+                                hx-include="{{ _hx_include }}">
+                            <option value="">Any Buff</option>
+                            {% for code, label in buff_filter_options %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div x-show="buffFilter !== ''" x-cloak>
+                        <label class="block text-xs text-slate-500 mb-1">
+                            <span x-text="['Firepower','Armour','Maneuver'].includes(buffFilter) ? 'Min (+N)' : 'Min (×N)'"></span>
+                        </label>
+                        <input id="filter-buff-min" name="buff_min" type="number" step="any" min="0"
+                               placeholder="any"
+                               class="text-sm bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1.5 w-24"
+                               hx-get="{{ url_for('equipment.equipment_grid') }}"
+                               hx-target="#equipment-grid"
+                               hx-include="{{ _hx_include }}"
+                               hx-trigger="change">
+                    </div>
                 </div>
             </div>
         </div>

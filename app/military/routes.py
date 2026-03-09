@@ -9,7 +9,7 @@ from sqlalchemy import or_, and_
 from ..models import Division, Unit, RecruitmentQueue, Battle, CombatReport, Nation, User, Equipment
 from ..helpers import error_response as _error_response, can_afford as _can_afford, deduct_cost as _deduct_cost, compute_total_upkeep
 from ..game.units import UNIT_DEFS
-from ..game.equipment import EQUIPMENT_SLOTS, RARITY_COLORS, get_slot_category
+from ..game.equipment import EQUIPMENT_SLOTS, RARITY_COLORS, get_slot_category, BUFF_FILTER_OPTIONS, apply_buff_filter
 from . import military
 
 
@@ -330,6 +330,12 @@ def equipment_picker(unit_id, slot):
         if available > 0:
             compatible.append((eq, available))
 
+    buff_type = request.args.get('buff_type', '')
+    buff_min  = request.args.get('buff_min', '')
+    if buff_type:
+        passing = {eq.id for eq in apply_buff_filter([eq for eq, _ in compatible], buff_type, buff_min)}
+        compatible = [(eq, avail) for eq, avail in compatible if eq.id in passing]
+
     return render_template(
         'military/partials/_equipment_picker.html',
         unit=unit,
@@ -338,6 +344,9 @@ def equipment_picker(unit_id, slot):
         slot_type=eq_type,
         compatible=compatible,
         rarity_colors=RARITY_COLORS,
+        buff_filter_options=BUFF_FILTER_OPTIONS,
+        buff_type=buff_type,
+        buff_min=buff_min,
     )
 
 
@@ -596,6 +605,8 @@ def deploy_peacekeeping(div_id):
     battle = Battle(
         attacker_division_id=div.id,
         defender_division_id=npc_div.id,
+        attacker_division_name=div.name,
+        defender_division_name=npc_div.name,
         attacker_nation_id=nation.id,
         defender_nation_id=npc_nation.id,
         battle_type='pve',

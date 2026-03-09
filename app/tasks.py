@@ -106,35 +106,16 @@ def deduct_military_upkeep():
 
 def process_factory_queue():
     """Runs every 60s. Completes factory build entries whose timer has expired."""
-    from .models import FactoryBuildQueue, NationFactory, Nation
-    from .game.factories import FACTORY_DEFS
+    from .models import FactoryBuildQueue, Nation
+    from .helpers import grant_factories
     from . import db
     with scheduler.app.app_context():
         now = datetime.utcnow()
         ready = FactoryBuildQueue.query.filter(FactoryBuildQueue.completes_at <= now).all()
         for entry in ready:
-            fdef = FACTORY_DEFS.get(entry.factory_key)
-            if not fdef:
-                db.session.delete(entry)
-                continue
-            # Upsert NationFactory
-            nf = NationFactory.query.filter_by(
-                nation_id=entry.nation_id, factory_key=entry.factory_key
-            ).first()
-            if nf:
-                nf.count += entry.quantity
-            else:
-                nf = NationFactory(
-                    nation_id=entry.nation_id,
-                    factory_key=entry.factory_key,
-                    count=entry.quantity,
-                    production_capacity=0,
-                )
-                db.session.add(nf)
-            # Add factory GP
             nation = db.session.get(Nation, entry.nation_id)
             if nation:
-                nation.factory_gp = (nation.factory_gp or 0) + entry.quantity * fdef.gp_value
+                grant_factories(nation, [(entry.factory_key, entry.quantity)])
             db.session.delete(entry)
         if ready:
             db.session.commit()

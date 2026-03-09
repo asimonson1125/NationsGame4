@@ -50,6 +50,37 @@ def deduct_cost(nation, cost_dict):
         nation.add_resource(resource, -amount)
 
 
+# ── Factory helpers ──────────────────────────────────────────────────────
+
+def grant_factories(nation, factories, production_capacity=0):
+    """Upsert NationFactory rows and credit factory_gp.
+
+    factories: iterable of (factory_key, count) tuples
+    """
+    from .models import NationFactory
+    from .game.factories import FACTORY_DEFS
+
+    for factory_key, count in factories:
+        fdef = FACTORY_DEFS.get(factory_key)
+        if not fdef:
+            continue
+        nf = NationFactory.query.filter_by(
+            nation_id=nation.id, factory_key=factory_key
+        ).first()
+        if nf:
+            nf.count += count
+        else:
+            from . import db
+            nf = NationFactory(
+                nation_id=nation.id,
+                factory_key=factory_key,
+                count=count,
+                production_capacity=production_capacity,
+            )
+            db.session.add(nf)
+        nation.factory_gp = (nation.factory_gp or 0) + count * fdef.gp_value
+
+
 # ── Military helpers ─────────────────────────────────────────────────────
 
 def compute_total_upkeep(nation_id):

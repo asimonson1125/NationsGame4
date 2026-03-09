@@ -6,9 +6,9 @@ from ..models import Equipment, Unit
 from ..helpers import error_response as _error_response, success_response as _success_response, build_equipped_counts as _build_equipped_counts
 from ..game.equipment import (
     EQUIPMENT_SLOTS, UNIT_CATEGORIES, RARITY_ORDER, RARITY_COLORS,
-    CRATE_SIZES, TRADE_IN_VALUES,
+    CRATE_SIZES, TRADE_IN_VALUES, BUFF_FILTER_OPTIONS,
     generate_crate_contents, get_slot_category,
-    compute_buff_hash, serialize_buffs,
+    compute_buff_hash, serialize_buffs, apply_buff_filter,
 )
 from ..game.units import UNIT_DEFS
 from . import equipment
@@ -38,6 +38,7 @@ def inventory():
         unit_categories=UNIT_CATEGORIES,
         crate_sizes=CRATE_SIZES,
         default_tab=default_tab,
+        buff_filter_options=BUFF_FILTER_OPTIONS,
     )
 
 
@@ -48,10 +49,12 @@ def equipment_grid():
     items = Equipment.query.filter_by(nation_id=nation.id).order_by(Equipment.created_at.desc()).all()
 
     # Filters
-    type_filter = request.args.get('type', '')
-    rarity_filter = request.args.get('rarity', '')
-    foil_filter = request.args.get('foil', '')
+    type_filter     = request.args.get('type', '')
+    rarity_filter   = request.args.get('rarity', '')
+    foil_filter     = request.args.get('foil', '')
     equipped_filter = request.args.get('equipped', '')
+    buff_type       = request.args.get('buff_type', '')
+    buff_min        = request.args.get('buff_min', '')
 
     equipped_counts = _build_equipped_counts(nation.id)
 
@@ -67,6 +70,8 @@ def equipment_grid():
         items = [i for i in items if equipped_counts.get(i.id, 0) > 0]
     elif equipped_filter == 'no':
         items = [i for i in items if equipped_counts.get(i.id, 0) == 0]
+    if buff_type:
+        items = apply_buff_filter(items, buff_type, buff_min)
 
     return render_template(
         'equipment/partials/equipment_grid.html',

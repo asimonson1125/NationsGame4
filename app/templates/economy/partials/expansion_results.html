@@ -8,7 +8,7 @@
     <div class="space-y-1.5">
         {% for land_type, amount in new_land.items() %}
         <div class="flex items-center gap-2 text-sm">
-            <img src="{{ url_for('static', filename='images/' ~ land_type ~ '_icon.png') }}"
+            <img src="{{ url_for('static', filename='images/icons/' ~ land_type ~ '_icon.png') }}"
                  alt="{{ land_type }}"
                  class="w-5 h-5"
                  onerror="this.style.display='none'">
@@ -28,7 +28,7 @@
     <div class="space-y-1.5">
         {% for resource, amount in discovered.items() %}
         <div class="flex items-center gap-2 text-sm">
-            <img src="{{ url_for('static', filename='images/' ~ resource ~ '_icon.png') }}"
+            <img src="{{ url_for('static', filename='images/icons/' ~ resource ~ '_icon.png') }}"
                  alt="{{ resource }}"
                  class="w-5 h-5"
                  onerror="this.style.display='none'">

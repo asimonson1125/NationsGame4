@@ -76,10 +76,48 @@
             transition: opacity 0.15s;
         }
         .rv:hover::before, .rv:hover::after { opacity: 1; }
+        .tt { position: relative; cursor: default; }
+        .tt::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2f3848;
+            color: #e7e9ed;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: nowrap;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+            border: 1px solid #404a5c;
+        }
+        .tt::after {
+            content: '';
+            position: absolute;
+            bottom: calc(100% + 2px);
+            left: 50%;
+            transform: translateX(-50%);
+            border: 4px solid transparent;
+            border-top-color: #2f3848;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .tt:hover::before, .tt:hover::after { opacity: 1; }
+        .tt-below::before { top: calc(100% + 6px); bottom: auto; }
+        .tt-below::after { top: calc(100% + 2px); bottom: auto; border-top-color: transparent; border-bottom-color: #2f3848; }
+        .tt-right::before { left: auto; right: 0; transform: none; }
+        .tt-right::after { left: auto; right: 8px; transform: none; }
     </style>
     {% block head %}{% endblock %}
 </head>
-<body class="bg-slate-950 min-h-screen text-slate-100 font-sans" x-data="{ mobileMenu: false }">
+<body class="bg-slate-950 min-h-screen text-slate-100 font-sans pt-14" x-data="{ mobileMenu: false }">
 
 {# ===== TOP NAVBAR ===== #}
 <nav class="fixed top-0 left-0 right-0 h-14 bg-slate-900 border-b border-slate-700 z-50 flex items-center px-4">
@@ -101,8 +139,8 @@
         {% endmacro %}
 
         {% macro nav_dropdown(icon, label, items, endpoints=[]) %}
-        <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
-            <button @click="open = !open"
+        <div class="relative" x-data="{ open: false }" @close-nav-dropdowns.window="open = false" @click.outside="open = false">
+            <button @click="if(open) { open = false } else { $dispatch('close-nav-dropdowns'); open = true }"
                     class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors
                            {% if request.endpoint in endpoints %}text-amber-400 bg-slate-800{% else %}text-slate-300 hover:text-slate-100 hover:bg-slate-800{% endif %}">
                 <i class="{{ icon }} text-xs"></i> {{ label }}
@@ -146,8 +184,8 @@
     {# Right: Version + Countdown + Logout #}
     <div class="hidden lg:flex items-center gap-3 ml-auto shrink-0">
         <a href="{{ url_for('main.changelog_page') }}" class="text-[11px] font-mono font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/30 px-1.5 py-0.5 rounded hover:bg-amber-500/20 transition-colors">v{{ latest_update.version if latest_update else '0.0.0' }}</a>
-        <div id="turn-countdown" class="text-xs text-slate-400"><i class="fas fa-clock mr-1"></i>--:--</div>
-        <div id="day-countdown" class="text-xs text-slate-400"><i class="fas fa-calendar-day mr-1"></i>--:--:--</div>
+        <div id="turn-countdown" class="tt tt-below tt-right text-xs text-slate-400" data-tooltip="Time until next production turn"><i class="fas fa-clock mr-1"></i>--:--</div>
+        <div id="day-countdown" class="tt tt-below tt-right text-xs text-slate-400" data-tooltip="Time until next game day"><i class="fas fa-calendar-day mr-1"></i>--:--:--</div>
         <a href="{{ url_for('auth.logout') }}" class="text-slate-400 hover:text-slate-200 transition-colors text-sm" title="Logout">
             <i class="fas fa-sign-out-alt"></i>
         </a>
@@ -161,20 +199,40 @@
 
 {# ===== MOBILE MENU ===== #}
 <div x-show="mobileMenu" x-cloak x-transition
-     class="fixed top-14 left-0 right-0 bg-slate-900 border-b border-slate-700 z-40 lg:hidden max-h-[calc(100vh-3.5rem)] overflow-y-auto">
+     class="bg-slate-900 border-b border-slate-700 lg:hidden">
     <div class="p-3 space-y-1">
         <a href="{{ url_for('main.home') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-home w-5"></i> Home</a>
         <a href="{{ url_for('economy.industry') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-industry w-5"></i> Industry</a>
         <a href="{{ url_for('economy.land') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-map w-5"></i> Land</a>
-        <a href="#" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-handshake w-5"></i> Alliance</a>
-        <div class="border-t border-slate-700 my-2"></div>
-        <a href="{{ url_for('trade.trade_page') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-money-bill-transfer w-5"></i> Trade</a>
-        <div class="border-t border-slate-700 my-2"></div>
-        <a href="{{ url_for('military.overview') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-flag w-5"></i> Military Overview</a>
-        <a href="{{ url_for('military.battles') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-crosshairs w-5"></i> Battle Reports</a>
-        <a href="{{ url_for('equipment.inventory') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-tools w-5"></i> Equipment</a>
-        <div class="border-t border-slate-700 my-2"></div>
-        <a href="{{ url_for('main.leaderboard') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-medal w-5"></i> Leaderboard</a>
+        <a href="{{ url_for('trade.trade_page') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-exchange-alt w-5"></i> Trade</a>
+
+        {# Military accordion #}
+        <div x-data="{ open: false }">
+            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md">
+                <span><i class="fas fa-shield-alt w-5"></i> Military</span>
+                <i class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+            </button>
+            <div x-show="open" x-cloak class="ml-4 mt-0.5 space-y-0.5">
+                <a href="{{ url_for('military.overview') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-flag w-5"></i> Military Overview</a>
+                <a href="{{ url_for('military.battles') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-crosshairs w-5"></i> Battle Reports</a>
+                <a href="{{ url_for('equipment.inventory') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-tools w-5"></i> Equipment</a>
+                <a href="#" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-person-rifle w-5"></i> Training League</a>
+            </div>
+        </div>
+
+        {# Leaderboards accordion #}
+        <div x-data="{ open: false }">
+            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md">
+                <span><i class="fas fa-trophy w-5"></i> Leaderboards</span>
+                <i class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+            </button>
+            <div x-show="open" x-cloak class="ml-4 mt-0.5 space-y-0.5">
+                <a href="{{ url_for('main.leaderboard') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-medal w-5"></i> Nation Leaderboard</a>
+                <a href="#" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-medal w-5"></i> Military Leaderboard</a>
+                <a href="#" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-users w-5"></i> Alliance Leaderboard</a>
+            </div>
+        </div>
+
         <div class="border-t border-slate-700 my-2"></div>
         <div class="flex items-center gap-4 px-3 py-2 text-xs text-slate-500">
             <span id="turn-countdown-mobile"><i class="fas fa-clock mr-1"></i>--:--</span>
@@ -186,7 +244,7 @@
 </div>
 
 {# ===== MAIN CONTENT ===== #}
-<div class="pt-14 pb-14 min-h-screen">
+<div class="pb-14 min-h-screen">
     {% block content %}{% endblock %}
 </div>
 

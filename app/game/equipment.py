@@ -85,6 +85,42 @@ _FLAT_BUFFS = [
 
 _UNIT_TYPES_FOR_MULT = ['Infantry', 'Armour', 'Air', 'Static', 'Special Forces']
 
+# Buff filter options for the equipment filter UI: (buff_type_code, display_label)
+BUFF_FILTER_OPTIONS = (
+    [
+        ('Firepower', 'Firepower'),
+        ('Armour',    'Armour'),
+        ('Maneuver',  'Maneuver'),
+        ('HP',        'HP Multiplier'),
+    ]
+    + [(f'FPvs_{ut}',      f'FP vs {ut}')      for ut in _UNIT_TYPES_FOR_MULT]
+    + [(f'AllStats_{c}',   f'All Stats ({c})') for c in CONTINENTS]
+)
+
+_FLAT_BUFF_TYPES = {'Firepower', 'Armour', 'Maneuver'}
+
+
+def apply_buff_filter(items, buff_type, buff_min_str):
+    """Return only items that have buff_type at or above buff_min.
+
+    items: iterable of Equipment ORM objects (with .buffs property).
+    Returns a list.
+    """
+    if not buff_type:
+        return list(items)
+    try:
+        buff_min = float(buff_min_str) if buff_min_str else None
+    except (ValueError, TypeError):
+        buff_min = None
+    result = []
+    for item in items:
+        for buff in item.buffs:
+            if buff.buff_type == buff_type:
+                if buff_min is None or buff.value >= buff_min:
+                    result.append(item)
+                    break
+    return result
+
 
 def _roll_rarity(min_rarity=None):
     """Roll a random rarity. If min_rarity is set, re-roll anything below it."""

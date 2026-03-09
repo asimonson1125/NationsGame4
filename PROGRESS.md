@@ -28,7 +28,7 @@ Reference: `../MODERNIZATION_STRATEGY.md`
 - [x] Factory definitions (`app/game/factories.py`) — 9 factory types (Farm, Windmill, Quarry, Consumer Factory, Foundry, Munitions Plant, Oil Refinery, Nuclear Plant, WHZ Lab)
 - [x] Industry page (`/industry`) — production capacity progress bar, hours input, collect route with Alpine.js filter by output type
 - [x] Flask-APScheduler background task — increments all factory `production_capacity` by 1/hour (capped at 24)
-- [x] Starter factories seeded on registration (10 farms, 5 windmills, 5 quarries)
+- [x] Starter factories seeded on registration (2 farms, 1 windmills, 1 quarries)
 - [x] Industry page two-tab layout — Collect tab (existing) + Build tab (Alpine.js reactive cost preview, tier gate, HTMX OOB swap)
 - [x] `FactoryDef` extended with `build_cost`, `land_required`, `gp_value`; all 9 factories populated from NG3 data
 - [x] `POST /industry/build` route — validates tier/land/resources, deducts costs, upserts `NationFactory`, updates `factory_gp`, returns partial (reopens Build tab)
@@ -90,22 +90,29 @@ Reference: `../MODERNIZATION_STRATEGY.md`
 ## Phase 4: Market & Alliance Logic ⬜
 **Goal:** Secure, transactional social features.
 
-- [ ] Global market listing UI with HTMX resource filter (`/market?resource=metal`)
-- [ ] Atomic trade transactions in Flask (SQLAlchemy)
-- [ ] Alliance leaderboard — server-rendered table
-- [ ] Live alliance search — `hx-trigger="keyup changed delay:500ms"`
+- [x] Global market listing UI with HTMX resource filter (`/market?resource=metal`)
+- [x] Atomic trade transactions in Flask (SQLAlchemy)
 
 ---
 
 ## Phase 5: Optimization & Visual Polish ⬜
 **Goal:** Performance and UX refinement.
 
-- [ ] Alpine.js tooltips on resource icons (replace JS fetch listeners)
+- [x] Alpine.js tooltips on resource icons (replace JS fetch listeners)
 - [ ] Flask-Caching for static data (continent weights, unit base stats)
 - [ ] Tailwind CSS JIT bundle optimization
 - [ ] Gunicorn + Nginx production deployment config
+- [ ] Docker compose compatibility w/ separate database container
 
 Future:
 - Wars
 - unit leveling (level bonuses are unit-innate)
 - Events (a la 2.0)
+- Alliance leaderboard — server-rendered table
+- Live alliance search — `hx-trigger="keyup changed delay:500ms"`
+
+
+TODO:
+Mail for notifications and international communication.  Battle messages should include earned loot tokens.
+
+tiers, population growth setter (urban land expansion cost)

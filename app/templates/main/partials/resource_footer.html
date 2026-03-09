@@ -1,7 +1,7 @@
 <div class="flex justify-around flex-wrap max-w-screen-xl mx-auto px-4">
     {% for r in resource_data %}
     <div class="group relative flex items-center gap-1.5 px-1 cursor-default">
-        <img src="{{ url_for('static', filename='images/' ~ r.icon) }}"
+        <img src="{{ url_for('static', filename='images/icons/' ~ r.icon) }}"
              alt="{{ r.label }}" title="{{ r.label }}"
              class="w-4 h-4 inline-block">
         <span class="text-sm font-medium

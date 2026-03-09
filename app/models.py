@@ -233,6 +233,8 @@ class Battle(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     attacker_division_id = db.Column(db.Integer, db.ForeignKey('divisions.id'), nullable=False)
     defender_division_id = db.Column(db.Integer, db.ForeignKey('divisions.id'), nullable=False)
+    attacker_division_name = db.Column(db.String(120), nullable=True)  # snapshot in case div is deleted
+    defender_division_name = db.Column(db.String(120), nullable=True)
     attacker_nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
     defender_nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
     status = db.Column(db.String(20), default='active')  # active|finished
