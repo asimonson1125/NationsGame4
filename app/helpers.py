@@ -111,25 +111,39 @@ def compute_total_upkeep(nation_id):
     """Sum hourly upkeep across all alive units for a nation."""
     from .models import Unit
     from .game.units import UNIT_DEFS
+    from . import db
+    from sqlalchemy import func
 
     upkeep = {}
-    for unit in Unit.query.filter_by(nation_id=nation_id).filter(Unit.hp > 0):
-        udef = UNIT_DEFS.get(unit.unit_key)
+    # Optimization: Group units by key in DB to avoid loading thousands of objects
+    groups = db.session.query(Unit.unit_key, func.count(Unit.id)).filter_by(
+        nation_id=nation_id
+    ).filter(Unit.hp > 0).group_by(Unit.unit_key).all()
+
+    for unit_key, count in groups:
+        udef = UNIT_DEFS.get(unit_key)
         if not udef:
             continue
         for res, rate in udef.upkeep.items():
-            upkeep[res] = upkeep.get(res, 0) + rate
+            upkeep[res] = upkeep.get(res, 0) + (rate * count)
     return upkeep
 
 
 def build_equipped_counts(nation_id):
     """Build a dict mapping equipment_id -> number of units using that equipment."""
     from .models import Unit
+    from . import db
+    from sqlalchemy import func
 
     counts = Counter()
-    units = Unit.query.filter_by(nation_id=nation_id).all()
-    for u in units:
-        for eid in (u.weapon_id, u.accessory_id, u.armour_eq_id):
-            if eid:
-                counts[eid] += 1
+    # Query weapons, accessories, and armour separately and sum them
+    # This is much faster than loading all Unit objects into memory
+    for field in (Unit.weapon_id, Unit.accessory_id, Unit.armour_eq_id):
+        results = db.session.query(field, func.count(Unit.id)).filter(
+            Unit.nation_id == nation_id,
+            field != None
+        ).group_by(field).all()
+        for eid, count in results:
+            counts[eid] += count
+
     return dict(counts)

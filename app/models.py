@@ -27,18 +27,24 @@ class Nation(db.Model):
     tier = db.Column(db.Integer, default=1)
     founded_date = db.Column(db.Date, default=date.today)
     description = db.Column(db.Text, default='')
-    continent = db.Column(db.String(100), default='')
+    continent = db.Column(db.String(100), default='', index=True)
     growth_rate = db.Column(db.Integer, default=50)  # 0-100 percent
-    alliance_id = db.Column(db.Integer, db.ForeignKey('alliances.id'), nullable=True)
+    alliance_id = db.Column(db.Integer, db.ForeignKey('alliances.id'), nullable=True, index=True)
     last_expanded_at = db.Column(db.DateTime, nullable=True)
     last_colonized_at = db.Column(db.DateTime, nullable=True)
 
     # Greatness Points components
-    population_gp = db.Column(db.BigInteger, default=0)
-    land_gp = db.Column(db.BigInteger, default=0)
-    factory_gp = db.Column(db.BigInteger, default=0)
-    building_gp = db.Column(db.BigInteger, default=0)
-    military_gp = db.Column(db.BigInteger, default=0)
+    population_gp = db.Column(db.BigInteger, default=0, index=True)
+    land_gp = db.Column(db.BigInteger, default=0, index=True)
+    factory_gp = db.Column(db.BigInteger, default=0, index=True)
+    building_gp = db.Column(db.BigInteger, default=0, index=True)
+    military_gp = db.Column(db.BigInteger, default=0, index=True)
+
+    # Add composite index for the leaderboard total GP calculation
+    __table_args__ = (
+        db.Index('idx_nations_total_gp',
+                 (population_gp + land_gp + factory_gp + building_gp + military_gp).desc()),
+    )
 
     # Core resources
     money = db.Column(db.Float, default=10_000.0)

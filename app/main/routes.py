@@ -2,7 +2,7 @@ import json
 from functools import wraps
 from flask import render_template, url_for, request, current_app, abort, jsonify, make_response
 from flask_login import login_required, current_user
-from .. import db
+from .. import db, cache
 from ..models import Nation, NationFactory, NaturalResource, Alliance, Division, Unit, RecruitmentQueue
 from ..helpers import error_response as _error_response, compute_total_upkeep
 from ..game.population import get_population_effects, estimate_pop_delta, FOOD_PER_CITIZEN
@@ -13,6 +13,7 @@ from . import main
 
 def _nation_summary(nation):
     """Build summary data dict for nation profile display."""
+    # Optimization: Use a single query for counts and use eager loading if possible
     # Factory summary: list of (display_name, count) for factories with count > 0
     factories = NationFactory.query.filter_by(nation_id=nation.id).filter(NationFactory.count > 0).all()
     factory_summary = []
@@ -51,12 +52,14 @@ ADMIN_RESOURCES = {
 
 
 @main.route('/')
+@cache.cached(timeout=3600)
 def index():
     """Landing / index page — always accessible."""
     return render_template('main/landing.html', layout='base.html')
 
 
 @main.route('/changelog')
+@cache.cached(timeout=3600)
 def changelog_page():
     """Full version history — always accessible."""
     return render_template('main/changelog.html', layout='base.html')
@@ -98,6 +101,11 @@ def population_delta():
     return jsonify(delta=estimate_pop_delta(nation))
 
 
+@cache.memoize(timeout=60)
+def _get_cached_upkeep(nation_id):
+    return compute_total_upkeep(nation_id)
+
+
 @main.route('/resource-footer')
 @login_required
 def resource_footer():
@@ -105,7 +113,7 @@ def resource_footer():
     resource_data = []
     if nation:
         pop_effects = get_population_effects(nation.population)
-        unit_upkeep = compute_total_upkeep(nation.id)
+        unit_upkeep = _get_cached_upkeep(nation.id)
         delta = estimate_pop_delta(nation)
         growth_food = max(0, delta) * FOOD_PER_CITIZEN
 

@@ -58,25 +58,34 @@ def process_population_tick():
                                   process_starvation, compute_tier, compute_population_gp)
     from . import db
     with scheduler.app.app_context():
-        nations = Nation.query.all()
-        for nation in nations:
-            # 1. Apply existing resource effects (tax income, consumption)
-            effects = get_population_effects(nation.population)
-            for res, amount in effects.items():
-                new_val = nation.get_resource(res) + amount
-                setattr(nation, res, max(0, new_val))
+        # Batch processing to avoid loading all nations into memory at once
+        batch_size = 100
+        last_id = 0
+        while True:
+            nations = Nation.query.filter(Nation.id > last_id).order_by(Nation.id).limit(batch_size).all()
+            if not nations:
+                break
+            
+            for nation in nations:
+                # 1. Apply existing resource effects (tax income, consumption)
+                effects = get_population_effects(nation.population)
+                for res, amount in effects.items():
+                    new_val = nation.get_resource(res) + amount
+                    setattr(nation, res, max(0, new_val))
 
-            # 2. Population growth (consumes food + cleared land)
-            process_growth(nation)
+                # 2. Population growth (consumes food + cleared land)
+                process_growth(nation)
 
-            # 3. Starvation (population loss when food == 0)
-            process_starvation(nation)
+                # 3. Starvation (population loss when food == 0)
+                process_starvation(nation)
 
-            # 4. Tier auto-update based on new population
-            nation.tier = compute_tier(nation.population)
-            nation.population_gp = compute_population_gp(nation.population)
+                # 4. Tier auto-update based on new population
+                nation.tier = compute_tier(nation.population)
+                nation.population_gp = compute_population_gp(nation.population)
+                
+                last_id = nation.id
 
-        db.session.commit()
+            db.session.commit()
 
 
 def deduct_military_upkeep():
@@ -88,33 +97,50 @@ def deduct_military_upkeep():
         # Exclude the system NPC nation — its divisions are disposable PvE opponents
         npc_user = User.query.filter_by(username='_system_npc').first()
         npc_nation_id = npc_user.nation.id if npc_user and npc_user.nation else None
-        nations = Nation.query.filter(Nation.id != npc_nation_id).all() if npc_nation_id else Nation.query.all()
-        for nation in nations:
-            units = Unit.query.filter_by(nation_id=nation.id).filter(Unit.hp > 0).all()
-            if not units:
-                continue
+        
+        # Batch processing
+        batch_size = 100
+        last_id = 0
+        while True:
+            query = Nation.query.filter(Nation.id > last_id)
+            if npc_nation_id:
+                query = query.filter(Nation.id != npc_nation_id)
+            
+            nations = query.order_by(Nation.id).limit(batch_size).all()
+            if not nations:
+                break
 
-            total_upkeep = compute_total_upkeep(nation.id)
+            for nation in nations:
+                # Optimized compute_total_upkeep uses GROUP BY now
+                total_upkeep = compute_total_upkeep(nation.id)
+                if not total_upkeep:
+                    last_id = nation.id
+                    continue
 
-            # Check if nation can afford
-            can_afford = True
-            for res, amount in total_upkeep.items():
-                if nation.get_resource(res) < amount:
-                    can_afford = False
-                    break
-
-            if can_afford:
+                # Check if nation can afford
+                can_afford = True
                 for res, amount in total_upkeep.items():
-                    nation.add_resource(res, -amount)
-            else:
-                # Attrition: each unit loses 10% max HP
-                for unit in units:
-                    attrition = max(1, unit.max_hp // 10)
-                    floor = unit.max_hp // 5  # 20% of max HP
-                    if unit.hp > floor:
-                        unit.hp = max(floor, unit.hp - attrition)
+                    if nation.get_resource(res) < amount:
+                        can_afford = False
+                        break
 
-        db.session.commit()
+                if can_afford:
+                    for res, amount in total_upkeep.items():
+                        nation.add_resource(res, -amount)
+                else:
+                    # Attrition: each unit loses 10% max HP
+                    # We still have to query all units here for attrition, 
+                    # but only for nations that can't afford upkeep.
+                    units = Unit.query.filter_by(nation_id=nation.id).filter(Unit.hp > 0).all()
+                    for unit in units:
+                        attrition = max(1, unit.max_hp // 10)
+                        floor = unit.max_hp // 5  # 20% of max HP
+                        if unit.hp > floor:
+                            unit.hp = max(floor, unit.hp - attrition)
+                
+                last_id = nation.id
+
+            db.session.commit()
 
 
 def process_factory_queue():
