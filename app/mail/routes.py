@@ -48,7 +48,8 @@ def message_list():
 @login_required
 def read_message(message_id):
     nation = current_user.nation
-    msg = db.session.get(Message, message_id)
+    # Use filter_by because sender doesn't have recipient_id for partitioning
+    msg = Message.query.filter_by(id=message_id).first()
 
     if not msg:
         return error_response('Message not found.')
@@ -130,7 +131,7 @@ def send_message():
 @login_required
 def delete_message(message_id):
     nation = current_user.nation
-    msg = db.session.get(Message, message_id)
+    msg = db.session.get(Message, (message_id, nation.id))
 
     if not msg:
         return error_response('Message not found.')

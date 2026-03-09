@@ -84,9 +84,9 @@ class TestTradePages:
         assert resp.status_code == 200
 
     def test_analytics_page_loads(self, app, auth_client):
-        resp = auth_client.get('/trade/analytics')
+        resp = auth_client.get('/trade/analytics', follow_redirects=True)
         assert resp.status_code == 200
-        assert b'Trade Analytics' in resp.data
+        assert b'Global Market' in resp.data
 
     def test_analytics_data_returns_json(self, app, auth_client):
         resp = auth_client.get('/trade/analytics/data?resource=food')

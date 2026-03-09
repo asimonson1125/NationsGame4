@@ -135,7 +135,7 @@ class TestCombatReport:
         db.session.add(battle)
         db.session.flush()
 
-        report = CombatReport(battle_id=battle.id, message='Test hit for 10 damage!')
+        report = CombatReport(battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id, message='Test hit for 10 damage!')
         db.session.add(report)
         db.session.commit()
 

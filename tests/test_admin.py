@@ -89,7 +89,7 @@ def test_complete_queue_entry(app, admin_client):
         assert resp.status_code == 200
 
         # Entry should be gone
-        assert db.session.get(RecruitmentQueue, entry_id) is None
+        assert db.session.get(RecruitmentQueue, (entry_id, target.id)) is None
         # Unit should exist
         unit = Unit.query.filter_by(nation_id=target.id, unit_key='infantry').first()
         assert unit is not None

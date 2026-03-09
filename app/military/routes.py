@@ -181,7 +181,7 @@ def move_unit(unit_id):
         return _error_response('Unit not found.')
     # Block moves out of mobilized/in-combat divisions
     if unit.division_id:
-        source = db.session.get(Division, unit.division_id)
+        source = db.session.get(Division, (unit.division_id, nation.id))
         if source and source.mobilization_state == 'mobilized':
             return _error_response('Cannot move units out of a mobilized division.')
     target_div_id = request.form.get('division_id', '').strip()
@@ -206,7 +206,7 @@ def disband_unit(unit_id):
     if not unit:
         return _error_response('Unit not found.')
     if unit.division_id:
-        div = db.session.get(Division, unit.division_id)
+        div = db.session.get(Division, (unit.division_id, nation.id))
         if div and div.mobilization_state == 'mobilized':
             return _error_response('Cannot disband units in a mobilized division.')
     udef = UNIT_DEFS.get(unit.unit_key)
@@ -259,7 +259,7 @@ def render_unit_detail(unit, nation):
     # Determine if equippable: reserve or in a demobilized division
     equippable = True
     if unit.division_id:
-        div = db.session.get(Division, unit.division_id)
+        div = db.session.get(Division, (unit.division_id, nation.id))
         if div and div.mobilization_state == 'mobilized':
             equippable = False
 
@@ -529,17 +529,17 @@ def _get_battle_units(battle):
     if battle.status == 'finished' and battle.attacker_snapshot:
         return (_snapshot_to_units(battle.attacker_snapshot),
                 _snapshot_to_units(battle.defender_snapshot))
-    return (Unit.query.filter_by(division_id=battle.attacker_division_id).order_by(Unit.id).all(),
-            Unit.query.filter_by(division_id=battle.defender_division_id).order_by(Unit.id).all())
+    return (Unit.query.filter_by(division_id=battle.attacker_division_id, nation_id=battle.attacker_nation_id).order_by(Unit.id).all(),
+            Unit.query.filter_by(division_id=battle.defender_division_id, nation_id=battle.defender_nation_id).order_by(Unit.id).all())
 
 
 @military.route('/military/battle/<int:battle_id>')
 @login_required
 def battle_view(battle_id):
-    battle = Battle.query.get_or_404(battle_id)
-    reports = CombatReport.query.filter_by(battle_id=battle.id).order_by(
-        CombatReport.id.desc()
-    ).limit(50).all()
+    battle = Battle.query.filter_by(id=battle_id).first_or_404()
+    reports = CombatReport.query.filter_by(
+        battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id
+    ).order_by(CombatReport.id.desc()).limit(50).all()
     attacker_units, defender_units = _get_battle_units(battle)
     nation = current_user.nation
     return render_template(
@@ -575,7 +575,7 @@ def _get_or_create_npc_nation():
 
 def _generate_peacekeeping_opponent(player_division, npc_nation_id):
     """Create a half-strength NPC division mirroring the player's units."""
-    alive_units = Unit.query.filter_by(division_id=player_division.id).filter(Unit.hp > 0).all()
+    alive_units = Unit.query.filter_by(division_id=player_division.id, nation_id=player_division.nation_id).filter(Unit.hp > 0).all()
 
     total_strength = sum(u.effective_firepower + u.effective_armour + u.effective_maneuver for u in alive_units)
     target = total_strength / 2
@@ -643,10 +643,10 @@ def deploy_peacekeeping(div_id):
 @military.route('/military/battle/<int:battle_id>/status')
 @login_required
 def battle_status(battle_id):
-    battle = Battle.query.get_or_404(battle_id)
-    reports = CombatReport.query.filter_by(battle_id=battle.id).order_by(
-        CombatReport.id.desc()
-    ).limit(50).all()
+    battle = Battle.query.filter_by(id=battle_id).first_or_404()
+    reports = CombatReport.query.filter_by(
+        battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id
+    ).order_by(CombatReport.id.desc()).limit(50).all()
     attacker_units, defender_units = _get_battle_units(battle)
     return render_template(
         'military/partials/battle_status.html',
@@ -662,7 +662,7 @@ def battle_status(battle_id):
 @login_required
 def battle_unit_detail(battle_id, side, index):
     """Unit detail popup for battle view — always renders from snapshot data."""
-    battle = Battle.query.get_or_404(battle_id)
+    battle = Battle.query.filter_by(id=battle_id).first_or_404()
 
     if side not in ('attacker', 'defender'):
         return _error_response('Invalid side.')

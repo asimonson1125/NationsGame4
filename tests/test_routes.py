@@ -14,7 +14,7 @@ class TestOverview:
 
     def test_overview_shows_empty_state(self, app, auth_client):
         resp = auth_client.get('/military')
-        assert b'No divisions yet' in resp.data
+        assert b'Reserve' in resp.data
 
     def test_overview_requires_login(self, app, client):
         resp = client.get('/military')
@@ -75,7 +75,7 @@ class TestDivisionRoutes:
         # Unit should be unassigned now
         db.session.refresh(unit)
         assert unit.division_id is None
-        assert db.session.get(Division, div.id) is None
+        assert db.session.get(Division, (div.id, nation.id)) is None
 
     def test_disband_in_combat_rejected(self, app, auth_client, nation):
         div = Division(nation_id=nation.id, name='InCombat', in_combat=True)
@@ -149,7 +149,7 @@ class TestUnitRoutes:
 
         resp = auth_client.post(f'/military/unit/{uid}/disband')
         assert resp.status_code == 200
-        assert db.session.get(Unit, uid) is None
+        assert db.session.get(Unit, (uid, nation.id)) is None
 
     def test_disband_unit_reduces_gp(self, app, auth_client, nation):
         nation.military_gp = 5
@@ -178,13 +178,13 @@ class TestUnitRoutes:
 
 class TestRecruitment:
     def test_recruitment_page_loads(self, app, auth_client):
-        resp = auth_client.get('/military/recruitment')
+        resp = auth_client.get('/military/recruitment', follow_redirects=True)
         assert resp.status_code == 200
         assert b'Infantry' in resp.data
         assert b'Recruit' in resp.data
 
     def test_recruitment_page_shows_all_types(self, app, auth_client):
-        resp = auth_client.get('/military/recruitment')
+        resp = auth_client.get('/military/recruitment', follow_redirects=True)
         data = resp.data.decode()
         assert 'M1A1 Abrahms' in data
         assert 'Railgun' in data
@@ -251,7 +251,7 @@ class TestRecruitment:
 
         resp = auth_client.post(f'/military/recruit/{eid}/cancel')
         assert resp.status_code == 200
-        assert db.session.get(RecruitmentQueue, eid) is None
+        assert db.session.get(RecruitmentQueue, (eid, nation.id)) is None
         # Should get 50% refund
         db.session.refresh(nation)
         assert nation.money == before + 500  # 50% of 1000

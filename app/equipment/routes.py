@@ -223,8 +223,8 @@ def equip_item():
     if not eq_id or not unit_id:
         return _error_response('Missing equipment or unit ID.')
 
-    eq = db.session.get(Equipment, eq_id)
-    unit = db.session.get(Unit, unit_id)
+    eq = db.session.get(Equipment, (eq_id, nation.id))
+    unit = db.session.get(Unit, (unit_id, nation.id))
 
     if not eq or eq.nation_id != nation.id:
         return _error_response('Equipment not found.')
@@ -277,7 +277,7 @@ def equip_item():
 @login_required
 def unequip_item(unit_id, slot):
     nation = current_user.nation
-    unit = db.session.get(Unit, unit_id)
+    unit = db.session.get(Unit, (unit_id, nation.id))
 
     if not unit or unit.nation_id != nation.id:
         return _error_response('Unit not found.')

@@ -1,5 +1,8 @@
 import os
+from dotenv import load_dotenv
 
+# Load .env file if it exists
+load_dotenv()
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -7,16 +10,30 @@ class Config:
     SCHEDULER_API_ENABLED = False
     CACHE_DEFAULT_TIMEOUT = 300
 
-
 class DevelopmentConfig(Config):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///ng4_dev.db')
+    # Default to localhost:5433 if not inside container
+    _user = os.environ.get('POSTGRES_USER', 'ng4')
+    _pw = os.environ.get('POSTGRES_PASSWORD', 'ng4')
+    _db = os.environ.get('POSTGRES_DB', 'ng4')
+    _port = os.environ.get('POSTGRES_PORT', '5433')
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        'DATABASE_URL', 
+        f'postgresql://{_user}:{_pw}@localhost:{_port}/{_db}'
+    )
     CACHE_TYPE = 'SimpleCache'
 
 
 class ProductionConfig(Config):
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    _user = os.environ.get('POSTGRES_USER', 'ng4')
+    _pw = os.environ.get('POSTGRES_PASSWORD', 'ng4')
+    _db = os.environ.get('POSTGRES_DB', 'ng4')
+    _port = os.environ.get('POSTGRES_PORT', '5433')
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        'DATABASE_URL', 
+        f'postgresql://{_user}:{_pw}@localhost:{_port}/{_db}'
+    )
     CACHE_TYPE = os.environ.get('CACHE_TYPE', 'RedisCache')
     CACHE_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
@@ -25,8 +42,19 @@ class TestingConfig(Config):
     TESTING = True
     DEBUG = False
     WTF_CSRF_ENABLED = False
-    SQLALCHEMY_DATABASE_URI = 'sqlite://'  # in-memory
+    # Use individual variables to construct test DB URI
+    _user = os.environ.get('POSTGRES_USER', 'ng4')
+    _pw = os.environ.get('POSTGRES_PASSWORD', 'ng4')
+    _port = os.environ.get('POSTGRES_PORT', '5433')
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        'TEST_DATABASE_URL',
+        f'postgresql://{_user}:{_pw}@localhost:{_port}/ng4_test'
+    )
     CACHE_TYPE = 'SimpleCache'
+    
+    # Ensure DB_PARTITIONS is set for tests
+    if 'DB_PARTITIONS' not in os.environ:
+        os.environ['DB_PARTITIONS'] = '2'
 
 
 config = {

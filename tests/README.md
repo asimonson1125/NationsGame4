@@ -44,7 +44,7 @@ python3 -m pytest tests/ --tb=short
 
 ## Notes
 
-- Tests use an **in-memory SQLite database** — the dev DB is never touched.
+- Tests use a **PostgreSQL database** (configured via `TestingConfig` in `config.py`) — the dev DB is never touched.
 - Each test rolls back its transaction so tests are isolated.
 - CSRF is disabled in the test app config.
 - The `auth_client` fixture provides a pre-authenticated test client with a nation that has plenty of resources.

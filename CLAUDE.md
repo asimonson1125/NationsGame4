@@ -11,11 +11,11 @@ python3 run.py init-db  # create DB tables (first run only)
 
 No `python` binary — always use `python3`/`pip3` on this machine.
 
-The SQLite DB (`ng4.db`) is created in the project root on first run via `db.create_all()` in `run.py`. No migrations are used; schema changes require dropping and recreating the DB in development.
+PostgreSQL is required for all environments. Schema is initialized via `python3 run.py init-db`, which also creates the necessary hash partitions. Schema changes require dropping and recreating the DB in development.
 
 ## Architecture
 
-**Stack:** Flask + SQLAlchemy (SQLite dev / PostgreSQL prod) + HTMX + Alpine.js + Tailwind CSS. No build step — all JS/CSS are CDN-loaded.
+**Stack:** Flask + SQLAlchemy (PostgreSQL with Partitioning) + HTMX + Alpine.js + Tailwind CSS. No build step — all JS/CSS are CDN-loaded.
 
 **App factory:** `app/__init__.py` — registers blueprints, Jinja2 filter `format_resource`, Flask-APScheduler (hourly production tick), Flask-Login.
 

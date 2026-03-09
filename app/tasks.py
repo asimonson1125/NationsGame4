@@ -175,15 +175,16 @@ def cleanup_pve_battles():
 
         for battle in old_pve:
             npc_div_id = battle.defender_division_id
+            npc_nation_id = battle.defender_nation_id
 
             # Delete combat reports and battle first (removes FK references to division)
-            CombatReport.query.filter_by(battle_id=battle.id).delete()
-            Battle.query.filter_by(id=battle.id).delete()
+            CombatReport.query.filter_by(battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id).delete()
+            Battle.query.filter_by(id=battle.id, attacker_nation_id=battle.attacker_nation_id).delete()
             db.session.flush()
 
             # Now safe to delete the NPC division and its units
-            Unit.query.filter_by(division_id=npc_div_id).delete()
-            Division.query.filter_by(id=npc_div_id).delete()
+            Unit.query.filter_by(division_id=npc_div_id, nation_id=npc_nation_id).delete()
+            Division.query.filter_by(id=npc_div_id, nation_id=npc_nation_id).delete()
 
         if old_pve:
             db.session.commit()
@@ -212,4 +213,5 @@ def register_tasks(app):
     scheduler.add_job(id='cleanup_pve', func=cleanup_pve_battles,
                       trigger='cron', hour=0, minute=0)
 
-    scheduler.start()
+    if not scheduler.running:
+        scheduler.start()

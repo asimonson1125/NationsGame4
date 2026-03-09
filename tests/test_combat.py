@@ -32,6 +32,22 @@ class FakeUnit:
         self.accessory = None
         self.armour_eq = None
 
+    @property
+    def effective_firepower(self):
+        return self.firepower
+
+    @property
+    def effective_armour(self):
+        return self.armour
+
+    @property
+    def effective_maneuver(self):
+        return self.maneuver
+
+    @property
+    def equipment_items(self):
+        return []
+
 
 # ── Ability parser tests ─────────────────────────────────────────────────
 

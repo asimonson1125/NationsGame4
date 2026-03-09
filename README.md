@@ -2,7 +2,7 @@
 
 A browser-based nation-building simulator. Players manage resources, industry, land, and military across five continents.
 
-**Stack:** Flask · SQLAlchemy (SQLite dev / PostgreSQL prod) · HTMX · Alpine.js · Tailwind CSS · Flask-Caching (SimpleCache dev / Redis prod)
+**Stack:** Flask · SQLAlchemy (PostgreSQL with Partitioning) · HTMX · Alpine.js · Tailwind CSS · Flask-Caching (SimpleCache dev / Redis prod)
 
 ---
 
@@ -17,7 +17,22 @@ python3 run.py                     # dev server (debug, auto-reload)
 
 No `python` binary on this machine — always use `python3` / `pip3`.
 
-The SQLite DB (`ng4.db`) is created in the project root. No migrations — schema changes require a DB drop/recreate in development.
+Local development requires a PostgreSQL instance. The application uses declarative hash partitioning for scalability.
+
+1.  **Start PostgreSQL:** Ensure a DB named `ng4` exists.
+2.  **Initialize:** `python3 run.py init-db` (creates tables and 16 hash partitions).
+3.  **Run:** `python3 run.py`.
+
+## Testing
+
+```bash
+pytest tests/
+```
+
+**Note:** Tests require a running PostgreSQL instance. The test runner will:
+1.  Automatically create a database named `ng4_test` if it doesn't exist.
+2.  Initialize the schema and create 2 hash partitions for each partitioned table (military, trade, etc.) before each test run.
+3.  Wipe the test data after each test.
 
 ### Tailwind CSS
 
@@ -36,7 +51,7 @@ The built file lives at `app/static/css/style.css`. Source styles are in `app/st
 
 ### Flask Shell
 
-Use the Flask shell to manually modify the database using SQLAlchemy models. This works in both development (SQLite) and production (PostgreSQL).
+Use the Flask shell to manually modify the database using SQLAlchemy models. This works in both local development and production (PostgreSQL).
 
 **Local Development:**
 ```bash
@@ -114,11 +129,12 @@ Point Nginx (or another reverse proxy) at `localhost:8000` using the provided `n
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `SECRET_KEY` | Yes | — | Flask session secret |
-| `DATABASE_URL` | Yes (prod) | `sqlite:///ng4_dev.db` | SQLAlchemy connection string |
+| `DATABASE_URL` | Yes (prod) | `postgresql://ng4:ng4@localhost:5432/ng4` | SQLAlchemy connection string |
 | `REDIS_URL` | No | `redis://localhost:6379/0` | Flask-Caching Redis backend |
 | `CACHE_TYPE` | No | `RedisCache` | Cache backend (`SimpleCache` or `RedisCache`) |
 | `WEB_CONCURRENCY` | No | `4` | Gunicorn worker count |
 | `POSTGRES_DB` | Docker only | `ng4` | PostgreSQL database name |
+| `POSTGRES_PORT`| No | `5433` | Host port for local development |
 | `POSTGRES_USER` | Docker only | `ng4` | PostgreSQL user |
 | `POSTGRES_PASSWORD` | Docker only | — | PostgreSQL password |
 | `HOST_PORT` | Docker only | `80` | Host port mapped to Nginx |

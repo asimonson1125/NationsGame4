@@ -231,9 +231,6 @@ def update_growth_rate():
 
 VALID_CONTINENTS = {'Westberg', 'Amarino', 'San Sebastian', 'Tind', 'Zaheria'}
 
-_GP_EXPR = (Nation.population_gp + Nation.land_gp + Nation.factory_gp
-            + Nation.building_gp + Nation.military_gp)
-
 
 @main.route('/leaderboard')
 @login_required
@@ -250,7 +247,7 @@ def leaderboard_table():
     if continent in VALID_CONTINENTS:
         query = query.filter(Nation.continent == continent)
         continent_label = continent
-    nations = query.order_by(_GP_EXPR.desc()).limit(100).all()
+    nations = query.order_by(Nation.total_gp.desc()).limit(100).all()
     return render_template('main/partials/leaderboard_table.html',
                            nations=nations, current_nation=current_user.nation,
                            continent_label=continent_label)
@@ -266,7 +263,7 @@ def leaderboard_search():
                                query='', results=[])
     results = (nation_search_query(q, search_leader=True)
                .options(db.joinedload(Nation.alliance))
-               .order_by(_GP_EXPR.desc())
+               .order_by(Nation.total_gp.desc())
                .limit(50).all())
     return render_template('main/partials/leaderboard_search.html',
                            query=q, results=results)
@@ -362,7 +359,7 @@ def admin_complete_queue(nation_id, entry_id):
     if not nation:
         return _error_response('Nation not found.')
 
-    entry = db.session.get(RecruitmentQueue, entry_id)
+    entry = db.session.get(RecruitmentQueue, (entry_id, nation.id))
     if not entry or entry.nation_id != nation.id:
         return _error_response('Queue entry not found.')
 

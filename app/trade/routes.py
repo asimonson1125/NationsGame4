@@ -293,7 +293,7 @@ def cancel_order(order_id):
     if not nation:
         return error_response('No nation found.')
 
-    order = db.session.get(TradeOrder, order_id)
+    order = db.session.get(TradeOrder, (order_id, nation.id))
     if not order or order.nation_id != nation.id:
         return error_response('Order not found.')
     if order.status != 'open':

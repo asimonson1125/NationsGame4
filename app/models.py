@@ -40,11 +40,12 @@ class Nation(db.Model):
     building_gp = db.Column(db.BigInteger, default=0, index=True)
     military_gp = db.Column(db.BigInteger, default=0, index=True)
 
-    # Add composite index for the leaderboard total GP calculation
-    __table_args__ = (
-        db.Index('idx_nations_total_gp',
-                 (population_gp + land_gp + factory_gp + building_gp + military_gp).desc()),
-    )
+    # Stored Generated Column for Total GP (PostgreSQL 12+)
+    # This automatically updates and can be indexed normally.
+    total_gp = db.Column(db.BigInteger, db.Computed(
+        "population_gp + land_gp + factory_gp + building_gp + military_gp",
+        persisted=True
+    ), index=True)
 
     # Core resources
     money = db.Column(db.Float, default=10_000.0)
@@ -75,15 +76,15 @@ class Nation(db.Model):
     # Loot tokens (for equipment crates)
     loot_tokens = db.Column(db.Float, default=0.0)
 
-    natural_resources = db.relationship('NaturalResource', backref='nation_ref', lazy='dynamic')
-    factories = db.relationship('NationFactory', backref='nation_ref', lazy='dynamic')
-    divisions = db.relationship('Division', backref='nation_ref', lazy='dynamic')
-    units = db.relationship('Unit', backref='nation_ref', lazy='dynamic')
-    recruitment_queue = db.relationship('RecruitmentQueue', backref='nation_ref', lazy='dynamic')
-    build_queue = db.relationship('FactoryBuildQueue', backref='nation_ref', lazy='dynamic')
-    equipment = db.relationship('Equipment', backref='nation_ref', lazy='dynamic')
-    trade_orders = db.relationship('TradeOrder', backref='nation_ref', lazy='dynamic')
-    messages_received = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient_nation', lazy='dynamic')
+    natural_resources = db.relationship('NaturalResource', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
+    factories = db.relationship('NationFactory', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
+    divisions = db.relationship('Division', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
+    units = db.relationship('Unit', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
+    recruitment_queue = db.relationship('RecruitmentQueue', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
+    build_queue = db.relationship('FactoryBuildQueue', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
+    equipment = db.relationship('Equipment', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
+    trade_orders = db.relationship('TradeOrder', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
+    messages_received = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient_nation', lazy='dynamic', overlaps="recipient,recipient_nation")
 
     def get_resource(self, key):
         return getattr(self, key, 0) or 0
@@ -91,29 +92,30 @@ class Nation(db.Model):
     def add_resource(self, key, amount):
         setattr(self, key, self.get_resource(key) + amount)
 
-    @property
-    def total_gp(self):
-        return (self.population_gp + self.land_gp + self.factory_gp
-                + self.building_gp + self.military_gp)
-
 
 class NaturalResource(db.Model):
     __tablename__ = 'natural_resources'
-    id = db.Column(db.Integer, primary_key=True)
-    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), primary_key=True)
     resource_key = db.Column(db.String(50), nullable=False)
     amount = db.Column(db.Integer, default=0)
-    __table_args__ = (db.UniqueConstraint('nation_id', 'resource_key'),)
+    __table_args__ = (
+        db.UniqueConstraint('nation_id', 'resource_key'),
+        {'postgresql_partition_by': 'HASH (nation_id)'}
+    )
 
 
 class NationFactory(db.Model):
     __tablename__ = 'nation_factories'
-    id = db.Column(db.Integer, primary_key=True)
-    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), primary_key=True)
     factory_key = db.Column(db.String(50), nullable=False)
     count = db.Column(db.Integer, default=0)
     production_capacity = db.Column(db.Integer, default=0)
-    __table_args__ = (db.UniqueConstraint('nation_id', 'factory_key'),)
+    __table_args__ = (
+        db.UniqueConstraint('nation_id', 'factory_key'),
+        {'postgresql_partition_by': 'HASH (nation_id)'}
+    )
 
 
 class User(UserMixin, db.Model):
@@ -137,21 +139,22 @@ class User(UserMixin, db.Model):
 
 class Division(db.Model):
     __tablename__ = 'divisions'
-    id = db.Column(db.Integer, primary_key=True)
-    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), primary_key=True)
     name = db.Column(db.String(120), nullable=False, default='New Division')
     mobilization_state = db.Column(db.String(20), default='demobilized')  # demobilized|mobilizing|mobilized
     in_combat = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    __table_args__ = ({'postgresql_partition_by': 'HASH (nation_id)'},)
 
-    units = db.relationship('Unit', backref='division_ref', lazy='dynamic', order_by='Unit.id')
+    units = db.relationship('Unit', backref=db.backref('division_ref', overlaps="nation_ref,units"), lazy='dynamic', order_by='Unit.id', overlaps="division_ref,nation_ref,units")
 
 
 class Unit(db.Model):
     __tablename__ = 'units'
-    id = db.Column(db.Integer, primary_key=True)
-    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
-    division_id = db.Column(db.Integer, db.ForeignKey('divisions.id'), nullable=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), primary_key=True)
+    division_id = db.Column(db.Integer, nullable=True)
     unit_key = db.Column(db.String(50), nullable=False)
     custom_name = db.Column(db.String(120), default='')
     level = db.Column(db.Integer, default=1)
@@ -161,13 +164,21 @@ class Unit(db.Model):
     maneuver = db.Column(db.Integer, default=0)
     hp = db.Column(db.Integer, default=0)
     max_hp = db.Column(db.Integer, default=0)
-    weapon_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=True)
-    accessory_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=True)
-    armour_eq_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=True)
+    weapon_id = db.Column(db.Integer, nullable=True)
+    accessory_id = db.Column(db.Integer, nullable=True)
+    armour_eq_id = db.Column(db.Integer, nullable=True)
 
-    weapon = db.relationship('Equipment', foreign_keys=[weapon_id])
-    accessory = db.relationship('Equipment', foreign_keys=[accessory_id])
-    armour_eq = db.relationship('Equipment', foreign_keys=[armour_eq_id])
+    __table_args__ = (
+        db.ForeignKeyConstraint(['division_id', 'nation_id'], ['divisions.id', 'divisions.nation_id']),
+        db.ForeignKeyConstraint(['weapon_id', 'nation_id'], ['equipment.id', 'equipment.nation_id']),
+        db.ForeignKeyConstraint(['accessory_id', 'nation_id'], ['equipment.id', 'equipment.nation_id']),
+        db.ForeignKeyConstraint(['armour_eq_id', 'nation_id'], ['equipment.id', 'equipment.nation_id']),
+        {'postgresql_partition_by': 'HASH (nation_id)'}
+    )
+
+    weapon = db.relationship('Equipment', primaryjoin="and_(Unit.weapon_id==Equipment.id, Unit.nation_id==Equipment.nation_id)", overlaps="units,division_ref,nation_ref")
+    accessory = db.relationship('Equipment', primaryjoin="and_(Unit.accessory_id==Equipment.id, Unit.nation_id==Equipment.nation_id)", overlaps="units,division_ref,nation_ref,weapon")
+    armour_eq = db.relationship('Equipment', primaryjoin="and_(Unit.armour_eq_id==Equipment.id, Unit.nation_id==Equipment.nation_id)", overlaps="units,division_ref,nation_ref,accessory,weapon")
 
     @classmethod
     def create_from_def(cls, nation_id, unit_key, **overrides):
@@ -221,32 +232,34 @@ class Unit(db.Model):
 
 class RecruitmentQueue(db.Model):
     __tablename__ = 'recruitment_queue'
-    id = db.Column(db.Integer, primary_key=True)
-    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), primary_key=True)
     unit_key = db.Column(db.String(50), nullable=False)
     started_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     completes_at = db.Column(db.DateTime, nullable=False)
+    __table_args__ = ({'postgresql_partition_by': 'HASH (nation_id)'},)
 
 
 class FactoryBuildQueue(db.Model):
     __tablename__ = 'factory_build_queue'
-    id = db.Column(db.Integer, primary_key=True)
-    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), primary_key=True)
     factory_key = db.Column(db.String(50), nullable=False)
     quantity = db.Column(db.Integer, default=1)
     started_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     completes_at = db.Column(db.DateTime, nullable=False)
+    __table_args__ = ({'postgresql_partition_by': 'HASH (nation_id)'},)
 
 
 class Battle(db.Model):
     __tablename__ = 'battles'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    attacker_nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), primary_key=True)
+    defender_nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
     attacker_division_id = db.Column(db.Integer, nullable=True)
     defender_division_id = db.Column(db.Integer, nullable=True)
     attacker_division_name = db.Column(db.String(120), nullable=True)
     defender_division_name = db.Column(db.String(120), nullable=True)
-    attacker_nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
-    defender_nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
     status = db.Column(db.String(20), default='active')  # active|finished
     winner = db.Column(db.String(20), nullable=True)      # attacker|defender|null
     battle_type = db.Column(db.String(10), default='pvp')  # pvp|pve
@@ -255,25 +268,33 @@ class Battle(db.Model):
     attacker_snapshot = db.Column(db.Text, nullable=True)  # JSON unit state at battle end
     defender_snapshot = db.Column(db.Text, nullable=True)  # JSON unit state at battle end
 
+    __table_args__ = ({'postgresql_partition_by': 'HASH (attacker_nation_id)'},)
+
     attacker_nation = db.relationship('Nation', foreign_keys=[attacker_nation_id])
     defender_nation = db.relationship('Nation', foreign_keys=[defender_nation_id])
-    reports = db.relationship('CombatReport', backref='battle_ref', lazy='dynamic',
+    reports = db.relationship('CombatReport', primaryjoin="and_(Battle.id==CombatReport.battle_id, Battle.attacker_nation_id==CombatReport.attacker_nation_id)", backref='battle_ref', lazy='dynamic',
                               order_by='CombatReport.created_at')
 
 
 class CombatReport(db.Model):
     __tablename__ = 'combat_reports'
-    id = db.Column(db.Integer, primary_key=True)
-    battle_id = db.Column(db.Integer, db.ForeignKey('battles.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    attacker_nation_id = db.Column(db.Integer, primary_key=True)
+    battle_id = db.Column(db.Integer, nullable=False)
     message = db.Column(db.Text, nullable=False)
     details = db.Column(db.Text, nullable=True)  # JSON breakdown of combat calc
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
+    __table_args__ = (
+        db.ForeignKeyConstraint(['battle_id', 'attacker_nation_id'], ['battles.id', 'battles.attacker_nation_id']),
+        {'postgresql_partition_by': 'HASH (attacker_nation_id)'}
+    )
+
 
 class Equipment(db.Model):
     __tablename__ = 'equipment'
-    id = db.Column(db.Integer, primary_key=True)
-    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), primary_key=True)
     equipment_type = db.Column(db.String(50), nullable=False)  # e.g. "Infantry Weapon"
     rarity = db.Column(db.String(20), nullable=False, default='Common')
     is_foil = db.Column(db.Boolean, default=False)
@@ -284,6 +305,7 @@ class Equipment(db.Model):
 
     __table_args__ = (
         db.UniqueConstraint('nation_id', 'equipment_type', 'rarity', 'is_foil', 'buff_hash'),
+        {'postgresql_partition_by': 'HASH (nation_id)'}
     )
 
     @property
@@ -294,8 +316,8 @@ class Equipment(db.Model):
 
 class TradeOrder(db.Model):
     __tablename__ = 'trade_orders'
-    id = db.Column(db.Integer, primary_key=True)
-    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), primary_key=True)
     resource_key = db.Column(db.String(50), nullable=False)
     resource_type = db.Column(db.String(10), nullable=False)   # commodity | natural
     order_type = db.Column(db.String(4), nullable=False)       # buy | sell
@@ -304,12 +326,13 @@ class TradeOrder(db.Model):
     quantity_filled = db.Column(db.Integer, default=0)
     status = db.Column(db.String(10), default='open')          # open | filled | cancelled
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    __table_args__ = ({'postgresql_partition_by': 'HASH (nation_id)'},)
 
 
 class TradeExecution(db.Model):
     __tablename__ = 'trade_executions'
-    id = db.Column(db.Integer, primary_key=True)
-    buyer_nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    buyer_nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), primary_key=True)
     seller_nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
     resource_key = db.Column(db.String(50), nullable=False)
     resource_type = db.Column(db.String(10), nullable=False)
@@ -318,6 +341,7 @@ class TradeExecution(db.Model):
     total_cost = db.Column(db.Float, nullable=False)
     fee = db.Column(db.Float, nullable=False)
     executed_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    __table_args__ = ({'postgresql_partition_by': 'HASH (buyer_nation_id)'},)
 
     buyer_nation = db.relationship('Nation', foreign_keys=[buyer_nation_id])
     seller_nation = db.relationship('Nation', foreign_keys=[seller_nation_id])
@@ -325,14 +349,15 @@ class TradeExecution(db.Model):
 
 class Message(db.Model):
     __tablename__ = 'messages'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    recipient_id = db.Column(db.Integer, db.ForeignKey('nations.id'), primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=True)  # null = system
-    recipient_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
     subject = db.Column(db.String(200), nullable=False)
     body = db.Column(db.Text, nullable=False)
     message_type = db.Column(db.String(20), default='player')  # 'system' | 'player'
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    __table_args__ = ({'postgresql_partition_by': 'HASH (recipient_id)'},)
 
     sender = db.relationship('Nation', foreign_keys=[sender_id])
     recipient = db.relationship('Nation', foreign_keys=[recipient_id], overlaps='messages_received,recipient_nation')

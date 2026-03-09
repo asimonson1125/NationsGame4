@@ -443,8 +443,8 @@ def process_battle_round(battle, db_session):
     defender_continent = getattr(battle.defender_nation, 'continent', '') or ''
 
     # Query ALL units (including dead) to build stable indices, then filter alive
-    all_atk = Unit.query.filter_by(division_id=battle.attacker_division_id).order_by(Unit.id).all()
-    all_def = Unit.query.filter_by(division_id=battle.defender_division_id).order_by(Unit.id).all()
+    all_atk = Unit.query.filter_by(division_id=battle.attacker_division_id, nation_id=battle.attacker_nation_id).order_by(Unit.id).all()
+    all_def = Unit.query.filter_by(division_id=battle.defender_division_id, nation_id=battle.defender_nation_id).order_by(Unit.id).all()
     attacker_units = [u for u in all_atk if u.hp > 0]
     defender_units = [u for u in all_def if u.hp > 0]
 
@@ -474,7 +474,7 @@ def process_battle_round(battle, db_session):
         _end_battle(battle, db_session)
         msg = f"Battle over! Defender ({battle.defender_nation.name}) wins!"
         reports.append(msg)
-        db_session.add(CombatReport(battle_id=battle.id, message=msg, created_at=now))
+        db_session.add(CombatReport(battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id, message=msg, created_at=now))
         return reports
 
     if not defender_units:
@@ -484,7 +484,7 @@ def process_battle_round(battle, db_session):
         _end_battle(battle, db_session)
         msg = f"Battle over! Attacker ({battle.attacker_nation.name}) wins!"
         reports.append(msg)
-        db_session.add(CombatReport(battle_id=battle.id, message=msg, created_at=now))
+        db_session.add(CombatReport(battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id, message=msg, created_at=now))
         return reports
 
     # Retreat check — weaker side flees if strength < opponent / 3
@@ -498,7 +498,7 @@ def process_battle_round(battle, db_session):
         _end_battle(battle, db_session)
         msg = f"Defender retreats! {battle.attacker_nation.name} wins!"
         reports.append(msg)
-        db_session.add(CombatReport(battle_id=battle.id, message=msg, created_at=now))
+        db_session.add(CombatReport(battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id, message=msg, created_at=now))
         return reports
 
     if atk_str < def_str / 3 and random.random() < 0.5:
@@ -508,7 +508,7 @@ def process_battle_round(battle, db_session):
         _end_battle(battle, db_session)
         msg = f"Attacker retreats! {battle.defender_nation.name} wins!"
         reports.append(msg)
-        db_session.add(CombatReport(battle_id=battle.id, message=msg, created_at=now))
+        db_session.add(CombatReport(battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id, message=msg, created_at=now))
         return reports
 
     # Select initiative winner from the combined pool
@@ -571,7 +571,7 @@ def process_battle_round(battle, db_session):
         msg += f" — {target_name} has been destroyed!"
 
     reports.append(msg)
-    db_session.add(CombatReport(battle_id=battle.id, message=msg, details=details_json, created_at=now))
+    db_session.add(CombatReport(battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id, message=msg, details=details_json, created_at=now))
 
     if target.hp <= 0:
         # Check if the opposing side is wiped out — end battle immediately
@@ -589,7 +589,7 @@ def process_battle_round(battle, db_session):
             _end_battle(battle, db_session)
             msg = f"Battle over! {winner_nation.name} wins!"
             reports.append(msg)
-            db_session.add(CombatReport(battle_id=battle.id, message=msg, created_at=now))
+            db_session.add(CombatReport(battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id, message=msg, created_at=now))
 
     # XP for the initiative winner
     init_unit.xp += 1
@@ -674,7 +674,7 @@ def _destroy_unit_equipment(unit, db_session):
     from ..models import Equipment
     for eq_id in (unit.weapon_id, unit.accessory_id, unit.armour_eq_id):
         if eq_id:
-            eq = db_session.get(Equipment, eq_id)
+            eq = db_session.get(Equipment, (eq_id, unit.nation_id))
             if eq:
                 eq.count -= 1
                 if eq.count <= 0:
@@ -799,8 +799,8 @@ def _end_battle(battle, db_session):
     from ..models import Division, Unit, Nation
 
     # Snapshot both sides' units before anything changes
-    atk_units = Unit.query.filter_by(division_id=battle.attacker_division_id).order_by(Unit.id).all()
-    def_units = Unit.query.filter_by(division_id=battle.defender_division_id).order_by(Unit.id).all()
+    atk_units = Unit.query.filter_by(division_id=battle.attacker_division_id, nation_id=battle.attacker_nation_id).order_by(Unit.id).all()
+    def_units = Unit.query.filter_by(division_id=battle.defender_division_id, nation_id=battle.defender_nation_id).order_by(Unit.id).all()
     battle.attacker_snapshot = json.dumps(_snapshot_units(atk_units))
     battle.defender_snapshot = json.dumps(_snapshot_units(def_units))
 
@@ -826,7 +826,7 @@ def _end_battle(battle, db_session):
         # Delete all NPC units and the NPC division — no FK constraint on division IDs
         for unit in def_units:
             db_session.delete(unit)
-        def_div = db_session.get(Division, battle.defender_division_id)
+        def_div = db_session.get(Division, (battle.defender_division_id, battle.defender_nation_id))
         if def_div:
             db_session.delete(def_div)
     else:
@@ -840,10 +840,10 @@ def _end_battle(battle, db_session):
                 db_session.delete(unit)
             else:
                 unit.hp = unit.effective_max_hp
-        def_div = db_session.get(Division, battle.defender_division_id)
+        def_div = db_session.get(Division, (battle.defender_division_id, battle.defender_nation_id))
         if def_div:
             def_div.in_combat = False
 
-    atk_div = db_session.get(Division, battle.attacker_division_id)
+    atk_div = db_session.get(Division, (battle.attacker_division_id, battle.attacker_nation_id))
     if atk_div:
         atk_div.in_combat = False

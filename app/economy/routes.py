@@ -307,7 +307,6 @@ def build_factory():
     _deduct_cost(nation, total_cost)
 
     # Queue the build instead of instant completion
-    # Use naive UTC datetimes — SQLite doesn't store timezone info
     now = datetime.now(timezone.utc)
     new_completes_at = now + timedelta(minutes=fdef.build_time)
 

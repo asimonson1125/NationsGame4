@@ -278,7 +278,7 @@ class TestTradeIn:
         eq = _make_equipment(nation, rarity='Uncommon')
         eq_id = eq.id
         auth_client.post('/equipment/trade-in', data={'ids': str(eq_id)})
-        assert db.session.get(Equipment, eq_id) is None
+        assert db.session.get(Equipment, (eq_id, nation.id)) is None
 
     def test_trade_in_stack_decrements_count(self, app, auth_client, nation):
         """Trading a stack with equipped copies should decrement count, not delete."""
@@ -303,7 +303,7 @@ class TestTradeIn:
         trigger = json.loads(resp.headers.get('HX-Trigger', '{}'))
         assert 'equipped' in trigger['showMessage']['message'].lower()
         # Item should still exist
-        assert db.session.get(Equipment, eq.id) is not None
+        assert db.session.get(Equipment, (eq.id, nation.id)) is not None
 
     def test_trade_in_empty_selection(self, app, auth_client, nation):
         resp = auth_client.post('/equipment/trade-in', data={'ids': ''})
@@ -332,7 +332,7 @@ class TestTradeIn:
         db.session.refresh(nation)
         assert nation.loot_tokens == 0
         # Other nation's item still exists
-        assert db.session.get(Equipment, eq.id) is not None
+        assert db.session.get(Equipment, (eq.id, n2.id)) is not None
 
 
 # ── Equip ─────────────────────────────────────────────────────────────────
@@ -475,7 +475,7 @@ class TestUnequip:
         db.session.commit()
 
         auth_client.post(f'/equipment/unequip/{unit.id}/weapon')
-        assert db.session.get(Equipment, eq.id) is not None
+        assert db.session.get(Equipment, (eq.id, nation.id)) is not None
 
 
 # ── Stacking ─────────────────────────────────────────────────────────────
@@ -517,7 +517,7 @@ class TestStacking:
         auth_client.post('/equipment/trade-in', data={'ids': str(eq_id)})
         db.session.refresh(nation)
         assert nation.loot_tokens == 15  # 5 per copy * 3
-        assert db.session.get(Equipment, eq_id) is None
+        assert db.session.get(Equipment, (eq_id, nation.id)) is None
 
     def test_trade_in_partial_stack(self, app, auth_client, nation):
         """Trade-in with some copies equipped decrements count."""
