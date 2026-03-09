@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ msg.subject }} — Mail{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-4xl mx-auto">
+
+    {# Back link #}
+    <a href="{{ url_for('mail.inbox') }}" class="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors mb-4">
+        <i class="fas fa-arrow-left text-xs"></i> Back to Mail
+    </a>
+
+    <div class="bg-slate-800 rounded-lg border border-slate-700">
+        {# Header #}
+        <div class="px-5 py-4 border-b border-slate-700">
+            <h1 class="text-lg font-semibold text-slate-100 mb-2">{{ msg.subject }}</h1>
+            <div class="flex items-center gap-4 text-sm">
+                {% if msg.message_type == 'system' %}
+                    <span class="text-amber-400"><i class="fas fa-bell mr-1"></i> System Notification</span>
+                {% else %}
+                    <span class="text-slate-400">
+                        <span class="text-slate-500">From:</span>
+                        <span class="text-slate-200">{{ msg.sender.name if msg.sender else 'Unknown' }}</span>
+                    </span>
+                    <span class="text-slate-400">
+                        <span class="text-slate-500">To:</span>
+                        <span class="text-slate-200">{{ msg.recipient.name if msg.recipient else 'Unknown' }}</span>
+                    </span>
+                {% endif %}
+                <span class="text-slate-500">{{ msg.created_at.strftime('%b %d, %Y at %H:%M UTC') }}</span>
+            </div>
+        </div>
+
+        {# Body #}
+        {% if msg.message_type == 'system' %}
+        <div class="px-5 py-4 text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{{ msg.body | safe }}</div>
+        {% else %}
+        <div class="px-5 py-4 text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{{ msg.body }}</div>
+        {% endif %}
+
+        {# Actions #}
+        {% if msg.message_type == 'player' %}
+        <div class="px-5 py-3 border-t border-slate-700 flex items-center gap-3">
+            {% if msg.sender_id and msg.sender_id != nation.id %}
+            <a href="{{ url_for('mail.compose', to=msg.sender_id, subject='Re: ' + msg.subject) }}"
+               class="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm px-3 py-1.5 rounded transition-colors">
+                <i class="fas fa-reply text-xs"></i> Reply
+            </a>
+            {% endif %}
+            {% if msg.recipient_id == nation.id %}
+            <form hx-post="{{ url_for('mail.delete_message', message_id=msg.id) }}" hx-swap="none"
+                  hx-confirm="Delete this message?">
+                <button type="submit"
+                        class="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-red-600 text-slate-400 hover:text-white text-sm px-3 py-1.5 rounded transition-colors">
+                    <i class="fas fa-trash text-xs"></i> Delete
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% elif msg.recipient_id == nation.id %}
+        <div class="px-5 py-3 border-t border-slate-700">
+            <form hx-post="{{ url_for('mail.delete_message', message_id=msg.id) }}" hx-swap="none"
+                  hx-confirm="Delete this notification?">
+                <button type="submit"
+                        class="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-red-600 text-slate-400 hover:text-white text-sm px-3 py-1.5 rounded transition-colors">
+                    <i class="fas fa-trash text-xs"></i> Delete
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

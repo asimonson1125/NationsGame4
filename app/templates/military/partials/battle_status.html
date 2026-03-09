@@ -6,13 +6,17 @@
     hx-target="#unit-detail-content"
     hx-swap="innerHTML"
     hx-on::after-request="if(event.detail.successful) { openUnitDetail(); }">
-    <div class="min-w-0 flex-1">
-        <div class="flex items-center gap-1 text-sm font-medium text-slate-200">
-            {{ unit_type_icon(udef.unit_type if udef else '', cls='w-4 h-4 shrink-0') }}
-            <span class="truncate">{{ udef.name if udef else unit.unit_key }}</span>
-            <sub class="text-slate-500 shrink-0">{{ index }}</sub>
+    <div class="min-w-0 flex-1 flex items-center gap-2">
+        <div class="shrink-0 self-center">
+            {{ unit_type_icon(udef.unit_type if udef else '', cls='w-5 h-5') }}
         </div>
-        {% if unit.custom_name %}<div class="text-xs text-slate-500 truncate">{{ unit.custom_name }}</div>{% endif %}
+        <div class="min-w-0">
+            <div class="flex items-center gap-1 text-sm font-medium text-slate-200">
+                <span class="truncate">{{ unit.custom_name or (udef.name if udef else unit.unit_key) }}</span>
+                <sub class="text-slate-500 shrink-0">{{ index }}</sub>
+            </div>
+            {% if udef %}<div class="text-xs text-slate-400 truncate">{{ udef.name }}</div>{% endif %}
+        </div>
     </div>
     <div class="flex items-center gap-1 ml-2 shrink-0">
         <span class="w-6 h-6 rounded text-[11px] font-bold flex items-center justify-center text-white bg-red-500">{{ unit.effective_firepower }}</span>
@@ -96,7 +100,7 @@
                 <span class="w-4 h-4 border-2 border-slate-500 border-t-slate-200 rounded-full animate-spin"></span>
                 {% endif %}
             </div>
-            <div id="battle-log" class="divide-y divide-slate-700/50 max-h-[600px] overflow-y-auto">
+            <div id="battle-log" class="divide-y divide-slate-700/50">
                 {% for report in reports %}
                 {% set is_final = 'Battle over!' in report.message or 'retreats!' in report.message %}
                 <div class="px-4 py-3 {% if is_final %}bg-amber-500/10{% else %}hover:bg-slate-700/30{% endif %} transition-colors">
@@ -128,7 +132,6 @@
                 <p class="text-slate-500 text-center py-8 italic">Waiting for combat to begin...</p>
                 {% endfor %}
             </div>
-            <script>(function(){ var el = document.getElementById('battle-log'); if(el) el.scrollTop = el.scrollHeight; })();</script>
         </div>
     </div>
 

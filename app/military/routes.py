@@ -36,6 +36,7 @@ def overview():
         queue=queue,
         total_upkeep=total_upkeep,
         default_tab=request.args.get('tab', 'overview'),
+        div_battles=_get_div_battles(nation.id),
     )
 
 
@@ -119,6 +120,20 @@ def demobilize_division(div_id):
     return _division_list_response(nation, f'"{div.name}" demobilized.')
 
 
+def _get_div_battles(nation_id):
+    """Return dict mapping division_id -> battle_id for active battles."""
+    active = Battle.query.filter_by(status='active').filter(
+        or_(Battle.attacker_nation_id == nation_id, Battle.defender_nation_id == nation_id)
+    ).all()
+    div_battles = {}
+    for b in active:
+        if b.attacker_nation_id == nation_id:
+            div_battles[b.attacker_division_id] = b.id
+        if b.defender_nation_id == nation_id:
+            div_battles[b.defender_division_id] = b.id
+    return div_battles
+
+
 def _division_list_response(nation, message):
     divisions = Division.query.filter_by(nation_id=nation.id).all()
     reserve_units = Unit.query.filter_by(nation_id=nation.id, division_id=None).all()
@@ -128,6 +143,7 @@ def _division_list_response(nation, message):
         divisions=divisions,
         reserve_units=reserve_units,
         unit_defs=UNIT_DEFS,
+        div_battles=_get_div_battles(nation.id),
     )
     resp = current_app.response_class(resp_html, status=200, mimetype='text/html')
     resp.headers['HX-Trigger'] = json.dumps(
@@ -150,6 +166,7 @@ def division_list():
         divisions=divisions,
         reserve_units=reserve_units,
         unit_defs=UNIT_DEFS,
+        div_battles=_get_div_battles(nation.id),
     )
 
 
@@ -358,6 +375,21 @@ def recruitment():
     return redirect(url_for('military.overview', tab='recruitment'))
 
 
+@military.route('/military/recruitment-queue')
+@login_required
+def recruitment_queue():
+    """Return the recruitment queue partial (used by refreshRecruitmentQueue trigger)."""
+    nation = current_user.nation
+    queue = RecruitmentQueue.query.filter_by(nation_id=nation.id).order_by(
+        RecruitmentQueue.completes_at
+    ).all()
+    return render_template(
+        'military/partials/recruitment_queue.html',
+        queue=queue,
+        unit_defs=UNIT_DEFS,
+    )
+
+
 @military.route('/military/recruit', methods=['POST'])
 @login_required
 def recruit_unit():
@@ -390,19 +422,11 @@ def recruit_unit():
     db.session.add(entry)
     db.session.commit()
 
-    queue = RecruitmentQueue.query.filter_by(nation_id=nation.id).order_by(
-        RecruitmentQueue.completes_at
-    ).all()
-    resp_html = render_template(
-        'military/partials/recruitment_grid.html',
-        nation=nation,
-        unit_defs=UNIT_DEFS,
-        queue=queue,
-    )
-    resp = current_app.response_class(resp_html, status=200, mimetype='text/html')
+    resp = current_app.response_class('', status=200, mimetype='text/html')
     resp.headers['HX-Trigger'] = json.dumps({
         'showMessage': {'message': f'{udef.name} recruitment started!', 'type': 'success'},
         'refreshResourceFooter': True,
+        'refreshRecruitmentQueue': True,
     })
     return resp
 
@@ -426,10 +450,9 @@ def cancel_recruitment(queue_id):
         RecruitmentQueue.completes_at
     ).all()
     resp_html = render_template(
-        'military/partials/recruitment_grid.html',
-        nation=nation,
-        unit_defs=UNIT_DEFS,
+        'military/partials/recruitment_queue.html',
         queue=queue,
+        unit_defs=UNIT_DEFS,
     )
     resp = current_app.response_class(resp_html, status=200, mimetype='text/html')
     resp.headers['HX-Trigger'] = json.dumps({
@@ -616,9 +639,7 @@ def deploy_peacekeeping(div_id):
     npc_div.in_combat = True
     db.session.commit()
 
-    resp = current_app.response_class(status=200)
-    resp.headers['HX-Redirect'] = f'/military/battle/{battle.id}'
-    return resp
+    return _division_list_response(nation, f'{div.name} deployed on peacekeeping!')
 
 
 @military.route('/military/battle/<int:battle_id>/status')

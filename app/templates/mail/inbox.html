@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Mail — {{ nation.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-4xl mx-auto" x-data="{ tab: '{{ active_tab }}' }">
+
+    <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-bold text-slate-100">Mail</h1>
+        <a href="{{ url_for('mail.compose') }}"
+           class="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold px-4 py-2 rounded-md transition-colors">
+            <i class="fas fa-pen"></i> Compose
+        </a>
+    </div>
+
+    {# Tab bar #}
+    <div class="flex gap-1 border-b border-slate-700 mb-4">
+        <button @click="tab = 'notifications'; htmx.ajax('GET', '/mail/messages?tab=notifications', {target: '#message-list', swap: 'innerHTML'})"
+                :class="tab === 'notifications' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-bell mr-1"></i> Notifications
+        </button>
+        <button @click="tab = 'inbox'; htmx.ajax('GET', '/mail/messages?tab=inbox', {target: '#message-list', swap: 'innerHTML'})"
+                :class="tab === 'inbox' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-inbox mr-1"></i> Inbox
+        </button>
+        <button @click="tab = 'sent'; htmx.ajax('GET', '/mail/messages?tab=sent', {target: '#message-list', swap: 'innerHTML'})"
+                :class="tab === 'sent' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-paper-plane mr-1"></i> Sent
+        </button>
+    </div>
+
+    {# Message list container #}
+    <div class="bg-slate-800 rounded-lg border border-slate-700">
+        <div id="message-list"
+             hx-get="{{ url_for('mail.message_list', tab=active_tab) }}"
+             hx-trigger="load"
+             hx-target="#message-list"
+             hx-swap="innerHTML">
+            <p class="text-slate-500 text-sm p-4">Loading...</p>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

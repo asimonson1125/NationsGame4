@@ -4,13 +4,21 @@
 
 {% block head %}
 <style>
+    .marquee-wrap { overflow: hidden; }
     .marquee-track {
-        animation: marquee 60s linear infinite;
+        display: flex;
         width: max-content;
+    }
+    .marquee-segment {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+        padding-right: 4rem;
     }
     @keyframes marquee {
         0%   { transform: translateX(0); }
-        100% { transform: translateX(-50%); }
+        100% { transform: translateX(var(--shift)); }
     }
 </style>
 {% endblock %}
@@ -19,15 +27,9 @@
 
 {# ===== LATEST UPDATE MARQUEE ===== #}
 {% if latest_update %}
-<a href="{{ url_for('main.changelog_page') }}" class="block bg-slate-900 border-b border-slate-800 overflow-hidden py-2 sticky top-14 z-30 hover:bg-slate-800/80 transition-colors">
-    <div class="marquee-track flex items-center gap-8 text-xs text-slate-400 whitespace-nowrap">
-        <span>
-            <i class="fas fa-bullhorn text-amber-500 mr-1"></i>
-            <span class="text-amber-500 font-semibold">{{ latest_update.title }}</span>
-            <span class="text-slate-500 mx-2">&middot;</span>
-            {{ latest_update.body }}
-        </span>
-        <span>
+<a href="{{ url_for('main.changelog_page') }}" class="block bg-slate-900 border-b border-slate-800 marquee-wrap py-2 sticky top-14 z-30 hover:bg-slate-800/80 transition-colors">
+    <div id="marquee-track" class="marquee-track text-xs text-slate-400">
+        <span class="marquee-segment">
             <i class="fas fa-bullhorn text-amber-500 mr-1"></i>
             <span class="text-amber-500 font-semibold">{{ latest_update.title }}</span>
             <span class="text-slate-500 mx-2">&middot;</span>
@@ -35,6 +37,23 @@
         </span>
     </div>
 </a>
+<script>
+(function() {
+    var track = document.getElementById('marquee-track');
+    if (!track) return;
+    var seg = track.querySelector('.marquee-segment');
+    if (!seg) return;
+    var segW = seg.offsetWidth;
+    var viewW = track.parentElement.offsetWidth;
+    /* Need enough copies so total >= viewport + one segment */
+    var copies = Math.max(2, Math.ceil((viewW + segW) / segW) + 1);
+    for (var i = 1; i < copies; i++) track.appendChild(seg.cloneNode(true));
+    track.style.setProperty('--shift', '-' + segW + 'px');
+    /* Scale duration to segment width for consistent speed */
+    var pxPerSec = 25;
+    track.style.animation = 'marquee ' + (segW / pxPerSec) + 's linear infinite';
+})();
+</script>
 {% endif %}
 
 {# ===== HERO ===== #}

@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Compose — Mail{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-2xl mx-auto" x-data="composeData()">
+
+    {# Back link #}
+    <a href="{{ url_for('mail.inbox') }}" class="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors mb-4">
+        <i class="fas fa-arrow-left text-xs"></i> Back to Mail
+    </a>
+
+    <div class="bg-slate-800 rounded-lg border border-slate-700">
+        <div class="px-5 py-4 border-b border-slate-700">
+            <h1 class="text-lg font-semibold text-slate-100">Compose Message</h1>
+        </div>
+
+        <form hx-post="{{ url_for('mail.send_message') }}" hx-swap="none" class="p-5 space-y-4">
+
+            {# Recipient with autocomplete #}
+            <div class="relative" @click.outside="suggestions = []">
+                <label class="block text-sm font-medium text-slate-400 mb-1">To</label>
+                <input type="text" name="recipient"
+                       x-model="recipientName"
+                       @input.debounce.300ms="searchNations()"
+                       @focus="if(recipientName.length >= 2) searchNations()"
+                       autocomplete="off"
+                       placeholder="Nation name..."
+                       class="w-full bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
+                {# Autocomplete dropdown #}
+                <div x-show="suggestions.length > 0" x-cloak
+                     class="absolute top-full left-0 right-0 mt-1 bg-slate-700 border border-slate-600 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                    <template x-for="nation in suggestions" :key="nation.id">
+                        <button type="button"
+                                @click="recipientName = nation.name; suggestions = []"
+                                class="w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-slate-600 transition-colors"
+                                x-text="nation.name"></button>
+                    </template>
+                </div>
+            </div>
+
+            {# Subject #}
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-1">Subject</label>
+                <input type="text" name="subject" maxlength="200"
+                       value="{{ reply_subject or '' }}"
+                       placeholder="Subject..."
+                       class="w-full bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
+            </div>
+
+            {# Body #}
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-1">Message</label>
+                <textarea name="body" rows="8" maxlength="5000"
+                          placeholder="Write your message..."
+                          class="w-full bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 resize-y"></textarea>
+            </div>
+
+            <button type="submit"
+                    class="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2.5 rounded-md transition-colors text-sm">
+                <i class="fas fa-paper-plane mr-1"></i> Send Message
+            </button>
+        </form>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function composeData() {
+    return {
+        recipientName: '{{ to_nation.name if to_nation else '' }}',
+        suggestions: [],
+
+        async searchNations() {
+            if (this.recipientName.length < 2) {
+                this.suggestions = [];
+                return;
+            }
+            const resp = await fetch('/mail/search-nations?q=' + encodeURIComponent(this.recipientName));
+            this.suggestions = await resp.json();
+        }
+    }
+}
+</script>
+{% endblock %}

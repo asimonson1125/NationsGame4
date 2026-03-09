@@ -8,7 +8,7 @@
             <h2 class="text-xl font-bold text-slate-100">
                 {{ unit.custom_name or (udef.name if udef else unit.unit_key) }}
             </h2>
-            {% if unit.custom_name and udef %}
+            {% if udef %}
             <div class="text-sm text-slate-500">{{ udef.name }}</div>
             {% endif %}
             <div class="flex items-center gap-2 mt-1.5">

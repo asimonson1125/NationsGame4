@@ -21,6 +21,12 @@
                 class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
             <i class="fas fa-user-plus mr-1"></i> Recruitment
         </button>
+        <button @click="tab = 'queue'"
+                :class="tab === 'queue' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-clock mr-1"></i> Queue
+            {% if queue %}<span class="ml-1 bg-amber-500/20 text-amber-400 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ queue | length }}</span>{% endif %}
+        </button>
         <button @click="tab = 'missions'"
                 :class="tab === 'missions' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
                 class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
@@ -71,40 +77,13 @@
                 {% endfor %}
             </div>
             {% else %}
-            <p class="text-sm text-slate-500 mb-3">No units — no upkeep costs.</p>
+            <p class="text-sm text-slate-400 mb-3">No units — no upkeep costs.</p>
             {% endif %}
-            <div class="text-xs text-slate-500 border-t border-slate-700 pt-2 space-y-1">
-                <p>Upkeep is deducted from your stockpiles every hour. If you cannot afford the full upkeep, all units suffer <strong class="text-slate-300">attrition</strong> — losing 10% of their max HP per hour, down to a minimum of 20% HP.</p>
+            <div class="text-xs text-slate-400 border-t border-slate-700 pt-2 space-y-1">
+                <p>Upkeep is deducted from your stockpiles every hour. If you cannot afford the full upkeep, all units suffer <strong class="text-slate-200">attrition</strong> — losing 10% of their max HP per hour, down to a minimum of 20% HP.</p>
                 <p>Attrition-weakened units still fight at reduced effectiveness. Restore your resource supply to stop the decay.</p>
             </div>
         </div>
-
-        {# Recruitment Queue (if any) #}
-        {% if queue %}
-        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6">
-            <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
-                <i class="fas fa-clock mr-1"></i>Recruitment Queue
-            </h2>
-            <div class="space-y-2">
-                {% for entry in queue %}
-                {% set udef = unit_defs.get(entry.unit_key) %}
-                <div class="flex items-center justify-between bg-slate-700/50 rounded px-3 py-2 text-sm">
-                    <div class="flex items-center gap-1.5">
-                        {{ unit_type_icon(udef.unit_type if udef else '', cls='w-4 h-4') }}
-                        <span class="font-medium text-slate-200">{{ udef.name if udef else entry.unit_key }}</span>
-                        <span class="text-slate-500 ml-1">{{ udef.unit_type if udef else '' }}</span>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs text-slate-400"
-                              x-data="{ target: new Date('{{ entry.completes_at.isoformat() }}Z').getTime(), display: '' }"
-                              x-init="setInterval(() => { let d = Math.max(0, Math.floor((target - Date.now())/1000)); let h=Math.floor(d/3600); let m=Math.floor((d%3600)/60); let s=d%60; display = d <= 0 ? 'Ready!' : (h>0?h+'h ':'')+(m>0?m+'m ':'')+(s+'s'); }, 1000)"
-                              x-text="display">...</span>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
 
         {# Create Division Form #}
         <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6">
@@ -122,7 +101,7 @@
         </div>
 
         {# Division Content #}
-        <div x-data="{ activeDiv: null }">
+        <div x-data="{ activeDiv: 'reserve' }">
             <div id="division-content"
                  hx-get="{{ url_for('military.division_list') }}"
                  hx-trigger="refreshDivisionContent from:body"
@@ -136,6 +115,15 @@
     {# ===== RECRUITMENT TAB ===== #}
     <div x-show="tab === 'recruitment'" x-cloak>
         {% include 'military/partials/recruitment_grid.html' %}
+    </div>
+
+    {# ===== QUEUE TAB ===== #}
+    <div x-show="tab === 'queue'" x-cloak>
+        <div hx-get="{{ url_for('military.recruitment_queue') }}"
+             hx-trigger="refreshRecruitmentQueue from:body"
+             hx-swap="innerHTML">
+            {% include 'military/partials/recruitment_queue.html' %}
+        </div>
     </div>
 
     {# ===== MISSIONS TAB (stub) ===== #}

@@ -195,7 +195,7 @@
                     {% if nf and nf.count > 0 %}
                     <p class="text-xs text-emerald-400 mb-1"><i class="fas fa-check-circle mr-1"></i>You own {{ nf.count }}</p>
                     {% else %}
-                    <p class="text-xs text-slate-500 mb-1">Not built yet</p>
+                    <p class="text-xs text-slate-400 mb-1">Not built yet</p>
                     {% endif %}
 
                     {# Active build queue entries #}
@@ -229,7 +229,7 @@
                     {% endfor %}
 
                     {# Build time label #}
-                    <p class="text-xs text-slate-500 mb-3">
+                    <p class="text-xs text-slate-400 mb-3">
                         <i class="far fa-clock mr-1"></i>Build Time:
                         {% if fdef.build_time < 60 %}
                             {{ fdef.build_time }}m each

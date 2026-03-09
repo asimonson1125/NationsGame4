@@ -1,0 +1,68 @@
+{% from 'shared/_equipment_macros.html' import unit_type_icon %}
+<div id="recruitment-queue-content">
+    {% if queue %}
+    <div class="space-y-3">
+        {% for entry in queue %}
+        {% set udef = unit_defs.get(entry.unit_key) %}
+        <div x-data="{
+                target: new Date('{{ entry.completes_at.isoformat() }}Z').getTime(),
+                started: new Date('{{ entry.started_at.isoformat() }}Z').getTime(),
+                remaining: '',
+                pct: 0,
+                init() {
+                    const tick = () => {
+                        const now = Date.now();
+                        const diff = this.target - now;
+                        const total = this.target - this.started;
+                        this.pct = Math.min(100, Math.max(0, ((total - diff) / total) * 100));
+                        if (diff <= 0) { this.remaining = 'Ready!'; this.pct = 100; return; }
+                        const h = Math.floor(diff / 3600000);
+                        const m = Math.floor((diff % 3600000) / 60000);
+                        const s = Math.floor((diff % 60000) / 1000);
+                        let parts = [];
+                        if (h > 0) parts.push(h + 'h');
+                        if (m > 0) parts.push(m + 'm');
+                        parts.push(s + 's');
+                        this.remaining = parts.join(' ');
+                    };
+                    tick();
+                    this._interval = setInterval(tick, 1000);
+                },
+                destroy() { clearInterval(this._interval); }
+             }"
+             class="bg-slate-800 rounded-lg border border-slate-700 p-4">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                    {{ unit_type_icon(udef.unit_type if udef else '', cls='w-5 h-5') }}
+                    <div>
+                        <h3 class="font-semibold text-slate-100">{{ udef.name if udef else entry.unit_key }}</h3>
+                        <span class="text-xs text-slate-400">{{ udef.unit_type if udef else '' }}</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-medium text-amber-400" x-text="remaining"></span>
+                    <form hx-post="{{ url_for('military.cancel_recruitment', queue_id=entry.id) }}"
+                          hx-target="#recruitment-queue-content" hx-swap="outerHTML show:none"
+                          hx-confirm="Cancel recruitment? You will be refunded 50%."
+                          class="inline">
+                        <button type="submit" class="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 px-2 py-1 rounded transition-colors">
+                            <i class="fas fa-times mr-0.5"></i>Cancel
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="w-full bg-slate-700 rounded-full h-2">
+                <div class="bg-amber-500 h-2 rounded-full transition-all duration-1000 ease-linear"
+                     :style="'width:' + pct.toFixed(1) + '%'"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12 text-slate-500">
+        <i class="fas fa-clock text-4xl mb-3 block text-slate-600"></i>
+        <p class="text-lg">No units in queue.</p>
+        <p class="text-sm">Switch to the Recruitment tab to start training units.</p>
+    </div>
+    {% endif %}
+</div>

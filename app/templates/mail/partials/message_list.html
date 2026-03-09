@@ -1,0 +1,65 @@
+{% if messages %}
+<div class="divide-y divide-slate-700">
+    {% for msg in messages %}
+    <a href="{{ url_for('mail.read_message', message_id=msg.id) }}"
+       class="flex items-center gap-3 px-4 py-3 hover:bg-slate-700/50 transition-colors group">
+
+        {# Icon #}
+        <div class="shrink-0">
+            {% if msg.message_type == 'system' %}
+                <div class="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+                    <i class="fas fa-bell text-amber-400 text-xs"></i>
+                </div>
+            {% else %}
+                <div class="w-8 h-8 rounded-full bg-sky-500/20 flex items-center justify-center">
+                    <i class="fas fa-user text-sky-400 text-xs"></i>
+                </div>
+            {% endif %}
+        </div>
+
+        {# Content #}
+        <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-0.5">
+                {% if tab == 'sent' %}
+                    <span class="text-xs text-slate-500">To:</span>
+                    <span class="text-sm text-slate-300 truncate">{{ msg.recipient.name if msg.recipient else 'Unknown' }}</span>
+                {% elif msg.message_type == 'system' %}
+                    <span class="text-sm {{ 'text-slate-100 font-semibold' if not msg.is_read else 'text-slate-400' }}">System</span>
+                {% else %}
+                    <span class="text-sm {{ 'text-slate-100 font-semibold' if not msg.is_read else 'text-slate-400' }}">{{ msg.sender.name if msg.sender else 'Unknown' }}</span>
+                {% endif %}
+            </div>
+            <div class="flex items-center gap-2">
+                {% if not msg.is_read and tab != 'sent' %}
+                    <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+                {% endif %}
+                <span class="text-sm {{ 'text-slate-100 font-medium' if not msg.is_read and tab != 'sent' else 'text-slate-400' }} truncate">
+                    {{ msg.subject }}
+                </span>
+            </div>
+        </div>
+
+        {# Date #}
+        <div class="shrink-0 text-xs text-slate-500">
+            {{ msg.created_at.strftime('%b %d, %H:%M') }}
+        </div>
+
+        {# Chevron #}
+        <i class="fas fa-chevron-right text-slate-600 group-hover:text-slate-400 text-xs shrink-0"></i>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="p-8 text-center">
+    <i class="fas fa-inbox text-3xl text-slate-600 mb-3"></i>
+    <p class="text-slate-500 text-sm">
+        {% if tab == 'notifications' %}
+            No notifications yet.
+        {% elif tab == 'inbox' %}
+            No messages yet.
+        {% elif tab == 'sent' %}
+            No sent messages.
+        {% endif %}
+    </p>
+</div>
+{% endif %}

@@ -79,6 +79,20 @@ def create_app(config_name='default'):
     from .trade import trade as trade_blueprint
     app.register_blueprint(trade_blueprint)
 
+    from .mail import mail as mail_blueprint
+    app.register_blueprint(mail_blueprint)
+
+    @app.context_processor
+    def inject_unread_count():
+        from flask_login import current_user
+        count = 0
+        if current_user.is_authenticated and current_user.nation:
+            from .models import Message
+            count = Message.query.filter_by(
+                recipient_id=current_user.nation.id, is_read=False
+            ).count()
+        return dict(unread_mail_count=count)
+
     import os
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         from .tasks import register_tasks

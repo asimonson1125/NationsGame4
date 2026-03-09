@@ -74,6 +74,7 @@ class Nation(db.Model):
     build_queue = db.relationship('FactoryBuildQueue', backref='nation_ref', lazy='dynamic')
     equipment = db.relationship('Equipment', backref='nation_ref', lazy='dynamic')
     trade_orders = db.relationship('TradeOrder', backref='nation_ref', lazy='dynamic')
+    messages_received = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient_nation', lazy='dynamic')
 
     def get_resource(self, key):
         return getattr(self, key, 0) or 0
@@ -313,6 +314,21 @@ class TradeExecution(db.Model):
 
     buyer_nation = db.relationship('Nation', foreign_keys=[buyer_nation_id])
     seller_nation = db.relationship('Nation', foreign_keys=[seller_nation_id])
+
+
+class Message(db.Model):
+    __tablename__ = 'messages'
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=True)  # null = system
+    recipient_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
+    subject = db.Column(db.String(200), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    message_type = db.Column(db.String(20), default='player')  # 'system' | 'player'
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    sender = db.relationship('Nation', foreign_keys=[sender_id])
+    recipient = db.relationship('Nation', foreign_keys=[recipient_id])
 
 
 @login_manager.user_loader

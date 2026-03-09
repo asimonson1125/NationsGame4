@@ -1,4 +1,5 @@
 import json
+import math
 import re
 import random
 from datetime import datetime, timezone
@@ -433,8 +434,8 @@ def process_battle_round(battle, db_session):
     No retaliation. Units are selected with replacement across ticks, so the
     same unit can act on consecutive ticks.
 
-    Retreat: if one side's strength drops below 1/3 of the other's, the
-    weaker side retreats and the stronger side wins.
+    Retreat: if one side's strength drops below 1/3 of the other's, there
+    is a 50% chance per tick that the weaker side retreats.
     """
     from ..models import Unit, CombatReport
 
@@ -453,11 +454,13 @@ def process_battle_round(battle, db_session):
     _unit_idx = {}
     for i, u in enumerate(all_atk, 1):
         udef = UNIT_DEFS.get(u.unit_key)
-        name = udef.name if udef else u.unit_key
+        base = udef.name if udef else u.unit_key
+        name = u.custom_name if u.custom_name else base
         _unit_idx[u.id] = f"{name} ({atk_div_name}-{i})"
     for i, u in enumerate(all_def, 1):
         udef = UNIT_DEFS.get(u.unit_key)
-        name = udef.name if udef else u.unit_key
+        base = udef.name if udef else u.unit_key
+        name = u.custom_name if u.custom_name else base
         _unit_idx[u.id] = f"{name} ({def_div_name}-{i})"
 
     reports = []
@@ -488,7 +491,7 @@ def process_battle_round(battle, db_session):
     atk_str = _side_strength(attacker_units)
     def_str = _side_strength(defender_units)
 
-    if def_str < atk_str / 3:
+    if def_str < atk_str / 3 and random.random() < 0.5:
         battle.status = 'finished'
         battle.winner = 'attacker'
         battle.finished_at = now
@@ -498,7 +501,7 @@ def process_battle_round(battle, db_session):
         db_session.add(CombatReport(battle_id=battle.id, message=msg, created_at=now))
         return reports
 
-    if atk_str < def_str / 3:
+    if atk_str < def_str / 3 and random.random() < 0.5:
         battle.status = 'finished'
         battle.winner = 'defender'
         battle.finished_at = now
@@ -678,6 +681,119 @@ def _destroy_unit_equipment(unit, db_session):
                     db_session.delete(eq)
 
 
+def _initial_strength(units):
+    """Compute a division's full strength (all units at max HP) for loot token calculation."""
+    return sum(
+        u.effective_firepower + u.effective_armour + u.effective_maneuver + u.effective_max_hp // 10
+        for u in units
+    )
+
+
+def _destroyed_unit_names(units):
+    """Return a list of display names for destroyed units (hp <= 0)."""
+    names = []
+    for u in units:
+        if u.hp <= 0:
+            udef = UNIT_DEFS.get(u.unit_key)
+            name = udef.name if udef else u.unit_key
+            if u.custom_name:
+                name = f'{u.custom_name} ({name})'
+            names.append(name)
+    return names
+
+
+def _battle_message(div_name, enemy_name, battle_id, is_victory,
+                    tokens=0, destroyed_names=None):
+    """Build the HTML body for a battle result system message."""
+    link = (f'<a href="/military/battle/{battle_id}" '
+            f'class="text-amber-400 hover:text-amber-300 underline">'
+            f'View Battle Details</a>')
+
+    if is_victory:
+        lines = [
+            f'Your division "{div_name}" was victorious against {enemy_name}!',
+            '',
+            f'Loot tokens earned: {tokens:,}',
+        ]
+    else:
+        lines = [
+            f'Your division "{div_name}" was defeated by {enemy_name}.',
+        ]
+
+    if destroyed_names:
+        lines.append('')
+        lines.append('Units destroyed:')
+        for name in destroyed_names:
+            lines.append(f'  \u2022 {name}')
+
+    lines.append('')
+    lines.append(link)
+    return '\n'.join(lines)
+
+
+def _send_battle_notifications(battle, atk_units, def_units, db_session):
+    """Send system mail to battle participants and grant loot tokens to the winner."""
+    from ..models import Message, Nation
+
+    is_pve = battle.battle_type == 'pve'
+    winner_side = battle.winner  # 'attacker' or 'defender'
+
+    atk_nation = db_session.get(Nation, battle.attacker_nation_id)
+    def_nation = db_session.get(Nation, battle.defender_nation_id)
+    atk_div_name = battle.attacker_division_name or 'Your division'
+    def_div_name = battle.defender_division_name or 'Enemy division'
+
+    atk_strength = _initial_strength(atk_units)
+    def_strength = _initial_strength(def_units)
+    atk_destroyed = _destroyed_unit_names(atk_units)
+    def_destroyed = _destroyed_unit_names(def_units)
+
+    # --- Attacker notification ---
+    if winner_side == 'attacker':
+        tokens = math.ceil(def_strength / 25)
+        atk_nation.loot_tokens = (atk_nation.loot_tokens or 0) + tokens
+        subject = f'Victory \u2014 {atk_div_name}'
+        body = _battle_message(atk_div_name, def_nation.name, battle.id,
+                               is_victory=True, tokens=tokens,
+                               destroyed_names=atk_destroyed)
+    else:
+        subject = f'Defeat \u2014 {atk_div_name}'
+        body = _battle_message(atk_div_name, def_nation.name, battle.id,
+                               is_victory=False,
+                               destroyed_names=atk_destroyed)
+
+    db_session.add(Message(
+        sender_id=None,
+        recipient_id=battle.attacker_nation_id,
+        subject=subject,
+        body=body,
+        message_type='system',
+    ))
+
+    # --- Defender notification (PvP only) ---
+    if not is_pve:
+        if winner_side == 'defender':
+            tokens = math.ceil(atk_strength / 5)
+            def_nation.loot_tokens = (def_nation.loot_tokens or 0) + tokens
+            subject = f'Victory \u2014 {def_div_name}'
+            body = _battle_message(def_div_name, atk_nation.name, battle.id,
+                                   is_victory=True, tokens=tokens,
+                                   destroyed_names=def_destroyed)
+        else:
+            subject = f'Defeat \u2014 {def_div_name}'
+            body = _battle_message(def_div_name, atk_nation.name, battle.id,
+                                   is_victory=False,
+                                   destroyed_names=def_destroyed)
+
+        db_session.add(Message(
+            sender_id=None,
+            recipient_id=battle.defender_nation_id,
+            subject=subject,
+            body=body,
+            message_type='system',
+        ))
+
+
 def _end_battle(battle, db_session):
     """Clean up after battle ends — snapshot unit state, disband destroyed, heal survivors."""
     from ..models import Division, Unit, Nation
@@ -687,6 +803,9 @@ def _end_battle(battle, db_session):
     def_units = Unit.query.filter_by(division_id=battle.defender_division_id).all()
     battle.attacker_snapshot = json.dumps(_snapshot_units(atk_units))
     battle.defender_snapshot = json.dumps(_snapshot_units(def_units))
+
+    # Send notifications and grant loot tokens (before units are deleted)
+    _send_battle_notifications(battle, atk_units, def_units, db_session)
 
     # For PvE, the NPC defender division is disposable — delete it entirely
     is_pve = battle.battle_type == 'pve'

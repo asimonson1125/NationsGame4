@@ -110,9 +110,5 @@ Future:
 - Events (a la 2.0)
 - Alliance leaderboard — server-rendered table
 - Live alliance search — `hx-trigger="keyup changed delay:500ms"`
-
-
-TODO:
-Mail for notifications and international communication.  Battle messages should include earned loot tokens.
-
-tiers, population growth setter (urban land expansion cost)
+- tiers, population growth setting (urban land expansion cost)
+- Security - messages should not be readable by those not in the conversation and divisions/units should only be visible through their snapshots (during/after battles)

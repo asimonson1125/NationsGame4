@@ -1,4 +1,4 @@
-<div class="flex justify-around flex-wrap max-w-screen-xl mx-auto px-4">
+<div class="flex justify-center flex-wrap max-w-screen-xl mx-auto px-4 gap-x-6">
     {% for r in resource_data %}
     <div class="group relative flex items-center gap-1.5 px-1 cursor-default">
         <img src="{{ url_for('static', filename='images/icons/' ~ r.icon) }}"

@@ -102,7 +102,7 @@
                     <i class="fas fa-tractor text-amber-500"></i> Buy Cleared Land
                 </h2>
                 <p class="text-sm text-slate-400 mb-1">Purchase pre-cleared tiles ready for development.</p>
-                <p class="text-xs text-slate-500 mb-4">Cost: <span class="font-medium text-slate-300">1,000 money per tile</span></p>
+                <p class="text-xs text-slate-400 mb-4">Cost: <span class="font-medium text-slate-200">1,000 money per tile</span></p>
                 <div class="flex gap-2 items-center mb-2">
                     <input type="number"
                            name="buy_amount"
@@ -119,7 +119,7 @@
                         Buy
                     </button>
                 </div>
-                <p class="text-xs text-slate-500">Current cleared land: <span class="font-medium text-slate-300">{{ (nation.cleared_land or 0) | format_resource }}</span></p>
+                <p class="text-xs text-slate-400">Current cleared land: <span class="font-medium text-slate-200">{{ (nation.cleared_land or 0) | format_resource }}</span></p>
             </div>
 
             {# Build Urban Areas Card #}
@@ -128,7 +128,7 @@
                     <i class="fas fa-city text-sky-400"></i> Build Urban Areas
                 </h2>
                 <p class="text-sm text-slate-400 mb-1">Convert cleared land into urban areas.</p>
-                <p class="text-xs text-slate-500 mb-4">Cost: <span class="font-medium text-slate-300">500 money per tile. Requires cleared land.</span></p>
+                <p class="text-xs text-slate-400 mb-4">Cost: <span class="font-medium text-slate-200">500 money per tile. Requires cleared land.</span></p>
                 <div class="flex gap-2 items-center mb-2">
                     <input type="number"
                            name="build_amount"
@@ -146,7 +146,7 @@
                         Build
                     </button>
                 </div>
-                <p class="text-xs text-slate-500">Available cleared land: <span class="font-medium text-slate-300">{{ (nation.cleared_land or 0) | format_resource }}</span></p>
+                <p class="text-xs text-slate-400">Available cleared land: <span class="font-medium text-slate-200">{{ (nation.cleared_land or 0) | format_resource }}</span></p>
             </div>
 
         </div>
