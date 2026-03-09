@@ -449,8 +449,8 @@ def process_battle_round(battle, db_session):
     defender_units = [u for u in all_def if u.hp > 0]
 
     # Build unit index maps (1-based, stable across the whole battle)
-    atk_div_name = battle.attacker_division.name
-    def_div_name = battle.defender_division.name
+    atk_div_name = battle.attacker_division_name or ''
+    def_div_name = battle.defender_division_name or ''
     _unit_idx = {}
     for i, u in enumerate(all_atk, 1):
         udef = UNIT_DEFS.get(u.unit_key)
@@ -823,7 +823,7 @@ def _end_battle(battle, db_session):
             unit.hp = unit.effective_max_hp
 
     if is_pve:
-        # Delete all NPC units and the NPC division
+        # Delete all NPC units and the NPC division — no FK constraint on division IDs
         for unit in def_units:
             db_session.delete(unit)
         def_div = db_session.get(Division, battle.defender_division_id)

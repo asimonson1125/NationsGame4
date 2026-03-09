@@ -233,9 +233,9 @@ class FactoryBuildQueue(db.Model):
 class Battle(db.Model):
     __tablename__ = 'battles'
     id = db.Column(db.Integer, primary_key=True)
-    attacker_division_id = db.Column(db.Integer, db.ForeignKey('divisions.id'), nullable=False)
-    defender_division_id = db.Column(db.Integer, db.ForeignKey('divisions.id'), nullable=False)
-    attacker_division_name = db.Column(db.String(120), nullable=True)  # snapshot in case div is deleted
+    attacker_division_id = db.Column(db.Integer, nullable=True)
+    defender_division_id = db.Column(db.Integer, nullable=True)
+    attacker_division_name = db.Column(db.String(120), nullable=True)
     defender_division_name = db.Column(db.String(120), nullable=True)
     attacker_nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
     defender_nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
@@ -247,8 +247,6 @@ class Battle(db.Model):
     attacker_snapshot = db.Column(db.Text, nullable=True)  # JSON unit state at battle end
     defender_snapshot = db.Column(db.Text, nullable=True)  # JSON unit state at battle end
 
-    attacker_division = db.relationship('Division', foreign_keys=[attacker_division_id])
-    defender_division = db.relationship('Division', foreign_keys=[defender_division_id])
     attacker_nation = db.relationship('Nation', foreign_keys=[attacker_nation_id])
     defender_nation = db.relationship('Nation', foreign_keys=[defender_nation_id])
     reports = db.relationship('CombatReport', backref='battle_ref', lazy='dynamic',
