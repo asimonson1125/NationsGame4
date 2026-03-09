@@ -148,15 +148,16 @@ def cleanup_pve_battles():
         ).all()
 
         for battle in old_pve:
-            # Delete combat reports
-            CombatReport.query.filter_by(battle_id=battle.id).delete()
-
-            # Delete NPC division and its units (defender side for peacekeeping)
             npc_div_id = battle.defender_division_id
+
+            # Delete combat reports and battle first (removes FK references to division)
+            CombatReport.query.filter_by(battle_id=battle.id).delete()
+            Battle.query.filter_by(id=battle.id).delete()
+            db.session.flush()
+
+            # Now safe to delete the NPC division and its units
             Unit.query.filter_by(division_id=npc_div_id).delete()
             Division.query.filter_by(id=npc_div_id).delete()
-
-            db.session.delete(battle)
 
         if old_pve:
             db.session.commit()

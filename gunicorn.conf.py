@@ -19,5 +19,7 @@ preload_app = True
 
 def post_fork(server, worker):
     """Reset SQLAlchemy connection pool after fork to avoid shared connections."""
+    from wsgi import app
     from app import db
-    db.engine.dispose()
+    with app.app_context():
+        db.engine.dispose(close=False)
