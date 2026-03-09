@@ -1,0 +1,59 @@
+services:
+  db:
+    container_name: ng-db
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ng4}
+      POSTGRES_USER: ${POSTGRES_USER:-ng4}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ng4}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    container_name: ng-redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  app:
+    container_name: ng-app
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ng4}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-ng4}
+      REDIS_URL: redis://redis:6379/0
+      CACHE_TYPE: RedisCache
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-4}
+    expose:
+      - "8000"
+
+  nginx:
+    container_name: ng-nginx
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "${HOST_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  pgdata:

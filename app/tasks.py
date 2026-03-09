@@ -52,17 +52,30 @@ def process_combat_rounds():
 
 
 def process_population_tick():
-    """Runs hourly. Applies population tax income and resource consumption."""
+    """Runs hourly. Applies population tax/consumption, growth, starvation, and tier update."""
     from .models import Nation
-    from .game.population import get_population_effects
+    from .game.population import (get_population_effects, process_growth,
+                                  process_starvation, compute_tier, compute_population_gp)
     from . import db
     with scheduler.app.app_context():
         nations = Nation.query.all()
         for nation in nations:
+            # 1. Apply existing resource effects (tax income, consumption)
             effects = get_population_effects(nation.population)
             for res, amount in effects.items():
                 new_val = nation.get_resource(res) + amount
                 setattr(nation, res, max(0, new_val))
+
+            # 2. Population growth (consumes food + cleared land)
+            process_growth(nation)
+
+            # 3. Starvation (population loss when food == 0)
+            process_starvation(nation)
+
+            # 4. Tier auto-update based on new population
+            nation.tier = compute_tier(nation.population)
+            nation.population_gp = compute_population_gp(nation.population)
+
         db.session.commit()
 
 

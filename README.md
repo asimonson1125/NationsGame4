@@ -2,20 +2,82 @@
 
 A browser-based nation-building simulator. Players manage resources, industry, land, and military across five continents.
 
-**Stack:** Flask · SQLAlchemy (SQLite dev / PostgreSQL prod) · HTMX · Alpine.js · Tailwind CSS (CDN, no build step)
+**Stack:** Flask · SQLAlchemy (SQLite dev / PostgreSQL prod) · HTMX · Alpine.js · Tailwind CSS · Flask-Caching (SimpleCache dev / Redis prod)
 
 ---
 
-## Running the App
+## Development
 
 ```bash
-python3 run.py          # dev server (debug, auto-reload)
-python3 run.py init-db  # create DB tables (first run only)
+pip3 install -r requirements.txt   # Python dependencies
+npm install                        # Tailwind CSS (dev only)
+python3 run.py init-db             # create DB tables (first run only)
+python3 run.py                     # dev server (debug, auto-reload)
 ```
 
 No `python` binary on this machine — always use `python3` / `pip3`.
 
 The SQLite DB (`ng4.db`) is created in the project root. No migrations — schema changes require a DB drop/recreate in development.
+
+### Tailwind CSS
+
+The CDN play script has been replaced with a local JIT build. After editing templates, rebuild CSS:
+
+```bash
+npm run build:css              # one-off minified build
+npm run watch:css              # watch mode for development
+```
+
+The built file lives at `app/static/css/style.css`. Source styles are in `app/static/css/input.css` and `tailwind.config.js`.
+
+---
+
+## Production Deployment
+
+### Option A: Docker Compose (recommended)
+
+```bash
+cp .env.example .env           # fill in SECRET_KEY, POSTGRES_PASSWORD
+docker compose up --build -d   # starts app, postgres, redis, nginx
+```
+
+Services:
+
+| Service | Image | Purpose |
+|---------|-------|---------|
+| `db` | postgres:16-alpine | Primary database |
+| `redis` | redis:7-alpine | Flask-Caching backend |
+| `app` | Built from Dockerfile | Flask + Gunicorn |
+| `nginx` | nginx:alpine | Reverse proxy, static files, gzip |
+
+The app is accessible at `http://localhost` (or the `HOST_PORT` set in `.env`). Database tables are created automatically on first boot via `docker-entrypoint.sh`.
+
+### Option B: Manual Gunicorn
+
+```bash
+pip3 install -r requirements.txt
+export FLASK_ENV=production
+export SECRET_KEY=your-secret
+export DATABASE_URL=postgresql://user:pass@localhost/ng4
+export REDIS_URL=redis://localhost:6379/0
+gunicorn -c gunicorn.conf.py wsgi:app
+```
+
+Point Nginx (or another reverse proxy) at `localhost:8000` using the provided `nginx/nginx.conf` as a reference.
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `SECRET_KEY` | Yes | — | Flask session secret |
+| `DATABASE_URL` | Yes (prod) | `sqlite:///ng4_dev.db` | SQLAlchemy connection string |
+| `REDIS_URL` | No | `redis://localhost:6379/0` | Flask-Caching Redis backend |
+| `CACHE_TYPE` | No | `RedisCache` | Cache backend (`SimpleCache` or `RedisCache`) |
+| `WEB_CONCURRENCY` | No | `4` | Gunicorn worker count |
+| `POSTGRES_DB` | Docker only | `ng4` | PostgreSQL database name |
+| `POSTGRES_USER` | Docker only | `ng4` | PostgreSQL user |
+| `POSTGRES_PASSWORD` | Docker only | — | PostgreSQL password |
+| `HOST_PORT` | Docker only | `80` | Host port mapped to Nginx |
 
 ---
 
@@ -29,6 +91,7 @@ app/
   military/      # units, battles, equipment
   trade/         # market
   game/          # pure game logic (no Flask imports)
+    cache.py        ← cached accessors for static game data
     population.py   ← population tick rates
     discovery.py    ← land/resource weights per continent
     factories.py    ← 66 factory definitions
@@ -42,9 +105,22 @@ app/
     base.html       # navbar, footer, toast system
     shared/         # reusable macros (_equipment_macros.html)
   static/
+    css/
+      input.css     # Tailwind source + custom styles
+      style.css     # built output (committed)
     images/
       icons/        # resource, land, and unit type icons
       continents/   # continent background images
+nginx/
+  nginx.conf       # production reverse proxy config
+config.py          # dev/prod/test Flask config
+wsgi.py            # production WSGI entry point
+gunicorn.conf.py   # Gunicorn worker settings
+docker-compose.yml # multi-container deployment
+Dockerfile         # app container image
+docker-entrypoint.sh
+tailwind.config.js # Tailwind theme (extracted from CDN config)
+package.json       # npm scripts for CSS build
 ```
 
 ---
@@ -56,15 +132,33 @@ app/
 Runs **hourly** via APScheduler. Applied per capita.
 
 ```python
+# Rates expressed as 1/N where N = people per unit per hour.
 POPULATION_RATES = {
-    'money':           1/100,   # 100 people per tax dollar/hr
-    'food':           -1/2000,  # 2000 people per food/hr
-    'power':          -1/2500,  # 2500 people per power/hr
-    'consumer_goods': -1/5000,  # 5000 people per consumer goods/hr
+    'money':           1/100,   # 100 people per tax dollar
+    'food':           -1/2000, # 2000 people per food
+    'power':          -1/2500, # 2500 people per power
+    'consumer_goods': -1/5000, # 5000 people per consumer goods
 }
-```
 
-Rates are `1/N` where N = people required per unit. Positive = nation gains, negative = nation consumes.
+# Consumer goods consumption only kicks in above this threshold.
+CG_POPULATION_THRESHOLD = 100_000
+
+# Tier thresholds: (min_population, tier) — checked highest-first
+# T1: <75k | T2: 75k–150k | T3: 150k–350k | T4: 350k–1M | T5: 1M–2.5M | T6: 2.5M+
+TIER_THRESHOLDS = [
+    (2_500_000, 6),
+    (1_000_000, 5),
+    (350_000,   4),
+    (150_000,   3),
+    (75_000,    2),
+]
+
+# Growth constants
+GROWTH_MULTIPLIER = 0.05       # base hourly growth factor
+FOOD_PER_CITIZEN = 0.1          # food cost per new citizen
+LAND_PER_POPULATION = 1000      # 1 tile per 1,000 new pop
+STARVATION_RATE = 0.01          # 1% population loss per hour when starving
+```
 
 ---
 
@@ -119,7 +213,7 @@ Jobs are registered in `app/tasks.py` and guarded with `WERKZEUG_RUN_MAIN` to pr
 - Partials return HTML fragments and swap a specific `#id` target.
 - Errors use `HX-Trigger: {"showMessage": {...}}` — the toast in `base.html` listens for this.
 - Alpine dropdowns in the navbar use a `close-nav-dropdowns` window event to coordinate mutual exclusion.
-- `[x-cloak] { display: none !important; }` lives in `base.html` before Alpine loads to prevent FOUC.
+- `[x-cloak] { display: none !important; }` lives in `app/static/css/input.css` (compiled into `style.css`) to prevent FOUC.
 
 ---
 

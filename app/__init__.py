@@ -2,12 +2,14 @@ from flask import Flask, request, make_response, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
+from flask_caching import Cache
 from markupsafe import Markup
 from config import config
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 csrf = CSRFProtect()
+cache = Cache()
 
 
 def format_resource(value):
@@ -40,6 +42,7 @@ def create_app(config_name='default'):
     db.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
+    cache.init_app(app)
 
     login_manager.login_view = 'auth.login'
     login_manager.login_message_category = 'info'
@@ -58,7 +61,7 @@ def create_app(config_name='default'):
     from .game.changelog import CHANGELOG
 
     @app.context_processor
-    def inject_changelog():
+    def inject_globals():
         return dict(changelog=CHANGELOG, latest_update=CHANGELOG[0] if CHANGELOG else None)
 
     from .auth import auth as auth_blueprint

@@ -1,0 +1,12 @@
+{# Shared nation description preamble.
+   Set these variables before including:
+     preamble_name     – nation name (plain text or Alpine span)
+     preamble_size     – size descriptor ('fledgling', 'small', 'large', 'massive')
+     preamble_location – location phrase (leading space included by caller)
+     preamble_leader   – leader name (plain text or Alpine span)
+     preamble_alliance – alliance sentence (e.g. 'The Xian people are unallied.')
+#}
+<p class="text-slate-300 mb-3">
+    {{ preamble_name|safe }} is a {{ preamble_size }} country{{ preamble_location|safe }}, led by {{ preamble_leader|safe }}.
+    {{ preamble_alliance|safe }}
+</p>

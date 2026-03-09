@@ -226,8 +226,12 @@
             <template x-if="nationName.trim() || demonym.trim() || continent">
                 <div class="max-w-md mx-auto mb-6 bg-slate-900 rounded-lg p-4 text-sm text-slate-300 border border-slate-700">
                     <span class="text-xs text-slate-500 block mb-1">Preview</span>
-                    <span x-text="nationName.trim() || '______'" class="font-medium"></span> is a fledgling country<span x-show="continent" x-text="' ' + ({Tind:'in the mountains of Tind',Zaheria:'in the deserts of Zaheria',Westberg:'in the forests of Westberg',Amarino:'in the jungles of Amarino','San Sebastian':'on the coasts of San Sebastian'}[continent] || '')"></span>.
-                    The <span x-text="demonym.trim() || '______'" class="font-medium"></span> people are unallied.
+                    {% set preamble_name %}<span x-text="nationName.trim() || '______'" class="font-medium"></span>{% endset %}
+                    {% set preamble_size = 'fledgling' %}
+                    {% set preamble_location %}<span x-show="continent" x-text="' ' + ({Tind:'in the mountains of Tind',Zaheria:'in the deserts of Zaheria',Westberg:'in the forests of Westberg',Amarino:'in the jungles of Amarino','San Sebastian':'on the coasts of San Sebastian'}[continent] || '')"></span>{% endset %}
+                    {% set preamble_leader %}<span x-text="username.trim() || '______'" class="font-medium"></span>{% endset %}
+                    {% set preamble_alliance %}The <span x-text="demonym.trim() || '______'" class="font-medium"></span> people are unallied.{% endset %}
+                    {% include 'shared/_preamble.html' %}
                 </div>
             </template>
 

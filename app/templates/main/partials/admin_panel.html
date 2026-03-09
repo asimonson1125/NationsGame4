@@ -33,6 +33,20 @@
         {% endfor %}
     </div>
 
+    {# ── Hourly tick ── #}
+    <h4 class="font-semibold text-slate-300 mb-2 border-b border-slate-700 pb-1">Hourly Tick</h4>
+    <div class="mb-6">
+        <p class="text-xs text-slate-500 mb-2">Applies one full hourly cycle: population effects, growth/starvation, tier update, factory capacity +1, and military upkeep.</p>
+        <form hx-post="{{ url_for('main.admin_apply_tick', nation_id=target.id) }}"
+              hx-target="#admin-panel-content" hx-swap="outerHTML"
+              hx-confirm="Apply one hourly tick to {{ target.name }}?">
+            <button type="submit"
+                    class="px-4 py-2 bg-amber-600 text-white rounded text-sm font-semibold hover:bg-amber-500 transition-colors">
+                <i class="fas fa-clock mr-1"></i>Apply Tick
+            </button>
+        </form>
+    </div>
+
     {# ── Recruitment queue ── #}
     <h4 class="font-semibold text-slate-300 mb-2 border-b border-slate-700 pb-1">Recruitment Queue</h4>
     {% if queue %}

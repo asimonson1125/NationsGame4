@@ -6,6 +6,7 @@ from .. import db
 from ..models import User, Nation
 from ..game.constants import CONTINENTS
 from ..game.discovery import LAND_WEIGHTS, _weighted_distribute
+from ..game.population import compute_population_gp
 from . import auth
 
 VALID_CONTINENTS = set(CONTINENTS)
@@ -85,6 +86,8 @@ def register():
             db.session.flush()
             from ..helpers import grant_factories
             grant_factories(nation, [('farm', 2), ('windmill', 1), ('quarry', 1)], production_capacity=6)
+            nation.land_gp = (nation.total_land or 0) // 10
+            nation.population_gp = compute_population_gp(nation.population)
             db.session.commit()
             login_user(user)
             return redirect(url_for('main.home'))

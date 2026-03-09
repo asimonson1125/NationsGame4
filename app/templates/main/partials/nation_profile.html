@@ -1,21 +1,77 @@
 {# ===== NATION HEADER BANNER ===== #}
+{% set continent_bg = {
+    'Tind':          'tind.png',
+    'Zaheria':       'zaheria.jpeg',
+    'Westberg':      'westberg.jpeg',
+    'Amarino':       'amarino.jpeg',
+    'San Sebastian': 'san_sebastian.jpeg',
+} %}
 <div class="relative bg-cover bg-center"
-     style="background-image: url('{{ url_for('static', filename='images/continents/tind.png') }}'); padding: 100px 20px;">
+     style="background-image: url('{{ url_for('static', filename='images/continents/' ~ continent_bg.get(nation.continent, 'tind.png')) }}'); padding: 100px 20px;">
     <div class="absolute inset-0 bg-slate-950/60"></div>
     <div class="relative max-w-5xl mx-auto flex items-center text-white"
          style="text-shadow: 1px 1px 4px rgba(0,0,0,.7)">
 
         {# Left: flag + nation name #}
-        <div class="flex-1 flex flex-col items-center pr-4">
-            {% if nation.flag_url %}
-            <img src="{{ nation.flag_url }}" alt="{{ nation.name }} Flag"
-                 class="w-48 h-28 object-cover border-2 border-white/50 mb-4">
-            {% else %}
-            <div class="w-48 h-28 bg-white/20 border-2 border-white/50 mb-4 flex items-center justify-center text-white/60 text-sm">
-                No Flag Set
+        <div class="flex-1 flex flex-col items-center pr-4"
+             {% if is_owner %}x-data="{ flagModal: false }"{% endif %}>
+            {% if is_owner %}
+            <div @click="flagModal = true"
+                 class="relative cursor-pointer mb-4 group">
+                {% if nation.flag_url %}
+                <img src="{{ nation.flag_url }}" alt="{{ nation.name }} Flag"
+                     class="w-48 h-28 object-cover border-2 border-white/50 group-hover:border-amber-400 transition-colors duration-200">
+                {% else %}
+                <div class="w-48 h-28 bg-white/20 border-2 border-white/50 group-hover:border-amber-400 flex items-center justify-center text-white/60 group-hover:text-amber-300 text-sm transition-colors duration-200">
+                    Click to set flag
+                </div>
+                {% endif %}
+                <div class="absolute -bottom-1.5 -right-1.5 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg">
+                    <i class="fas fa-pencil text-[10px] text-slate-900"></i>
+                </div>
             </div>
+            {% else %}
+                {% if nation.flag_url %}
+                <img src="{{ nation.flag_url }}" alt="{{ nation.name }} Flag"
+                     class="w-48 h-28 object-cover border-2 border-white/50 mb-4">
+                {% else %}
+                <div class="w-48 h-28 bg-white/20 border-2 border-white/50 mb-4 flex items-center justify-center text-white/60 text-sm">
+                    No Flag Set
+                </div>
+                {% endif %}
             {% endif %}
             <h1 class="text-3xl font-bold text-center">{{ nation.name }}</h1>
+
+            {% if is_owner %}
+            {# Flag URL modal #}
+            <div x-show="flagModal" x-cloak
+                 class="fixed inset-0 z-50 flex items-center justify-center p-4" style="text-shadow: none;"
+                 @keydown.escape.window="flagModal = false">
+                <div class="absolute inset-0 bg-black/60" @click="flagModal = false"></div>
+                <div class="relative bg-slate-800 border border-slate-700 rounded-lg shadow-2xl w-full max-w-sm p-5"
+                     @click.stop>
+                    <h3 class="text-lg font-semibold text-slate-100 mb-4">Update Flag</h3>
+                    <form hx-post="{{ url_for('main.update_flag') }}" hx-swap="none"
+                          @htmx:after-request="if ($event.detail.successful) { flagModal = false; location.reload(); }"
+                          class="space-y-3">
+                        <input type="text" name="new_flag"
+                               value="{{ nation.flag_url or '' }}"
+                               placeholder="https://... (any image link)"
+                               class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm">
+                        <div class="flex justify-end gap-2">
+                            <button type="button" @click="flagModal = false"
+                                    class="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">
+                                Cancel
+                            </button>
+                            <button type="submit"
+                                    class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md transition-colors font-semibold text-sm">
+                                Save
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         {# Right: stats #}
@@ -24,13 +80,118 @@
                 <div class="text-sm opacity-80 mb-0.5">Leader</div>
                 <div class="text-2xl font-bold">{{ nation.leader or 'Unknown' }}</div>
             </div>
-            <div class="text-center">
+            <div class="text-center" x-data="{
+                delta: 0,
+                fmt(n) {
+                    let a = Math.abs(n);
+                    if (a >= 1e9) return (a/1e9).toFixed(1) + 'b';
+                    if (a >= 1e6) return (a/1e6).toFixed(1) + 'm';
+                    if (a >= 1e3) return (a/1e3).toFixed(1) + 'k';
+                    return a.toString();
+                },
+                fetchDelta() {
+                    fetch('{{ url_for('main.population_delta') }}')
+                        .then(r => r.json()).then(d => this.delta = d.delta);
+                },
+                {% if is_owner|default(false) %}
+                open: false,
+                mode: {{ nation.growth_rate or 0 }} === 50 ? 'auto' : ({{ nation.growth_rate or 0 }} > 0 ? 'manual' : 'off'),
+                committedRate: {{ nation.growth_rate or 0 }},
+                manualRate: {{ nation.growth_rate or 0 }},
+                setAuto() {
+                    this.mode = 'auto';
+                    this.committedRate = 50;
+                    this.manualRate = 50;
+                    this.save(50);
+                    this.open = false;
+                },
+                save(rate) {
+                    fetch('{{ url_for('main.update_growth_rate') }}', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded',
+                                  'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content},
+                        body: 'growth_rate=' + rate,
+                    }).then(r => {
+                        const triggers = r.headers.get('HX-Trigger');
+                        if (triggers) {
+                            for (const [evt, detail] of Object.entries(JSON.parse(triggers)))
+                                document.body.dispatchEvent(new CustomEvent(evt, {detail}));
+                        }
+                        return r.json();
+                    }).then(d => this.delta = d.delta);
+                },
+                saveManual() {
+                    let r = Math.max(0, Math.min(100, parseInt(this.manualRate) || 0));
+                    this.manualRate = r;
+                    this.committedRate = r;
+                    this.mode = r === 0 ? 'off' : 'manual';
+                    this.save(r);
+                    this.open = false;
+                },
+                {% endif %}
+            }" x-init="fetchDelta()">
                 <div class="text-sm opacity-80 mb-0.5">Population</div>
                 <div class="text-2xl font-bold flex items-center justify-center gap-2">
                     <img src="{{ url_for('static', filename='images/tier.png') }}" alt="Tier" class="h-5 w-auto">
                     <span class="text-amber-400 text-sm font-bold">{{ nation.tier }}</span>
                     {{ "{:,}".format(nation.population) }}
+                    <template x-if="delta > 0">
+                        <span class="text-emerald-400 text-sm font-semibold flex items-center gap-0.5">
+                            <i class="fas fa-caret-up"></i><span x-text="fmt(delta) + '/hr'"></span>
+                        </span>
+                    </template>
+                    <template x-if="delta < 0">
+                        <span class="text-red-400 text-sm font-semibold flex items-center gap-0.5">
+                            <i class="fas fa-caret-down"></i><span x-text="fmt(delta) + '/hr'"></span>
+                        </span>
+                    </template>
                 </div>
+                {% if is_owner|default(false) %}
+                <div class="mt-2">
+                    <button @click="open = !open"
+                            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-colors"
+                            :class="mode === 'off'
+                                ? 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                                : mode === 'auto'
+                                    ? 'bg-emerald-600/80 text-emerald-100 hover:bg-emerald-500/80'
+                                    : 'bg-amber-600/80 text-amber-100 hover:bg-amber-500/80'">
+                        <i class="fas fa-users text-[10px]"></i>
+                        <span x-text="mode === 'off' ? 'Growth: Off' : mode === 'auto' ? 'Growth: Auto (50%)' : 'Growth: ' + committedRate + '%'"></span>
+                        <i class="fas fa-caret-down text-[10px]"></i>
+                    </button>
+                    <div x-show="open" @click.outside="open = false" x-cloak
+                         class="absolute z-30 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl overflow-hidden"
+                         style="text-shadow: none;">
+                        <button @click="save(0); mode = 'off'; open = false"
+                                class="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-700 transition-colors"
+                                :class="mode === 'off' ? 'text-white bg-slate-700/50' : 'text-slate-300'">
+                            <i class="fas fa-pause w-4 text-center mr-2 text-slate-500"></i>Off
+                        </button>
+                        <button @click="setAuto()"
+                                class="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-700 transition-colors"
+                                :class="mode === 'auto' ? 'text-emerald-400 bg-slate-700/50' : 'text-slate-300'">
+                            <i class="fas fa-bolt w-4 text-center mr-2 text-emerald-500"></i>Automatic (50%)
+                        </button>
+                        <div class="border-t border-slate-700">
+                            <div class="px-4 py-2.5 flex items-center gap-2"
+                                 @click.stop>
+                                <i class="fas fa-sliders-h w-4 text-center text-amber-500"></i>
+                                <span class="text-sm text-slate-300">Manual:</span>
+                                <div class="flex items-center flex-1">
+                                    <input type="number" min="0" max="100" x-model="manualRate"
+                                           @keydown.enter="saveManual()"
+                                           class="w-16 px-2 py-1 bg-slate-700 border border-slate-500 text-slate-100 rounded-l-md text-sm text-center focus:outline-none focus:border-amber-500">
+                                    <span class="px-2 py-1 bg-slate-600 border border-l-0 border-slate-500 text-slate-400 rounded-r-md text-sm">%</span>
+                                </div>
+                                <button @click="saveManual()"
+                                        class="px-2 py-1 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md text-xs font-semibold">
+                                    Set
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
             <div class="text-center cursor-pointer group" onclick="showGPBreakdown()">
                 <div class="text-sm opacity-80 mb-0.5 underline underline-offset-2">GP</div>
@@ -52,8 +213,17 @@
 <div class="p-5 space-y-5">
 
     {# About — autogenerated preamble + user description #}
-    <div class="bg-slate-800 rounded-lg border border-slate-700 p-5 max-w-4xl mx-auto">
-        <h2 class="text-lg font-semibold text-slate-100 mb-3">About {{ nation.name }}</h2>
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-5 max-w-4xl mx-auto"
+         x-data="{ editingDesc: false }">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold text-slate-100">About {{ nation.name }}</h2>
+            {% if is_owner %}
+            <button @click="editingDesc = !editingDesc"
+                    class="text-slate-400 hover:text-amber-400 transition-colors">
+                <i class="fas fa-pencil text-xs"></i>
+            </button>
+            {% endif %}
+        </div>
 
         {# --- size descriptor based on population --- #}
         {% if nation.population < 5_000_000 %}
@@ -86,14 +256,23 @@
             {% set alliance_blurb = 'The ' ~ (dem ~ ' ' if dem else '') ~ 'people are unallied.' %}
         {% endif %}
 
-        <p class="text-slate-300 mb-3">
-            {{ nation.name }} is a {{ size_word }} country {{ location }}.
-            {{ alliance_blurb | safe }}
-        </p>
+        {% set preamble_name = nation.name %}
+        {% set preamble_size = size_word %}
+        {% set preamble_location = ' ' ~ location %}
+        {% set preamble_leader = nation.leader or 'Unknown' %}
+        {% set preamble_alliance = alliance_blurb %}
+        {% include 'shared/_preamble.html' %}
+        <hr>
 
-        {% if nation.description %}
-        <p class="text-slate-300 whitespace-pre-line">{{ nation.description }}</p>
-        {% endif %}
+        <div id="nation-description">
+            {% if is_owner %}
+            {% include 'main/partials/nation_description.html' %}
+            {% else %}
+                {% if nation.description %}
+                <p class="text-slate-300 whitespace-pre-line">{{ nation.description }}</p>
+                {% endif %}
+            {% endif %}
+        </div>
     </div>
 
     {# ===== STATS GRID ===== #}

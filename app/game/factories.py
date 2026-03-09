@@ -38,7 +38,7 @@ FACTORY_DEFS: Dict[str, FactoryDef] = {
     'farm': _fd(
         'Farm', 1,
         inp={_M: 9}, out={_F: 3},
-        cost={_M: 500}, land={'cleared_land': 5}, gp=1, max_h=6, bt=30,
+        cost={_M: 500}, land={'cleared_land': 5}, gp=1, bt=30,
     ),
     'windmill': _fd(
         'Windmill', 1,

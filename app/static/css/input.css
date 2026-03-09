@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Alpine.js cloak — must load before Alpine to prevent FOUC */
+[x-cloak] { display: none !important; }
+
+/* Resource value tooltip */
+.rv { position: relative; cursor: help; }
+.rv::before {
+    content: attr(data-raw);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2f3848;
+    color: #e7e9ed;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    border: 1px solid #404a5c;
+}
+.rv::after {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: #2f3848;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.rv:hover::before, .rv:hover::after { opacity: 1; }
+
+/* Generic tooltip */
+.tt { position: relative; cursor: default; }
+.tt::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2f3848;
+    color: #e7e9ed;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    border: 1px solid #404a5c;
+}
+.tt::after {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: #2f3848;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.tt:hover::before, .tt:hover::after { opacity: 1; }
+.tt-below::before { top: calc(100% + 6px); bottom: auto; }
+.tt-below::after { top: calc(100% + 2px); bottom: auto; border-top-color: transparent; border-bottom-color: #2f3848; }
+.tt-right::before { left: auto; right: 0; transform: none; }
+.tt-right::after { left: auto; right: 8px; transform: none; }

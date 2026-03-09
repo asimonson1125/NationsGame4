@@ -1,10 +1,10 @@
 import json
-from flask import render_template, url_for, request, current_app, abort, jsonify
+from flask import render_template, url_for, request, current_app, abort, jsonify, make_response
 from flask_login import login_required, current_user
 from .. import db
 from ..models import Nation, NationFactory, NaturalResource, Alliance, Division, Unit, RecruitmentQueue
 from ..helpers import error_response as _error_response, compute_total_upkeep
-from ..game.population import get_population_effects
+from ..game.population import get_population_effects, estimate_pop_delta, FOOD_PER_CITIZEN
 from ..game.factories import FACTORY_DEFS
 from ..game.units import UNIT_DEFS
 from . import main
@@ -45,7 +45,7 @@ ADMIN_RESOURCES = {
     'total_land', 'cleared_land', 'urban_areas', 'used_land',
     'forest', 'grassland', 'jungle', 'desert', 'mountain', 'tundra', 'river', 'lake',
     'population_gp', 'land_gp', 'factory_gp', 'building_gp', 'military_gp',
-    'population', 'tier', 'loot_tokens',
+    'population', 'tier', 'growth_rate', 'loot_tokens',
 }
 
 
@@ -68,7 +68,8 @@ def changelog_page():
 def home():
     nation = current_user.nation
     summary = _nation_summary(nation) if nation else {}
-    return render_template('main/home.html', nation=nation, is_owner=True, **summary)
+    return render_template('main/home.html', nation=nation, is_owner=True,
+                           **summary)
 
 
 @main.route('/nation/<int:nation_id>')
@@ -79,13 +80,23 @@ def nation_view(nation_id):
         abort(404)
     summary = _nation_summary(nation)
     is_owner = current_user.nation and current_user.nation.id == nation_id
-    return render_template('main/nation.html', nation=nation, is_owner=is_owner, **summary)
+    return render_template('main/nation.html', nation=nation, is_owner=False,
+                           **summary)
 
 
 @main.route('/gp-breakdown')
 @login_required
 def gp_breakdown():
     return render_template('main/partials/gp_breakdown.html', nation=current_user.nation)
+
+
+@main.route('/population-delta')
+@login_required
+def population_delta():
+    nation = current_user.nation
+    if not nation:
+        return jsonify(delta=0)
+    return jsonify(delta=estimate_pop_delta(nation))
 
 
 @main.route('/resource-footer')
@@ -96,6 +107,8 @@ def resource_footer():
     if nation:
         pop_effects = get_population_effects(nation.population)
         unit_upkeep = compute_total_upkeep(nation.id)
+        delta = estimate_pop_delta(nation)
+        growth_food = max(0, delta) * FOOD_PER_CITIZEN
 
         resources_config = [
             ('money',              'Money',              'money_icon.png'),
@@ -120,6 +133,10 @@ def resource_footer():
                 lines.append(('Pop Tax', pop_rate))
             elif pop_rate < 0:
                 lines.append(('Pop Usage', pop_rate))
+
+            # Show growth food cost on the food row
+            if key == 'food' and growth_food > 0:
+                lines.append(('Pop Growth', -growth_food))
 
             upkeep = unit_upkeep.get(key, 0)
             if upkeep > 0:
@@ -168,16 +185,39 @@ def update_flag():
 def update_description():
     new_desc = request.form.get('new_description', '').strip()
     if len(new_desc) > 5000:
-        resp = current_app.response_class(status=422)
-        resp.headers['HX-Trigger'] = json.dumps(
-            {'showMessage': {'message': 'Description too long (max 5000 characters).', 'type': 'error'}}
-        )
-        return resp
+        return _error_response('Description too long (max 5000 characters).')
     current_user.nation.description = new_desc
     db.session.commit()
-    resp = current_app.response_class(status=204)
+    resp = make_response(render_template(
+        'main/partials/nation_description.html',
+        nation=current_user.nation,
+    ))
     resp.headers['HX-Trigger'] = json.dumps(
         {'showMessage': {'message': 'Description updated.', 'type': 'success'}}
+    )
+    return resp
+
+
+@main.route('/update-growth-rate', methods=['POST'])
+@login_required
+def update_growth_rate():
+    nation = current_user.nation
+    if not nation:
+        return _error_response('No nation found.')
+    try:
+        rate = int(request.form.get('growth_rate', 0))
+    except (ValueError, TypeError):
+        return _error_response('Invalid growth rate.')
+    if rate < 0 or rate > 100:
+        return _error_response('Growth rate must be between 0 and 100.')
+    nation.growth_rate = rate
+    db.session.commit()
+    delta = estimate_pop_delta(nation)
+    resp = current_app.make_response(json.dumps({'delta': delta}))
+    resp.headers['Content-Type'] = 'application/json'
+    resp.headers['HX-Trigger'] = json.dumps(
+        {'showMessage': {'message': f'Growth rate set to {rate}%.', 'type': 'success'},
+         'refreshResourceFooter': True}
     )
     return resp
 
@@ -332,5 +372,76 @@ def admin_complete_queue(nation_id, entry_id):
     )
     resp.headers['HX-Trigger'] = json.dumps(
         {'showMessage': {'message': f'{udef.name} completed instantly.', 'type': 'success'}}
+    )
+    return resp
+
+
+@main.route('/admin/nation/<int:nation_id>/tick', methods=['POST'])
+@login_required
+def admin_apply_tick(nation_id):
+    """Apply one full hourly tick to a single nation."""
+    _require_admin()
+    nation = db.session.get(Nation, nation_id)
+    if not nation:
+        return _error_response('Nation not found.')
+
+    from ..game.population import (get_population_effects, process_growth,
+                                   process_starvation, compute_tier, compute_population_gp)
+    from ..helpers import compute_total_upkeep
+    from ..models import NationFactory, Unit
+
+    # 1. Population effects (tax income + resource consumption)
+    effects = get_population_effects(nation.population)
+    for res, amount in effects.items():
+        new_val = nation.get_resource(res) + amount
+        setattr(nation, res, max(0, new_val))
+
+    # 2. Population growth
+    grown = process_growth(nation)
+
+    # 3. Starvation
+    starved = process_starvation(nation)
+
+    # 4. Tier + population GP
+    nation.tier = compute_tier(nation.population)
+    nation.population_gp = compute_population_gp(nation.population)
+
+    # 5. Factory production capacity (+1, cap 24)
+    NationFactory.query.filter(
+        NationFactory.nation_id == nation.id,
+        NationFactory.count > 0,
+        NationFactory.production_capacity < 24,
+    ).update({'production_capacity': NationFactory.production_capacity + 1})
+
+    # 6. Military upkeep
+    units = Unit.query.filter_by(nation_id=nation.id).filter(Unit.hp > 0).all()
+    if units:
+        total_upkeep = compute_total_upkeep(nation.id)
+        can_pay = all(nation.get_resource(r) >= a for r, a in total_upkeep.items())
+        if can_pay:
+            for res, amount in total_upkeep.items():
+                nation.add_resource(res, -amount)
+        else:
+            for unit in units:
+                attrition = max(1, unit.max_hp // 10)
+                floor = unit.max_hp // 5
+                if unit.hp > floor:
+                    unit.hp = max(floor, unit.hp - attrition)
+
+    db.session.commit()
+
+    parts = ['Tick applied']
+    if grown:
+        parts.append(f'+{grown:,} pop')
+    if starved:
+        parts.append(f'-{starved:,} pop (starvation)')
+    summary = '. '.join(parts) + '.'
+
+    resp = current_app.make_response(
+        render_template('main/partials/admin_panel.html', **_admin_panel_context(nation))
+    )
+    resp.headers['HX-Trigger'] = json.dumps(
+        {'showMessage': {'message': summary, 'type': 'success'},
+         'refreshResourceFooter': True}
     )
     return resp

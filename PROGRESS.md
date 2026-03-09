@@ -87,22 +87,23 @@ Reference: `../MODERNIZATION_STRATEGY.md`
 
 ---
 
-## Phase 4: Market & Alliance Logic ⬜
+## Phase 4: Market & Growth Logic ⬜
 **Goal:** Secure, transactional social features.
 
 - [x] Global market listing UI with HTMX resource filter (`/market?resource=metal`)
 - [x] Atomic trade transactions in Flask (SQLAlchemy)
+- [x] tiers, population growth setting (urban land expansion cost)
 
 ---
 
-## Phase 5: Optimization & Visual Polish ⬜
+## Phase 5: Optimization & Visual Polish ✅
 **Goal:** Performance and UX refinement.
 
 - [x] Alpine.js tooltips on resource icons (replace JS fetch listeners)
-- [ ] Flask-Caching for static data (continent weights, unit base stats)
-- [ ] Tailwind CSS JIT bundle optimization
-- [ ] Gunicorn + Nginx production deployment config
-- [ ] Docker compose compatibility w/ separate database container
+- [x] Flask-Caching for static data (continent weights, unit base stats)
+- [x] Tailwind CSS JIT bundle optimization
+- [x] Gunicorn + Nginx production deployment config
+- [x] Docker compose compatibility w/ separate database container
 
 Future:
 - Wars
@@ -110,5 +111,4 @@ Future:
 - Events (a la 2.0)
 - Alliance leaderboard — server-rendered table
 - Live alliance search — `hx-trigger="keyup changed delay:500ms"`
-- tiers, population growth setting (urban land expansion cost)
 - Security - messages should not be readable by those not in the conversation and divisions/units should only be visible through their snapshots (during/after battles)

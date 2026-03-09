@@ -28,6 +28,7 @@ class Nation(db.Model):
     founded_date = db.Column(db.Date, default=date.today)
     description = db.Column(db.Text, default='')
     continent = db.Column(db.String(100), default='')
+    growth_rate = db.Column(db.Integer, default=50)  # 0-100 percent
     alliance_id = db.Column(db.Integer, db.ForeignKey('alliances.id'), nullable=True)
 
     # Greatness Points components
@@ -40,8 +41,8 @@ class Nation(db.Model):
     # Core resources
     money = db.Column(db.Float, default=10_000.0)
     food = db.Column(db.Float, default=5_000.0)
-    power = db.Column(db.Float, default=5_000.0)
-    building_materials = db.Column(db.Float, default=1_000.0)
+    power = db.Column(db.Float, default=2500.0)
+    building_materials = db.Column(db.Float, default=2500.0)
     consumer_goods = db.Column(db.Float, default=1_000.0)
     metal = db.Column(db.Float, default=500.0)
     fuel = db.Column(db.Float, default=500.0)

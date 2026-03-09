@@ -28,21 +28,6 @@
 
         <div x-show="settingsOpen" x-cloak class="divide-y divide-slate-700">
 
-            {# Flag URL #}
-            <form hx-post="{{ url_for('main.update_flag') }}" hx-swap="none"
-                  class="p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                <label class="text-sm font-medium text-slate-300 sm:w-28 shrink-0">Flag URL</label>
-                <input type="text" name="new_flag"
-                       value="{{ nation.flag_url or '' }}"
-                       placeholder="https://... (any image link)"
-                       class="flex-1 w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm"
-                       required>
-                <button type="submit"
-                        class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md transition-colors font-semibold text-sm shrink-0">
-                    Save
-                </button>
-            </form>
-
             {# Email #}
             <form hx-post="{{ url_for('auth.update_email') }}" hx-swap="none"
                   class="p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center">
@@ -56,18 +41,6 @@
                        required>
                 <button type="submit"
                         class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md transition-colors font-semibold text-sm shrink-0">
-                    Save
-                </button>
-            </form>
-
-            {# Description #}
-            <form hx-post="{{ url_for('main.update_description') }}" hx-swap="none" class="p-4 space-y-3">
-                <label class="text-sm font-medium text-slate-300">Country Description</label>
-                <textarea name="new_description" rows="3"
-                          placeholder="Enter your country's description..."
-                          class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 resize-y font-sans text-sm">{{ nation.description }}</textarea>
-                <button type="submit"
-                        class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md transition-colors font-semibold text-sm">
                     Save
                 </button>
             </form>
