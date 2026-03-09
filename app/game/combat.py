@@ -799,8 +799,8 @@ def _end_battle(battle, db_session):
     from ..models import Division, Unit, Nation
 
     # Snapshot both sides' units before anything changes
-    atk_units = Unit.query.filter_by(division_id=battle.attacker_division_id).all()
-    def_units = Unit.query.filter_by(division_id=battle.defender_division_id).all()
+    atk_units = Unit.query.filter_by(division_id=battle.attacker_division_id).order_by(Unit.id).all()
+    def_units = Unit.query.filter_by(division_id=battle.defender_division_id).order_by(Unit.id).all()
     battle.attacker_snapshot = json.dumps(_snapshot_units(atk_units))
     battle.defender_snapshot = json.dumps(_snapshot_units(def_units))
 

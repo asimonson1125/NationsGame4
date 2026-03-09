@@ -54,7 +54,7 @@ from app.models import User
 from app import db
 
 # Find user by username and set is_admin to True
-user = User.query.filter_by(username='your_username').first()
+user = User.query.filter_by(username='Cascadalyst').first()
 if user:
     user.is_admin = True
     db.session.commit()

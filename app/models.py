@@ -30,6 +30,8 @@ class Nation(db.Model):
     continent = db.Column(db.String(100), default='')
     growth_rate = db.Column(db.Integer, default=50)  # 0-100 percent
     alliance_id = db.Column(db.Integer, db.ForeignKey('alliances.id'), nullable=True)
+    last_expanded_at = db.Column(db.DateTime, nullable=True)
+    last_colonized_at = db.Column(db.DateTime, nullable=True)
 
     # Greatness Points components
     population_gp = db.Column(db.BigInteger, default=0)

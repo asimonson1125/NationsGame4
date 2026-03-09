@@ -1,4 +1,5 @@
 import json
+from functools import wraps
 from flask import render_template, url_for, request, current_app, abort, jsonify, make_response
 from flask_login import login_required, current_user
 from .. import db
@@ -265,17 +266,21 @@ def leaderboard_search():
 
 # ── Admin helpers ──────────────────────────────────────────────────────
 
-def _require_admin():
-    if not current_user.is_admin:
-        abort(403)
+def require_admin(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not current_user.is_admin:
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated
 
 
 # ── Admin routes ───────────────────────────────────────────────────────
 
 @main.route('/admin/search-nations')
 @login_required
+@require_admin
 def admin_search_nations():
-    _require_admin()
     from ..helpers import nation_search_query
     q = request.args.get('q', '').strip()
     if len(q) < 1:
@@ -293,8 +298,8 @@ def _admin_panel_context(nation):
 
 @main.route('/admin/nation/<int:nation_id>')
 @login_required
+@require_admin
 def admin_nation_panel(nation_id):
-    _require_admin()
     nation = db.session.get(Nation, nation_id)
     if not nation:
         return _error_response('Nation not found.')
@@ -303,8 +308,8 @@ def admin_nation_panel(nation_id):
 
 @main.route('/admin/nation/<int:nation_id>/resource', methods=['POST'])
 @login_required
+@require_admin
 def admin_edit_resource(nation_id):
-    _require_admin()
     nation = db.session.get(Nation, nation_id)
     if not nation:
         return _error_response('Nation not found.')
@@ -343,8 +348,8 @@ def admin_edit_resource(nation_id):
 
 @main.route('/admin/nation/<int:nation_id>/complete-queue/<int:entry_id>', methods=['POST'])
 @login_required
+@require_admin
 def admin_complete_queue(nation_id, entry_id):
-    _require_admin()
     nation = db.session.get(Nation, nation_id)
     if not nation:
         return _error_response('Nation not found.')
@@ -376,9 +381,9 @@ def admin_complete_queue(nation_id, entry_id):
 
 @main.route('/admin/nation/<int:nation_id>/tick', methods=['POST'])
 @login_required
+@require_admin
 def admin_apply_tick(nation_id):
     """Apply one full hourly tick to a single nation."""
-    _require_admin()
     nation = db.session.get(Nation, nation_id)
     if not nation:
         return _error_response('Nation not found.')

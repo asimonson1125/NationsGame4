@@ -110,5 +110,5 @@ Future:
 - unit leveling (level bonuses are unit-innate)
 - Events (a la 2.0)
 - Alliance leaderboard — server-rendered table
-- Live alliance search — `hx-trigger="keyup changed delay:500ms"`
-- Security - messages should not be readable by those not in the conversation and divisions/units should only be visible through their snapshots (during/after battles)
+- Live alliance search — `hx-trigger="keyup changed delay:500ms"`\
+- Rate Limiting

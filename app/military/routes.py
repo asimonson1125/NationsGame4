@@ -537,14 +537,11 @@ def _get_battle_units(battle):
 @login_required
 def battle_view(battle_id):
     battle = Battle.query.get_or_404(battle_id)
-    nation = current_user.nation
-    # Only participants can view
-    if nation.id not in (battle.attacker_nation_id, battle.defender_nation_id):
-        return _error_response('You are not a participant in this battle.', 403)
     reports = CombatReport.query.filter_by(battle_id=battle.id).order_by(
         CombatReport.id.desc()
     ).limit(50).all()
     attacker_units, defender_units = _get_battle_units(battle)
+    nation = current_user.nation
     return render_template(
         'military/battle.html',
         battle=battle,
@@ -552,6 +549,7 @@ def battle_view(battle_id):
         attacker_units=attacker_units,
         defender_units=defender_units,
         unit_defs=UNIT_DEFS,
+        is_participant=nation and nation.id in (battle.attacker_nation_id, battle.defender_nation_id),
     )
 
 
@@ -646,9 +644,6 @@ def deploy_peacekeeping(div_id):
 @login_required
 def battle_status(battle_id):
     battle = Battle.query.get_or_404(battle_id)
-    nation = current_user.nation
-    if nation.id not in (battle.attacker_nation_id, battle.defender_nation_id):
-        return _error_response('You are not a participant in this battle.', 403)
     reports = CombatReport.query.filter_by(battle_id=battle.id).order_by(
         CombatReport.id.desc()
     ).limit(50).all()
@@ -668,9 +663,6 @@ def battle_status(battle_id):
 def battle_unit_detail(battle_id, side, index):
     """Unit detail popup for battle view — always renders from snapshot data."""
     battle = Battle.query.get_or_404(battle_id)
-    nation = current_user.nation
-    if nation.id not in (battle.attacker_nation_id, battle.defender_nation_id):
-        return _error_response('You are not a participant in this battle.')
 
     if side not in ('attacker', 'defender'):
         return _error_response('Invalid side.')

@@ -12,6 +12,7 @@
      }"
      @open-combat-detail.window="open($event.detail)"
 >
+    <span id="battle-spin" class="htmx-indicator fixed top-4 right-4 z-50 w-4 h-4 border-2 border-slate-500 border-t-slate-200 rounded-full animate-spin pointer-events-none"></span>
     {% include 'military/partials/battle_status.html' %}
 
     {# ── Combat Roll detail modal ── #}

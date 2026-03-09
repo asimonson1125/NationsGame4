@@ -36,6 +36,7 @@
      hx-get="{{ url_for('military.battle_status', battle_id=battle.id) }}"
      hx-trigger="every 2s"
      hx-swap="outerHTML"
+     hx-indicator="#battle-spin"
      {% endif %}>
 
 <div class="flex items-center justify-between mb-4">
@@ -74,7 +75,7 @@
     <div class="lg:w-[30%] w-full">
         <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
             <div class="bg-blue-600 text-white px-4 py-3">
-                <div class="font-bold text-base">{{ battle.defender_division.name if battle.defender_division else battle.defender_division_name }}</div>
+                <div class="font-bold text-base">{{ battle.defender_division_name }}</div>
                 <div class="text-blue-100 text-xs mt-0.5">{{ battle.defender_nation.name }}</div>
             </div>
             {% set def_alive = defender_units | selectattr('hp', 'gt', 0) | list | length %}
@@ -97,7 +98,7 @@
             <div class="bg-slate-700 text-slate-200 px-4 py-3 flex items-center justify-between">
                 <span class="font-bold text-base">Battle Reports</span>
                 {% if battle.status == 'active' %}
-                <span class="w-4 h-4 border-2 border-slate-500 border-t-slate-200 rounded-full animate-spin"></span>
+                <span class="w-2 h-2 rounded-full bg-red-400 animate-pulse"></span>
                 {% endif %}
             </div>
             <div id="battle-log" class="divide-y divide-slate-700/50">
@@ -139,7 +140,7 @@
     <div class="lg:w-[30%] w-full">
         <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
             <div class="bg-red-600 text-white px-4 py-3">
-                <div class="font-bold text-base">{{ battle.attacker_division.name if battle.attacker_division else battle.attacker_division_name }}</div>
+                <div class="font-bold text-base">{{ battle.attacker_division_name }}</div>
                 <div class="text-red-100 text-xs mt-0.5">{{ battle.attacker_nation.name }}</div>
             </div>
             {% set atk_alive = attacker_units | selectattr('hp', 'gt', 0) | list | length %}

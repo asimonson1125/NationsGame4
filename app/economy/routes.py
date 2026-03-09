@@ -10,6 +10,12 @@ from ..game.discovery import roll_expansion, roll_colonization
 from ..game.factories import FACTORY_DEFS
 from . import economy
 
+_EXPAND_COOLDOWN = 60       # seconds between expand attempts
+_COLONIZE_COOLDOWN = 60    # seconds between colonize attempts
+_MAX_LAND_TX = 10_000      # tiles per buy/build transaction
+_MAX_BUILD_QTY = 100       # factories per build transaction
+
+
 def get_expand_cost(population):
     pop = population or 0
     return {
@@ -73,11 +79,18 @@ def expand_borders():
     if not nation:
         return _error_response('No nation found.')
 
+    if nation.last_expanded_at:
+        elapsed = (datetime.utcnow() - nation.last_expanded_at).total_seconds()
+        if elapsed < _EXPAND_COOLDOWN:
+            remaining = int(_EXPAND_COOLDOWN - elapsed)
+            return _error_response(f'Please wait {remaining}s before expanding again.')
+
     cost = get_expand_cost(nation.population)
     if not _can_afford(nation, cost):
         return _error_response('Insufficient resources to expand borders.')
 
     _deduct_cost(nation, cost)
+    nation.last_expanded_at = datetime.utcnow()
     continent = nation.continent or 'Westberg'
     new_land, discovered, total_gained = roll_expansion(continent, nation.population)
     _apply_land(nation, new_land, total_gained)
@@ -110,6 +123,12 @@ def colonize():
     if (nation.tier or 1) < 6:
         return _error_response('Colonization requires Tier 6 or higher.')
 
+    if nation.last_colonized_at:
+        elapsed = (datetime.utcnow() - nation.last_colonized_at).total_seconds()
+        if elapsed < _COLONIZE_COOLDOWN:
+            remaining = int(_COLONIZE_COOLDOWN - elapsed)
+            return _error_response(f'Please wait {remaining}s before colonizing again.')
+
     cost = get_colonize_cost(nation.population)
     if not _can_afford(nation, cost):
         return _error_response('Insufficient resources to colonize.')
@@ -119,6 +138,7 @@ def colonize():
         return _error_response('Invalid continent selected.')
 
     _deduct_cost(nation, cost)
+    nation.last_colonized_at = datetime.utcnow()
     new_land, discovered, total_gained = roll_colonization(target_continent, nation.population)
     _apply_land(nation, new_land, total_gained)
     _upsert_resources(nation, discovered)
@@ -153,6 +173,8 @@ def buy_cleared_land():
         return _error_response('Invalid amount.')
     if amount <= 0:
         return _error_response('Amount must be greater than zero.')
+    if amount > _MAX_LAND_TX:
+        return _error_response(f'Cannot purchase more than {_MAX_LAND_TX:,} tiles at once.')
 
     cost = amount * 1000
     if (nation.money or 0) < cost:
@@ -185,6 +207,8 @@ def build_urban_areas():
         return _error_response('Invalid amount.')
     if amount <= 0:
         return _error_response('Amount must be greater than zero.')
+    if amount > _MAX_LAND_TX:
+        return _error_response(f'Cannot build more than {_MAX_LAND_TX:,} urban tiles at once.')
 
     cleared = nation.cleared_land or 0
     if cleared < amount:
@@ -251,6 +275,8 @@ def build_factory():
         return _error_response('Invalid amount.')
     if qty < 1:
         return _error_response('Amount must be at least 1.')
+    if qty > _MAX_BUILD_QTY:
+        return _error_response(f'Cannot build more than {_MAX_BUILD_QTY} factories at once.')
 
     if (nation.tier or 1) < fdef.tier:
         return _error_response(f'{fdef.name} requires Tier {fdef.tier}.')
@@ -357,7 +383,9 @@ def collect_factory(factory_key):
     if not fdef:
         return _error_response('Unknown factory type.')
 
-    nf = NationFactory.query.filter_by(nation_id=nation.id, factory_key=factory_key).first()
+    nf = NationFactory.query.filter_by(
+        nation_id=nation.id, factory_key=factory_key
+    ).with_for_update().first()
     if not nf or nf.count == 0:
         return _error_response('You do not have this factory.')
 
