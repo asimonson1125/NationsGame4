@@ -164,8 +164,6 @@ def search_nations():
     q = request.args.get('q', '').strip()
     if len(q) < 2:
         return jsonify([])
-    nations = Nation.query.filter(
-        Nation.name.ilike(f'%{q}%'),
-        Nation.id != current_user.nation.id,
-    ).limit(10).all()
+    from ..helpers import nation_search_query
+    nations = nation_search_query(q, exclude_id=current_user.nation.id).limit(10).all()
     return jsonify([{'id': n.id, 'name': n.name} for n in nations])

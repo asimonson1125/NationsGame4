@@ -443,6 +443,30 @@
     })();
 </script>
 
+<script>
+    // Reusable Alpine component factory for nation name autocomplete.
+    // endpoint: URL returning [{id, name}, ...] JSON
+    // minLen:   minimum query length before fetching
+    // onSelect: optional callback(nation) called after a result is picked
+    function nationAutocomplete(endpoint, minLen, onSelect) {
+        return {
+            query: '',
+            results: [],
+            minLen: minLen,
+            async search() {
+                if (this.query.length < this.minLen) { this.results = []; return; }
+                const resp = await fetch(endpoint + '?q=' + encodeURIComponent(this.query));
+                this.results = await resp.json();
+            },
+            select(n) {
+                this.query = n.name;
+                this.results = [];
+                if (onSelect) onSelect(n);
+            }
+        };
+    }
+</script>
+
 {% block scripts %}{% endblock %}
 </body>
 </html>

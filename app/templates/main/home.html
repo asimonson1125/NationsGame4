@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% from 'macros.html' import nation_autocomplete_input %}
 
 {% block title %}{{ nation.name if nation else 'Home' }}{% endblock %}
 
@@ -95,49 +96,19 @@
     {% if current_user.is_admin %}
     {# ===== ADMIN PANEL ===== #}
     <div class="bg-slate-800 rounded-lg border-2 border-red-500 p-5 max-w-4xl mx-auto"
-         x-data="adminSearch()">
+         x-data="nationAutocomplete('{{ url_for('main.admin_search_nations') }}', 1, function(n) {
+             htmx.ajax('GET', '/admin/nation/' + n.id, {target: '#admin-panel-content', swap: 'outerHTML'});
+         })">
         <h2 class="text-xl font-semibold mb-4 text-red-400">Admin Panel</h2>
 
         {# Nation search #}
-        <div class="relative mb-4">
-            <input type="text" placeholder="Search nations by name..."
-                   x-model="query" @input.debounce.300ms="search()"
-                   class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/50 text-sm">
-            {# Dropdown results #}
-            <div x-show="results.length > 0" x-cloak
-                 class="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                <template x-for="n in results" :key="n.id">
-                    <button @click="selectNation(n)"
-                            class="w-full text-left px-3 py-2 hover:bg-slate-700 text-sm text-slate-200"
-                            x-text="n.name + ' (#' + n.id + ')'"></button>
-                </template>
-            </div>
-        </div>
+        {{ nation_autocomplete_input(placeholder='Search nations by name...', accent='red', show_id=true, wrapper_class='mb-4') }}
 
         {# Panel content (loaded via HTMX) #}
         <div id="admin-panel-content">
             <p class="text-sm text-slate-500 italic">Search for a nation above to manage it.</p>
         </div>
     </div>
-
-    <script>
-    function adminSearch() {
-        return {
-            query: '',
-            results: [],
-            async search() {
-                if (this.query.length < 1) { this.results = []; return; }
-                const resp = await fetch('{{ url_for("main.admin_search_nations") }}?q=' + encodeURIComponent(this.query));
-                this.results = await resp.json();
-            },
-            selectNation(n) {
-                this.results = [];
-                this.query = n.name;
-                htmx.ajax('GET', '/admin/nation/' + n.id, {target: '#admin-panel-content', swap: 'outerHTML'});
-            }
-        };
-    }
-    </script>
     {% endif %}
 
 </div>

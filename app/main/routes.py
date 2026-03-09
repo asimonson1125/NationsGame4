@@ -212,13 +212,15 @@ def leaderboard_table():
 @main.route('/leaderboard/search')
 @login_required
 def leaderboard_search():
+    from ..helpers import nation_search_query
     q = request.args.get('q', '').strip()
     if len(q) < 2:
         return render_template('main/partials/leaderboard_search.html',
                                query='', results=[])
-    results = Nation.query.options(db.joinedload(Nation.alliance)).filter(
-        db.or_(Nation.name.ilike(f'%{q}%'), Nation.leader.ilike(f'%{q}%'))
-    ).order_by(_GP_EXPR.desc()).limit(50).all()
+    results = (nation_search_query(q, search_leader=True)
+               .options(db.joinedload(Nation.alliance))
+               .order_by(_GP_EXPR.desc())
+               .limit(50).all())
     return render_template('main/partials/leaderboard_search.html',
                            query=q, results=results)
 
@@ -236,10 +238,11 @@ def _require_admin():
 @login_required
 def admin_search_nations():
     _require_admin()
+    from ..helpers import nation_search_query
     q = request.args.get('q', '').strip()
     if len(q) < 1:
         return jsonify([])
-    nations = Nation.query.filter(Nation.name.ilike(f'%{q}%')).limit(20).all()
+    nations = nation_search_query(q).limit(20).all()
     return jsonify([{'id': n.id, 'name': n.name} for n in nations])
 
 

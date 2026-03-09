@@ -1,9 +1,12 @@
 {% extends 'base.html' %}
+{% from 'macros.html' import nation_autocomplete_input %}
 
 {% block title %}Compose — Mail{% endblock %}
 
 {% block content %}
-<div class="p-6 max-w-2xl mx-auto" x-data="composeData()">
+<div class="p-6 max-w-2xl mx-auto"
+     x-data="nationAutocomplete('/mail/search-nations', 2)"
+     x-init="query = {{ (to_nation.name if to_nation else '') | tojson }}">
 
     {# Back link #}
     <a href="{{ url_for('mail.inbox') }}" class="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors mb-4">
@@ -18,25 +21,11 @@
         <form hx-post="{{ url_for('mail.send_message') }}" hx-swap="none" class="p-5 space-y-4">
 
             {# Recipient with autocomplete #}
-            <div class="relative" @click.outside="suggestions = []">
+            <div>
                 <label class="block text-sm font-medium text-slate-400 mb-1">To</label>
-                <input type="text" name="recipient"
-                       x-model="recipientName"
-                       @input.debounce.300ms="searchNations()"
-                       @focus="if(recipientName.length >= 2) searchNations()"
-                       autocomplete="off"
-                       placeholder="Nation name..."
-                       class="w-full bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
-                {# Autocomplete dropdown #}
-                <div x-show="suggestions.length > 0" x-cloak
-                     class="absolute top-full left-0 right-0 mt-1 bg-slate-700 border border-slate-600 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
-                    <template x-for="nation in suggestions" :key="nation.id">
-                        <button type="button"
-                                @click="recipientName = nation.name; suggestions = []"
-                                class="w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-slate-600 transition-colors"
-                                x-text="nation.name"></button>
-                    </template>
-                </div>
+                {# Hidden input carries the value for form submission; x-model keeps it in sync #}
+                <input type="hidden" name="recipient" x-bind:value="query">
+                {{ nation_autocomplete_input(placeholder='Nation name...') }}
             </div>
 
             {# Subject #}
@@ -66,22 +55,3 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
-<script>
-function composeData() {
-    return {
-        recipientName: '{{ to_nation.name if to_nation else '' }}',
-        suggestions: [],
-
-        async searchNations() {
-            if (this.recipientName.length < 2) {
-                this.suggestions = [];
-                return;
-            }
-            const resp = await fetch('/mail/search-nations?q=' + encodeURIComponent(this.recipientName));
-            this.suggestions = await resp.json();
-        }
-    }
-}
-</script>
-{% endblock %}

@@ -5,6 +5,30 @@ from collections import Counter
 from flask import current_app
 
 
+# ── Nation search ────────────────────────────────────────────────────────
+
+def nation_search_query(q, *, exclude_id=None, search_leader=False):
+    """Return a filtered Nation.query for the given search string.
+
+    Callers apply .limit(), .order_by(), .options() etc. themselves.
+
+    Args:
+        q: search string (caller is responsible for min-length guard)
+        exclude_id: omit this nation ID from results (e.g. current user's nation)
+        search_leader: also match against Nation.leader column
+    """
+    from .models import Nation
+    from . import db
+    if search_leader:
+        name_filter = db.or_(Nation.name.ilike(f'%{q}%'), Nation.leader.ilike(f'%{q}%'))
+    else:
+        name_filter = Nation.name.ilike(f'%{q}%')
+    query = Nation.query.filter(name_filter)
+    if exclude_id is not None:
+        query = query.filter(Nation.id != exclude_id)
+    return query
+
+
 # ── HTMX response builders ──────────────────────────────────────────────
 
 def htmx_response(html='', message='', msg_type='success', status=200,
