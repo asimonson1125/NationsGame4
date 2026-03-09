@@ -36,10 +36,20 @@ The built file lives at `app/static/css/style.css`. Source styles are in `app/st
 
 ### Option A: Docker Compose (recommended)
 
+**Standalone** (includes Nginx):
 ```bash
-cp .env.example .env           # fill in SECRET_KEY, POSTGRES_PASSWORD
-docker compose up --build -d   # starts app, postgres, redis, nginx
+python3 setup_env.py
+docker compose --profile standalone up --build -d
 ```
+
+**Behind Nginx Proxy Manager** (or another external proxy):
+```bash
+python3 setup_env.py           # set APP_PORT when prompted, e.g. 127.0.0.1:8001
+docker compose up --build -d   # starts app, postgres, redis — no nginx
+```
+Then point NPM to `http://127.0.0.1:8001`.
+
+The script prompts for all required vars, generating a random `SECRET_KEY` and Postgres password automatically.
 
 Services:
 
@@ -56,12 +66,15 @@ The app is accessible at `http://localhost` (or the `HOST_PORT` set in `.env`). 
 
 ```bash
 pip3 install -r requirements.txt
-export FLASK_ENV=production
-export SECRET_KEY=your-secret
-export DATABASE_URL=postgresql://user:pass@localhost/ng4
-export REDIS_URL=redis://localhost:6379/0
+python3 setup_env.py           # generates .env with a random SECRET_KEY
+# edit .env — set DATABASE_URL, REDIS_URL, etc.
+source .env
 gunicorn -c gunicorn.conf.py wsgi:app
 ```
+
+`setup_env.py` flags:
+- `--defaults` — accept all defaults without prompting (CI/scripted deploys)
+- `--force` — overwrite an existing `.env`
 
 Point Nginx (or another reverse proxy) at `localhost:8000` using the provided `nginx/nginx.conf` as a reference.
 

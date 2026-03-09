@@ -1,3 +1,4 @@
+{% from 'shared/_macros.html' import res_icon %}
 {# ===== NATION HEADER BANNER ===== #}
 {% set continent_bg = {
     'Tind':          'tind.png',
@@ -382,10 +383,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {% for nr in natural_resources %}
             <div class="bg-slate-800 rounded-lg border border-slate-700 p-3 flex flex-col items-center text-center">
-                <img src="{{ url_for('static', filename='images/icons/' ~ nr.resource_key ~ '_icon.png') }}"
-                     alt="{{ nr.resource_key }}"
-                     class="w-8 h-8 mb-2"
-                     onerror="this.style.display='none'">
+                {{ res_icon(nr.resource_key, 'w-8 h-8 mb-2') }}
                 <div class="text-xs text-slate-400 mb-1 capitalize">{{ nr.resource_key | replace('_', ' ') }}</div>
                 <div class="text-sm font-bold text-slate-100">{{ nr.amount | format_resource }}</div>
             </div>

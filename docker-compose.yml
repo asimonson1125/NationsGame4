@@ -43,17 +43,21 @@ services:
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-4}
     expose:
       - "8000"
+    ports:
+      - "${APP_PORT:-127.0.0.1:8001}:8000"  # NPM or other external proxy points here
 
   nginx:
     container_name: ng-nginx
     image: nginx:alpine
     restart: unless-stopped
+    profiles: ["standalone"]
     depends_on:
       - app
     ports:
       - "${HOST_PORT:-80}:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./app/static:/app/app/static:ro
 
 volumes:
   pgdata:

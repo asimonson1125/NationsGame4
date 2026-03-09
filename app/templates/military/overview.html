@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% from 'shared/_equipment_macros.html' import unit_type_icon %}
+{% from 'shared/_macros.html' import res_icon %}
 
 {% block title %}Military — {{ nation.name }}{% endblock %}
 
@@ -68,8 +69,7 @@
             <div class="flex flex-wrap gap-x-4 gap-y-2 mb-3">
                 {% for res, amount in total_upkeep.items() %}
                 <div class="flex items-center gap-1.5 text-sm">
-                    <img src="{{ url_for('static', filename='images/icons/' ~ res ~ '_icon.png') }}"
-                         alt="{{ res }}" class="w-4 h-4" onerror="this.style.display='none'">
+                    {{ res_icon(res) }}
                     <span class="{% if amount > (nation | attr(res) or 0) %}text-red-400 font-semibold{% else %}text-slate-300{% endif %}">
                         {{ amount | format_resource }}
                     </span>

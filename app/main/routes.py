@@ -52,15 +52,13 @@ ADMIN_RESOURCES = {
 @main.route('/')
 def index():
     """Landing / index page — always accessible."""
-    layout = 'base.html' if current_user.is_authenticated else 'layouts/bare.html'
-    return render_template('main/landing.html', layout=layout)
+    return render_template('main/landing.html', layout='base.html')
 
 
 @main.route('/changelog')
 def changelog_page():
     """Full version history — always accessible."""
-    layout = 'base.html' if current_user.is_authenticated else 'layouts/bare.html'
-    return render_template('main/changelog.html', layout=layout)
+    return render_template('main/changelog.html', layout='base.html')
 
 
 @main.route('/home')

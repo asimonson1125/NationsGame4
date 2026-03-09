@@ -7,7 +7,7 @@
 <div class="grid grid-cols-1 {% if items|length > 1 %}sm:grid-cols-2{% endif %} {% if items|length > 3 %}lg:grid-cols-3{% endif %} gap-3">
     {% for item in items %}
     {% set colors = rarity_colors.get(item.rarity, rarity_colors['Common']) %}
-    {{ equipment_card(item, colors, show_name=false,
+    {{ equipment_card(item, colors,
                       extra_class='animate-[fadeIn_0.3s_ease-in-out]',
                       extra_style='animation-delay: ' ~ (loop.index0 * 150) ~ 'ms; animation-fill-mode: both;') }}
     {% endfor %}

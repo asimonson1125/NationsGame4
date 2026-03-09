@@ -1,0 +1,8 @@
+{# ===== Shared macros ===== #}
+
+{#
+  res_icon(key, size='w-4 h-4')
+  Renders a resource icon wrapped in a tooltip span showing the resource name.
+  Works for commodity keys (money, food, …) and natural resource keys.
+#}
+{% macro res_icon(key, size='w-4 h-4') %}<span class="tt inline-flex" data-tooltip="{{ key | replace('_', ' ') | title }}"><img src="{{ url_for('static', filename='images/icons/' ~ key ~ '_icon.png') }}" alt="{{ key }}" class="{{ size }}" onerror="this.style.display='none'"></span>{% endmacro %}

@@ -57,6 +57,7 @@
         </a>
         {% endmacro %}
 
+        {% if current_user.is_authenticated %}
         {{ nav_link(url_for('main.home'), 'fas fa-home', 'Home', 'main.home') }}
         {{ nav_link(url_for('economy.industry'), 'fas fa-industry', 'Industry', 'economy.industry') }}
         {{ nav_link(url_for('economy.land'), 'fas fa-map', 'Land & Resources', 'economy.land') }}
@@ -74,7 +75,7 @@
         </a>
 
         {# Military dropdown #}
-        {% call(items) nav_dropdown('fas fa-shield-alt', 'Military', [], []) %}
+        {% call(items) nav_dropdown('fa fa-fighter-jet fa-fw', 'Military', [], []) %}
             {{ dropdown_link(url_for('military.overview'), 'fas fa-flag', 'Military Overview') }}
             {{ dropdown_link(url_for('military.battles'), 'fas fa-crosshairs', 'Battle Reports') }}
             {{ dropdown_link(url_for('equipment.inventory'), 'fas fa-tools', 'Equipment') }}
@@ -87,16 +88,22 @@
             {{ dropdown_link('#', 'fas fa-medal', 'Military Leaderboard') }}
             {{ dropdown_link('#', 'fas fa-users', 'Alliance Leaderboard') }}
         {% endcall %}
+        {% endif %}
     </div>
 
-    {# Right: Version + Countdown + Logout #}
+    {# Right: Version + Countdown + Auth action #}
     <div class="hidden lg:flex items-center gap-3 ml-auto shrink-0">
         <a href="{{ url_for('main.changelog_page') }}" class="text-[11px] font-mono font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/30 px-1.5 py-0.5 rounded hover:bg-amber-500/20 transition-colors">v{{ latest_update.version if latest_update else '0.0.0' }}</a>
+        {% if current_user.is_authenticated %}
         <div id="turn-countdown" class="tt tt-below tt-right text-xs text-slate-400" data-tooltip="Time until next production turn"><i class="fas fa-clock mr-1"></i>--:--</div>
         <div id="day-countdown" class="tt tt-below tt-right text-xs text-slate-400" data-tooltip="Time until next game day"><i class="fas fa-calendar-day mr-1"></i>--:--:--</div>
         <a href="{{ url_for('auth.logout') }}" class="text-slate-400 hover:text-slate-200 transition-colors text-sm" title="Logout">
             <i class="fas fa-sign-out-alt"></i>
         </a>
+        {% else %}
+        <a href="{{ url_for('auth.login') }}" class="text-slate-300 hover:text-slate-100 transition-colors text-sm font-medium">Sign In</a>
+        <a href="{{ url_for('auth.register') }}" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-md transition-colors text-sm">Register</a>
+        {% endif %}
     </div>
 
     {# Mobile hamburger #}
@@ -109,6 +116,7 @@
 <div x-show="mobileMenu" x-cloak x-transition
      class="bg-slate-900 border-b border-slate-700 lg:hidden">
     <div class="p-3 space-y-1">
+        {% if current_user.is_authenticated %}
         <a href="{{ url_for('main.home') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-home w-5"></i> Home</a>
         <a href="{{ url_for('economy.industry') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-industry w-5"></i> Industry</a>
         <a href="{{ url_for('economy.land') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-map w-5"></i> Land</a>
@@ -153,6 +161,10 @@
             <span id="day-countdown-mobile"><i class="fas fa-calendar-day mr-1"></i>--:--:--</span>
         </div>
         <a href="{{ url_for('auth.logout') }}" class="block px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-slate-800 rounded-md"><i class="fas fa-sign-out-alt w-5"></i> Logout</a>
+        {% else %}
+        <a href="{{ url_for('auth.login') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-sign-in-alt w-5"></i> Sign In</a>
+        <a href="{{ url_for('auth.register') }}" class="block px-3 py-2 text-sm text-amber-400 hover:text-amber-300 hover:bg-slate-800 rounded-md"><i class="fas fa-user-plus w-5"></i> Register</a>
+        {% endif %}
     </div>
     <a href="{{ url_for('main.changelog_page') }}" class="block px-3 py-2 text-center text-xs text-slate-600 hover:text-slate-400 border-t border-slate-700 transition-colors">v{{ latest_update.version if latest_update else '0.0.0' }} (NG4)</a>
 </div>
@@ -163,7 +175,8 @@
 </div>
 
 {# ===== RESOURCE FOOTER ===== #}
-<footer class="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 z-40 py-1.5">
+{% if current_user.is_authenticated %}
+<footer class="fixed bottom-0 left-0 right-0 bg-slate-900/60 backdrop-blur-sm border-t border-slate-700 z-40 py-1.5">
     <div id="resource-footer-content"
          hx-get="{{ url_for('main.resource_footer') }}"
          hx-trigger="load, every 60s"
@@ -171,6 +184,7 @@
          hx-swap="innerHTML">
     </div>
 </footer>
+{% endif %}
 
 {# ===== GP BREAKDOWN MODAL ===== #}
 <div id="gp-overlay"

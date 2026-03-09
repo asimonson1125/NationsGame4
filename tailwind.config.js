@@ -24,5 +24,31 @@ module.exports = {
       },
     },
   },
+  safelist: [
+    // Rarity badge backgrounds (defined in app/game/equipment.py, not visible to JIT)
+    'bg-slate-700',
+    'bg-emerald-900/60',
+    'bg-blue-900/60',
+    'bg-purple-900/60',
+    'bg-amber-900/60',
+    // Rarity text colors
+    'text-slate-300',
+    'text-emerald-300',
+    'text-blue-300',
+    'text-purple-300',
+    'text-amber-300',
+    // Rarity borders
+    'border-slate-600',
+    'border-emerald-700',
+    'border-blue-700',
+    'border-purple-700',
+    'border-amber-600',
+    // Rarity accent text (used in card body)
+    'text-slate-400',
+    'text-emerald-400',
+    'text-blue-400',
+    'text-purple-400',
+    'text-amber-400',
+  ],
   plugins: [],
 }

@@ -1,4 +1,5 @@
 {% from 'shared/_equipment_macros.html' import stat_icon, unit_type_icon %}
+{% from 'shared/_macros.html' import res_icon %}
 <div id="recruitment-content" x-data="{ filter: '' }">
 
     {# Filter #}
@@ -100,8 +101,7 @@
                     <div class="flex flex-wrap gap-x-3 gap-y-1">
                         {% for res, amount in udef.recruit_cost.items() %}
                         <div class="flex items-center gap-1.5 text-sm {{ amount | cost_class(nation | attr(res)) }}">
-                            <img src="{{ url_for('static', filename='images/icons/' ~ res ~ '_icon.png') }}"
-                                 alt="{{ res }}" class="w-4 h-4" onerror="this.style.display='none'">
+                            {{ res_icon(res) }}
                             <span>{{ amount | format_resource }} {{ res | replace('_', ' ') | title }}</span>
                         </div>
                         {% endfor %}
@@ -114,8 +114,7 @@
                     <div class="flex flex-wrap gap-x-3 gap-y-1">
                         {% for res, amount in udef.upkeep.items() %}
                         <div class="flex items-center gap-1.5 text-sm {{ amount | cost_class(nation | attr(res)) }}">
-                            <img src="{{ url_for('static', filename='images/icons/' ~ res ~ '_icon.png') }}"
-                                 alt="{{ res }}" class="w-4 h-4" onerror="this.style.display='none'">
+                            {{ res_icon(res) }}
                             <span>-{{ amount | format_resource }}</span>
                         </div>
                         {% endfor %}
