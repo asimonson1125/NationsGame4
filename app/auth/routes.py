@@ -79,7 +79,7 @@ def register():
                 population=50_000,
                 urban_areas=50,
                 cleared_land=20,
-                total_land=170,  # 50 urban + 20 cleared + 500 uncleared
+                total_land=570,  # 50 urban + 20 cleared + 500 uncleared
                 **starting_land,
             )
             db.session.add(nation)

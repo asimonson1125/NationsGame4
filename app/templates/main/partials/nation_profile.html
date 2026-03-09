@@ -347,20 +347,20 @@
             </div>
         </div>
         {% set land_types = [
-            ('cleared_land',  'Cleared Land',  'cleared_land_icon.png'),
-            ('urban_areas',   'Urban Areas',   'urban_areas_icon.png'),
-            ('used_land',     'Used Land',     'used_land_icon.png'),
-            ('forest',        'Forest',        'forest_icon.png'),
-            ('grassland',     'Grassland',     'grassland_icon.png'),
-            ('jungle',        'Jungle',        'jungle_icon.png'),
-            ('desert',        'Desert',        'desert_icon.png'),
-            ('mountain',      'Mountain',      'mountain_icon.png'),
-            ('tundra',        'Tundra',        'tundra_icon.png'),
-            ('river',         'River',         'river_icon.png'),
-            ('lake',          'Lake',          'lake_icon.png'),
+            ('cleared_land',  'Cleared Land',  'cleared_land_icon.png', ''),
+            ('urban_areas',   'Urban Areas',   'urban_areas_icon.png',  'Urban areas are created automatically for population growth'),
+            ('used_land',     'Used Land',     'used_land_icon.png',    ''),
+            ('forest',        'Forest',        'forest_icon.png',       ''),
+            ('grassland',     'Grassland',     'grassland_icon.png',    ''),
+            ('jungle',        'Jungle',        'jungle_icon.png',       ''),
+            ('desert',        'Desert',        'desert_icon.png',       ''),
+            ('mountain',      'Mountain',      'mountain_icon.png',     ''),
+            ('tundra',        'Tundra',        'tundra_icon.png',       ''),
+            ('river',         'River',         'river_icon.png',        ''),
+            ('lake',          'Lake',          'lake_icon.png',         ''),
         ] %}
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {% for field, label, icon in land_types %}
+            {% for field, label, icon, tooltip in land_types %}
             {% set tile_amount = nation | attr(field) or 0 %}
             {% if tile_amount > 0 %}
             <div class="bg-slate-800 rounded-lg border border-slate-700 p-3 flex flex-col items-center text-center">
@@ -368,7 +368,14 @@
                      alt="{{ label }}"
                      class="w-8 h-8 mb-2"
                      onerror="this.style.display='none'">
-                <div class="text-xs text-slate-400 mb-1">{{ label }}</div>
+                <div class="text-xs text-slate-400 mb-1 flex items-center justify-center gap-1">
+                    {{ label }}
+                    {% if tooltip %}
+                    <span class="tt cursor-help text-slate-500 hover:text-slate-300 transition-colors" data-tooltip="{{ tooltip }}">
+                        <i class="fas fa-question-circle text-[10px]"></i>
+                    </span>
+                    {% endif %}
+                </div>
                 <div class="text-sm font-bold text-slate-100">{{ tile_amount | format_resource }}</div>
             </div>
             {% endif %}

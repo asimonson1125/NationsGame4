@@ -32,7 +32,38 @@ The built file lives at `app/static/css/style.css`. Source styles are in `app/st
 
 ---
 
-## Production Deployment
+## Database Management
+
+### Flask Shell
+
+Use the Flask shell to manually modify the database using SQLAlchemy models. This works in both development (SQLite) and production (PostgreSQL).
+
+**Local Development:**
+```bash
+flask shell
+```
+
+**Docker / Production:**
+```bash
+docker exec -it ng-app flask shell
+```
+
+**Example: Set a user to admin**
+```python
+from app.models import User
+from app import db
+
+# Find user by username and set is_admin to True
+user = User.query.filter_by(username='your_username').first()
+if user:
+    user.is_admin = True
+    db.session.commit()
+    print(f"User {user.username} is now an admin.")
+else:
+    print("User not found.")
+```
+
+---
 
 ### Option A: Docker Compose (recommended)
 

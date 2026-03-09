@@ -19,8 +19,8 @@ from . import military
 @login_required
 def overview():
     nation = current_user.nation
-    divisions = Division.query.filter_by(nation_id=nation.id).all()
-    reserve_units = Unit.query.filter_by(nation_id=nation.id, division_id=None).all()
+    divisions = Division.query.filter_by(nation_id=nation.id).order_by(Division.id).all()
+    reserve_units = Unit.query.filter_by(nation_id=nation.id, division_id=None).order_by(Unit.id).all()
     queue = RecruitmentQueue.query.filter_by(nation_id=nation.id).order_by(
         RecruitmentQueue.completes_at
     ).all()
@@ -135,8 +135,8 @@ def _get_div_battles(nation_id):
 
 
 def _division_list_response(nation, message):
-    divisions = Division.query.filter_by(nation_id=nation.id).all()
-    reserve_units = Unit.query.filter_by(nation_id=nation.id, division_id=None).all()
+    divisions = Division.query.filter_by(nation_id=nation.id).order_by(Division.id).all()
+    reserve_units = Unit.query.filter_by(nation_id=nation.id, division_id=None).order_by(Unit.id).all()
     resp_html = render_template(
         'military/partials/division_content.html',
         nation=nation,
@@ -158,8 +158,8 @@ def _division_list_response(nation, message):
 def division_list():
     """Return the division content partial (used by refreshDivisionContent trigger)."""
     nation = current_user.nation
-    divisions = Division.query.filter_by(nation_id=nation.id).all()
-    reserve_units = Unit.query.filter_by(nation_id=nation.id, division_id=None).all()
+    divisions = Division.query.filter_by(nation_id=nation.id).order_by(Division.id).all()
+    reserve_units = Unit.query.filter_by(nation_id=nation.id, division_id=None).order_by(Unit.id).all()
     return render_template(
         'military/partials/division_content.html',
         nation=nation,
@@ -529,8 +529,8 @@ def _get_battle_units(battle):
     if battle.status == 'finished' and battle.attacker_snapshot:
         return (_snapshot_to_units(battle.attacker_snapshot),
                 _snapshot_to_units(battle.defender_snapshot))
-    return (Unit.query.filter_by(division_id=battle.attacker_division_id).all(),
-            Unit.query.filter_by(division_id=battle.defender_division_id).all())
+    return (Unit.query.filter_by(division_id=battle.attacker_division_id).order_by(Unit.id).all(),
+            Unit.query.filter_by(division_id=battle.defender_division_id).order_by(Unit.id).all())
 
 
 @military.route('/military/battle/<int:battle_id>')

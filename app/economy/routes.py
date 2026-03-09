@@ -282,7 +282,7 @@ def build_factory():
 
     # Queue the build instead of instant completion
     # Use naive UTC datetimes — SQLite doesn't store timezone info
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     new_completes_at = now + timedelta(minutes=fdef.build_time)
 
     # Check for existing queue entry of same type completing within 5 min

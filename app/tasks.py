@@ -123,7 +123,7 @@ def process_factory_queue():
     from .helpers import grant_factories
     from . import db
     with scheduler.app.app_context():
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         ready = FactoryBuildQueue.query.filter(FactoryBuildQueue.completes_at <= now).all()
         for entry in ready:
             nation = db.session.get(Nation, entry.nation_id)

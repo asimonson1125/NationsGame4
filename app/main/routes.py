@@ -24,7 +24,7 @@ def _nation_summary(nation):
     factory_summary.sort(key=lambda x: x[0])
 
     # Natural resources
-    natural_resources = NaturalResource.query.filter_by(nation_id=nation.id).filter(NaturalResource.amount > 0).all()
+    natural_resources = NaturalResource.query.filter_by(nation_id=nation.id).filter(NaturalResource.amount > 0).order_by(NaturalResource.amount.desc()).all()
 
     # Military counts
     total_units = Unit.query.filter_by(nation_id=nation.id).count()

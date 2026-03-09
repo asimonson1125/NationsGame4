@@ -136,7 +136,7 @@ class Division(db.Model):
     in_combat = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    units = db.relationship('Unit', backref='division_ref', lazy='dynamic')
+    units = db.relationship('Unit', backref='division_ref', lazy='dynamic', order_by='Unit.id')
 
 
 class Unit(db.Model):
@@ -226,7 +226,7 @@ class FactoryBuildQueue(db.Model):
     nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False)
     factory_key = db.Column(db.String(50), nullable=False)
     quantity = db.Column(db.Integer, default=1)
-    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    started_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     completes_at = db.Column(db.DateTime, nullable=False)
 
 
@@ -329,7 +329,7 @@ class Message(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     sender = db.relationship('Nation', foreign_keys=[sender_id])
-    recipient = db.relationship('Nation', foreign_keys=[recipient_id])
+    recipient = db.relationship('Nation', foreign_keys=[recipient_id], overlaps='messages_received,recipient_nation')
 
 
 @login_manager.user_loader
