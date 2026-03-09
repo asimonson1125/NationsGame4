@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+
+{% block title %}Military — {{ nation.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-6xl mx-auto" x-data="{ tab: '{{ default_tab | default('overview') }}' }">
+    <h1 class="text-2xl font-bold text-slate-100 mb-6">
+        <i class="fas fa-shield-alt mr-2 text-slate-400"></i>Military
+    </h1>
+
+    {# Tab Bar #}
+    <div class="flex gap-1 border-b border-slate-700 mb-6">
+        <button @click="tab = 'overview'"
+                :class="tab === 'overview' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-flag mr-1"></i> Overview
+        </button>
+        <button @click="tab = 'recruitment'"
+                :class="tab === 'recruitment' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-user-plus mr-1"></i> Recruitment
+        </button>
+        <button @click="tab = 'missions'"
+                :class="tab === 'missions' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-tasks mr-1"></i> Missions
+        </button>
+    </div>
+
+    {# ===== OVERVIEW TAB ===== #}
+    <div x-show="tab === 'overview'" x-cloak:false>
+
+        {# Quick Stats #}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 text-center">
+                <div class="text-2xl font-bold text-slate-100">{{ divisions | length }}</div>
+                <div class="text-xs text-slate-400 uppercase tracking-wide">Divisions</div>
+            </div>
+            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 text-center">
+                {% set total_units = namespace(count=0) %}
+                {% for d in divisions %}{% set total_units.count = total_units.count + d.units.count() %}{% endfor %}
+                <div class="text-2xl font-bold text-slate-100">{{ total_units.count + reserve_units | length }}</div>
+                <div class="text-xs text-slate-400 uppercase tracking-wide">Total Units</div>
+            </div>
+            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 text-center">
+                <div class="text-2xl font-bold text-amber-400">{{ nation.military_gp or 0 }}</div>
+                <div class="text-xs text-slate-400 uppercase tracking-wide">Military GP</div>
+            </div>
+            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 text-center">
+                <div class="text-2xl font-bold text-slate-100">{{ queue | length }}</div>
+                <div class="text-xs text-slate-400 uppercase tracking-wide">In Queue</div>
+            </div>
+        </div>
+
+        {# Upkeep & Attrition Info #}
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6">
+            <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                <i class="fas fa-coins mr-1"></i>Hourly Upkeep
+            </h2>
+            {% if total_upkeep %}
+            <div class="flex flex-wrap gap-x-4 gap-y-2 mb-3">
+                {% for res, amount in total_upkeep.items() %}
+                <div class="flex items-center gap-1.5 text-sm">
+                    <img src="{{ url_for('static', filename='images/' ~ res ~ '_icon.png') }}"
+                         alt="{{ res }}" class="w-4 h-4" onerror="this.style.display='none'">
+                    <span class="{% if amount > (nation | attr(res) or 0) %}text-red-400 font-semibold{% else %}text-slate-300{% endif %}">
+                        {{ amount | format_resource }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-slate-500 mb-3">No units — no upkeep costs.</p>
+            {% endif %}
+            <div class="text-xs text-slate-500 border-t border-slate-700 pt-2 space-y-1">
+                <p>Upkeep is deducted from your stockpiles every hour. If you cannot afford the full upkeep, all units suffer <strong class="text-slate-300">attrition</strong> — losing 10% of their max HP per hour, down to a minimum of 20% HP.</p>
+                <p>Attrition-weakened units still fight at reduced effectiveness. Restore your resource supply to stop the decay.</p>
+            </div>
+        </div>
+
+        {# Recruitment Queue (if any) #}
+        {% if queue %}
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6">
+            <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                <i class="fas fa-clock mr-1"></i>Recruitment Queue
+            </h2>
+            <div class="space-y-2">
+                {% for entry in queue %}
+                {% set udef = unit_defs.get(entry.unit_key) %}
+                <div class="flex items-center justify-between bg-slate-700/50 rounded px-3 py-2 text-sm">
+                    <div>
+                        <span class="font-medium text-slate-200">{{ udef.name if udef else entry.unit_key }}</span>
+                        <span class="text-slate-500 ml-2">{{ udef.unit_type if udef else '' }}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-slate-400"
+                              x-data="{ target: new Date('{{ entry.completes_at.isoformat() }}Z').getTime(), display: '' }"
+                              x-init="setInterval(() => { let d = Math.max(0, Math.floor((target - Date.now())/1000)); let h=Math.floor(d/3600); let m=Math.floor((d%3600)/60); let s=d%60; display = d <= 0 ? 'Ready!' : (h>0?h+'h ':'')+(m>0?m+'m ':'')+(s+'s'); }, 1000)"
+                              x-text="display">...</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# Create Division Form #}
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6">
+            <form hx-post="{{ url_for('military.create_division') }}"
+                  hx-target="#division-content"
+                  hx-swap="innerHTML"
+                  class="flex items-center gap-3">
+                <input type="text" name="name" placeholder="New division name..."
+                       class="flex-1 bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
+                <button type="submit"
+                        class="bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
+                    <i class="fas fa-plus mr-1"></i>Create Division
+                </button>
+            </form>
+        </div>
+
+        {# Division Content #}
+        <div x-data="{ activeDiv: null }">
+            <div id="division-content"
+                 hx-get="{{ url_for('military.division_list') }}"
+                 hx-trigger="refreshDivisionContent from:body"
+                 hx-swap="innerHTML">
+                {% include 'military/partials/division_content.html' %}
+            </div>
+        </div>
+
+    </div>
+
+    {# ===== RECRUITMENT TAB ===== #}
+    <div x-show="tab === 'recruitment'" x-cloak>
+        {% include 'military/partials/recruitment_grid.html' %}
+    </div>
+
+    {# ===== MISSIONS TAB (stub) ===== #}
+    <div x-show="tab === 'missions'" x-cloak>
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-12 text-center">
+            <i class="fas fa-tasks text-slate-600 text-5xl mb-4"></i>
+            <p class="text-slate-500 text-sm">Missions coming soon.</p>
+        </div>
+    </div>
+
+    {# ===== UNIT DETAIL POPUP ===== #}
+    <div id="unit-detail-overlay" class="hidden fixed inset-0 bg-black/60 z-[1050]" onclick="closeUnitDetail()"></div>
+    <div id="unit-detail-popup" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl z-[1100] w-[95%] max-w-5xl max-h-[90vh] overflow-y-auto">
+        <div id="unit-detail-content"></div>
+    </div>
+
+    {# ===== EQUIPMENT PICKER POPUP ===== #}
+    <div id="eq-picker-overlay" class="hidden fixed inset-0 bg-black/40 z-[1150]" onclick="closeEqPicker()"></div>
+    <div id="eq-picker-popup" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl z-[1200] w-[90%] max-w-4xl max-h-[80vh] overflow-y-auto">
+        <div id="eq-picker-content"></div>
+    </div>
+
+</div>
+
+<script>
+function openUnitDetail() {
+    document.getElementById('unit-detail-overlay').classList.remove('hidden');
+    document.getElementById('unit-detail-popup').classList.remove('hidden');
+}
+function closeUnitDetail() {
+    document.getElementById('unit-detail-overlay').classList.add('hidden');
+    document.getElementById('unit-detail-popup').classList.add('hidden');
+    closeEqPicker();
+}
+function openEqPicker() {
+    document.getElementById('eq-picker-overlay').classList.remove('hidden');
+    document.getElementById('eq-picker-popup').classList.remove('hidden');
+}
+function closeEqPicker() {
+    document.getElementById('eq-picker-overlay').classList.add('hidden');
+    document.getElementById('eq-picker-popup').classList.add('hidden');
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (!document.getElementById('eq-picker-overlay').classList.contains('hidden')) {
+            closeEqPicker();
+        } else {
+            closeUnitDetail();
+        }
+    }
+});
+</script>
+{% endblock %}

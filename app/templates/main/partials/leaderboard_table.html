@@ -1,0 +1,61 @@
+<div class="overflow-x-auto bg-slate-800 rounded-lg border border-slate-700">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="bg-slate-700/50 text-left text-slate-400">
+                <th class="px-4 py-3 w-16">Rank</th>
+                <th class="px-4 py-3">Nation</th>
+                <th class="px-4 py-3">Alliance</th>
+                <th class="px-4 py-3">Leader</th>
+                <th class="px-4 py-3">Continent</th>
+                <th class="px-4 py-3 text-right">Population</th>
+                <th class="px-4 py-3 text-right">GP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for nation in nations %}
+            <tr class="border-t border-slate-700 {% if current_nation and nation.id == current_nation.id %}bg-amber-500/10{% elif loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %} hover:bg-slate-700/50 transition-colors">
+                <td class="px-4 py-3">
+                    {% if loop.index == 1 %}
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold"
+                              style="background: linear-gradient(45deg, #FFD700, #FFA500); box-shadow: 0 2px 4px rgba(0,0,0,.2);">1</span>
+                    {% elif loop.index == 2 %}
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold"
+                              style="background: linear-gradient(45deg, #C0C0C0, #A9A9A9); box-shadow: 0 2px 4px rgba(0,0,0,.2);">2</span>
+                    {% elif loop.index == 3 %}
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold"
+                              style="background: linear-gradient(45deg, #CD7F32, #8B4513); box-shadow: 0 2px 4px rgba(0,0,0,.2);">3</span>
+                    {% else %}
+                        <span class="text-slate-400">{{ loop.index }}</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                    <div class="flex items-center">
+                        {% if nation.flag_url %}
+                        <img src="{{ nation.flag_url }}" alt="Flag" class="w-8 h-auto mr-2 rounded-sm" onerror="this.style.display='none'">
+                        {% endif %}
+                        <a href="{{ url_for('main.nation_view', nation_id=nation.id) }}" class="text-amber-500 hover:text-amber-400 font-medium">{{ nation.name }}</a>
+                    </div>
+                </td>
+                <td class="px-4 py-3">
+                    {% if nation.alliance %}
+                        <span class="text-amber-500">{{ nation.alliance.name }}</span>
+                    {% else %}
+                        <span class="text-slate-500 italic">Unallied</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-slate-300">{{ nation.leader or '—' }}</td>
+                <td class="px-4 py-3 text-slate-500">{{ nation.continent or '—' }}</td>
+                <td class="px-4 py-3 text-right text-slate-300">{{ '{:,}'.format(nation.population | int) }}</td>
+                <td class="px-4 py-3 text-right font-semibold text-amber-400">{{ '{:,}'.format(nation.total_gp | int) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="px-4 py-8 text-center text-slate-500">No nations found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% if nations %}
+<p class="text-xs text-slate-500 mt-2">Showing top {{ nations | length }} nation{{ 's' if nations | length != 1 else '' }}{{ ' in ' + continent_label if continent_label != 'Global' else '' }}.</p>
+{% endif %}

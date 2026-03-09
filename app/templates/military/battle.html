@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}Battle #{{ battle.id }}{% endblock %}
+
+{% block content %}
+<div class="p-4 max-w-7xl mx-auto"
+     x-data="{
+        showDetail: false,
+        d: null,
+        open(detail) { this.d = detail; this.showDetail = true; },
+        close() { this.showDetail = false; }
+     }"
+     @open-combat-detail.window="open($event.detail)"
+>
+    {% include 'military/partials/battle_status.html' %}
+
+    {# ── Combat Roll detail modal ── #}
+    <template x-if="showDetail && d">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="close()">
+            <div class="absolute inset-0 bg-black/50" @click="close()"></div>
+            <div class="relative bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-w-sm w-full p-5 space-y-3 text-sm" @click.stop>
+                <div class="flex items-center justify-between mb-1">
+                    <span class="font-bold text-slate-100">Combat Roll Details</span>
+                    <button @click="close()" class="text-slate-400 hover:text-slate-200 text-lg leading-none">&times;</button>
+                </div>
+
+                <div class="text-xs text-slate-500 text-center" x-text="d.attacker + ' → ' + d.target"></div>
+
+                {# Firepower #}
+                <div class="font-semibold text-slate-400 text-[11px] uppercase tracking-wide">Firepower</div>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-slate-400 font-mono text-xs">
+                    <div>Base FP</div>
+                    <div class="text-right" x-text="d.base_fp"></div>
+                    <template x-if="d.fp_type_mult != 1">
+                        <div class="contents">
+                            <div>Type multiplier</div>
+                            <div class="text-right" x-text="'\u00d7' + d.fp_type_mult"></div>
+                        </div>
+                    </template>
+                    <template x-if="d.atk_def_bonus != 1">
+                        <div class="contents">
+                            <div>Defending bonus</div>
+                            <div class="text-right" x-text="'\u00d7' + d.atk_def_bonus"></div>
+                        </div>
+                    </template>
+                    <div class="font-semibold text-slate-200">Effective FP</div>
+                    <div class="text-right font-semibold text-slate-200" x-text="d.eff_fp"></div>
+                </div>
+
+                <hr class="border-slate-700">
+
+                {# Armour #}
+                <div class="font-semibold text-slate-400 text-[11px] uppercase tracking-wide">Armour</div>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-slate-400 font-mono text-xs">
+                    <div>Base Armour</div>
+                    <div class="text-right" x-text="d.base_armour"></div>
+                    <template x-if="d.armour_type_mult != 1">
+                        <div class="contents">
+                            <div>Type multiplier</div>
+                            <div class="text-right" x-text="'\u00d7' + d.armour_type_mult"></div>
+                        </div>
+                    </template>
+                    <template x-if="d.def_bonus != 1">
+                        <div class="contents">
+                            <div>Defending bonus</div>
+                            <div class="text-right" x-text="'\u00d7' + d.def_bonus"></div>
+                        </div>
+                    </template>
+                    <div class="font-semibold text-slate-200">Effective Armour</div>
+                    <div class="text-right font-semibold text-slate-200" x-text="d.eff_armour"></div>
+                </div>
+
+                <hr class="border-slate-700">
+
+                {# Damage #}
+                <div class="font-semibold text-slate-400 text-[11px] uppercase tracking-wide">Damage</div>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-slate-400 font-mono text-xs">
+                    <div>FP&times;10 &minus; AR&times;5</div>
+                    <div class="text-right" x-text="d.base_damage"></div>
+                    <div>Variance</div>
+                    <div class="text-right" x-text="(d.variance >= 0 ? '+' : '') + d.variance"></div>
+                    <template x-if="d.dmg_reduction_pct > 0">
+                        <div class="contents">
+                            <div>Support reduction</div>
+                            <div class="text-right text-green-400" x-text="'-' + d.dmg_reduction_pct + '%'"></div>
+                        </div>
+                    </template>
+                </div>
+
+                <hr class="border-slate-700">
+
+                {# Hit roll #}
+                <div class="font-semibold text-slate-400 text-[11px] uppercase tracking-wide">Hit Roll</div>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-slate-400 font-mono text-xs">
+                    <div>d100</div>
+                    <div class="text-right" x-text="d.d100"></div>
+                    <div>Maneuver mod</div>
+                    <div class="text-right" x-text="(d.man_mod >= 0 ? '+' : '') + d.man_mod"></div>
+                    <div class="text-[10px] text-slate-500 col-span-2"
+                         x-text="'(' + Number(d.atk_maneuver).toFixed(1) + ' atk \u2212 ' + Number(d.def_maneuver).toFixed(1) + ' def)'"></div>
+                    <div class="font-semibold text-slate-200">Final roll</div>
+                    <div class="text-right font-semibold text-slate-200" x-text="d.final_roll"></div>
+                    <div>Hit type</div>
+                    <div class="text-right">
+                        <span :class="{
+                            'text-yellow-400 font-bold': d.hit_type === 'critical',
+                            'text-slate-300': d.hit_type === 'hit',
+                            'text-orange-400': d.hit_type === 'graze',
+                            'text-red-400 font-bold': d.hit_type === 'miss'
+                        }" x-text="d.hit_type.charAt(0).toUpperCase() + d.hit_type.slice(1)"></span>
+                        <span class="text-slate-500" x-show="d.hit_mult != 1 && d.hit_mult != 0"
+                              x-text="'(\u00d7' + d.hit_mult + ')'"></span>
+                    </div>
+                </div>
+
+                <hr class="border-slate-700">
+
+                {# Final #}
+                <div class="grid grid-cols-2 gap-x-4 text-slate-100 font-bold font-mono">
+                    <div>Final Damage</div>
+                    <div class="text-right" x-text="d.final_damage"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    {# ── Unit Detail Popup ───── #}
+    <div id="unit-detail-overlay" class="hidden fixed inset-0 bg-black/60 z-[1050]" onclick="closeUnitDetail()"></div>
+    <div id="unit-detail-popup" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl z-[1100] w-[95%] max-w-5xl max-h-[90vh] overflow-y-auto">
+        <div id="unit-detail-content"></div>
+    </div>
+
+</div>
+
+<script>
+function openUnitDetail() {
+    document.getElementById('unit-detail-overlay').classList.remove('hidden');
+    document.getElementById('unit-detail-popup').classList.remove('hidden');
+}
+function closeUnitDetail() {
+    document.getElementById('unit-detail-overlay').classList.add('hidden');
+    document.getElementById('unit-detail-popup').classList.add('hidden');
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (!document.getElementById('unit-detail-overlay').classList.contains('hidden')) {
+            closeUnitDetail();
+        }
+    }
+});
+</script>
+{% endblock %}

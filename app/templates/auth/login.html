@@ -4,21 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Nations Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        slate: {
+                            50:'#f4f5f7',100:'#e7e9ed',200:'#ced1d8',300:'#adb2bc',
+                            400:'#8a919f',500:'#6b7486',600:'#545d70',700:'#404a5c',
+                            800:'#2f3848',900:'#252d3c',950:'#1c2332',
+                        },
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center py-10 font-sans">
+<body class="min-h-screen flex items-center justify-center py-10 font-sans" style="background:#09102f">
     <div class="flex flex-wrap justify-center gap-8 max-w-5xl w-full px-4">
 
         {# Login form #}
-        <div class="bg-white rounded-xl shadow-md p-8 w-full max-w-sm">
-            <h1 class="text-2xl font-bold text-gray-800 mb-1 text-center">Nations Simulator</h1>
-            <p class="text-gray-400 text-sm text-center mb-6">Sign in to your nation</p>
+        <div class="bg-slate-800 rounded-xl border border-slate-700 p-8 w-full max-w-sm border-t-4 border-t-amber-500">
+            <div class="text-center mb-6">
+                <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Nations" class="w-10 h-10 mx-auto mb-2">
+                <h1 class="text-2xl font-bold text-slate-100 mb-1">Nations Simulator</h1>
+                <p class="text-slate-400 text-sm">Sign in to your nation</p>
+            </div>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% for category, message in messages %}
             <div class="mb-4 p-3 rounded text-sm
-                        {% if category == 'error' %}bg-red-50 text-red-700 border border-red-200
-                        {% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
+                        {% if category == 'error' %}bg-red-500/10 text-red-400 border border-red-500/30
+                        {% else %}bg-sky-500/10 text-sky-400 border border-sky-500/30{% endif %}">
                 {{ message }}
             </div>
             {% endfor %}
@@ -27,37 +50,40 @@
             <form method="POST" action="{{ url_for('auth.login') }}" class="flex flex-col gap-4">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Username</label>
                     <input type="text" name="username" autocomplete="username" required
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/25">
+                           class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Password</label>
                     <input type="password" name="password" autocomplete="current-password" required
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/25">
+                           class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm">
                 </div>
                 <button type="submit"
-                        class="w-full py-2.5 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors">
+                        class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold rounded-md transition-colors">
                     Login
                 </button>
             </form>
-            <p class="text-center text-sm text-gray-500 mt-5">
+            <p class="text-center text-sm text-slate-400 mt-5">
                 Don't have an account?
-                <a href="{{ url_for('auth.register') }}" class="text-blue-600 hover:underline font-medium">Register</a>
+                <a href="{{ url_for('auth.register') }}" class="text-amber-500 hover:text-amber-400 font-medium">Register</a>
             </p>
         </div>
 
         {# Game updates panel #}
-        <div class="bg-white rounded-xl shadow-md p-8 w-full max-w-lg">
-            <h2 class="text-xl font-semibold text-gray-800 border-b-2 border-blue-500 pb-2.5 mb-5">Game Updates</h2>
+        <div class="bg-slate-800 rounded-xl border border-slate-700 p-8 w-full max-w-lg">
+            <div class="flex items-center justify-between border-b-2 border-amber-500 pb-2.5 mb-5">
+                <h2 class="text-xl font-semibold text-slate-100">Game Updates</h2>
+                <a href="{{ url_for('main.changelog_page') }}" class="text-xs text-slate-400 hover:text-slate-200 transition-colors">Full log &rarr;</a>
+            </div>
             <div class="overflow-y-auto max-h-80 pr-2 space-y-5">
-                <div class="pb-5 border-b border-gray-100">
-                    <h3 class="text-blue-600 font-semibold mb-2">NG4 Alpha — Phase 1</h3>
-                    <p class="text-gray-600 text-sm leading-relaxed">
-                        Welcome to NG4, the modern rebuild of the Nations Simulator using Flask + HTMX.
-                        This is an early alpha. Authentication, nation profiles, and the home dashboard are live.
-                    </p>
+                {% for entry in changelog %}
+                <div class="{% if not loop.last %}pb-5 border-b border-slate-700{% endif %}">
+                    <h3 class="text-amber-500 font-semibold mb-1">{{ entry.title }}</h3>
+                    <div class="text-xs text-slate-500 mb-2">{{ entry.date }} &middot; v{{ entry.version }}</div>
+                    <p class="text-slate-300 text-sm leading-relaxed">{{ entry.body }}</p>
                 </div>
+                {% endfor %}
             </div>
         </div>
 

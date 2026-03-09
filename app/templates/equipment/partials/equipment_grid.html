@@ -1,0 +1,37 @@
+{% from 'shared/_equipment_macros.html' import equipment_card %}
+{% if not items %}
+<div class="text-center py-12 text-slate-500">
+    <i class="fas fa-box-open text-4xl mb-3 text-slate-600"></i>
+    <p class="text-sm">No equipment found. Visit the <a href="{{ url_for('equipment.loot_crates') }}" class="text-amber-500 hover:text-amber-400">Loot Crate Shop</a> to get some!</p>
+</div>
+{% else %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    {% for item in items %}
+    {% set colors = rarity_colors.get(item.rarity, rarity_colors['Common']) %}
+    {% set eq_count = equipped_counts.get(item.id, 0) %}
+    {% set available = item.count - eq_count %}
+    <div class="relative">
+        {# Trade-in checkbox #}
+        <div x-show="tradeMode" x-cloak class="absolute top-2 left-2 z-20">
+            {% if available <= 0 %}
+            <input type="checkbox" disabled class="opacity-40 cursor-not-allowed" title="Cannot trade equipped items">
+            {% else %}
+            <input type="checkbox"
+                   class="w-4 h-4 cursor-pointer"
+                   @click.stop="selected.has({{ item.id }}) ? selected.delete({{ item.id }}) : selected.add({{ item.id }}); $el.checked = selected.has({{ item.id }})"
+                   :checked="selected.has({{ item.id }})">
+            {% endif %}
+        </div>
+        {% call equipment_card(item, colors, count=item.count, equipped_count=eq_count, extra_class='transition-shadow hover:shadow-lg') %}
+        <div class="mt-auto pt-2 border-t {{ colors.border }} border-opacity-50 text-xs text-slate-500">
+            {% set unit_val = trade_in_values.get(item.rarity, 0) %}
+            Trade value: {{ unit_val * available }} token{{ 's' if unit_val * available != 1 else '' }}
+            {% if item.count > 1 %}
+            <span class="text-slate-600">({{ available }} available)</span>
+            {% endif %}
+        </div>
+        {% endcall %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}

@@ -12,18 +12,16 @@
     ('lake',          'Lake',          'lake_icon.png'),
 ] %}
 
-<div id="land-panel" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+<div id="land-panel" {% if oob %}hx-swap-oob="true"{% endif %} class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
     {% for field, label, icon in land_types %}
     {% set tile_amount = nation | attr(field) or 0 %}
-    {% if tile_amount > 0 or field in ('cleared_land', 'urban_areas') %}
-    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-3 flex flex-col items-center text-center">
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-3 flex flex-col items-center text-center">
         <img src="{{ url_for('static', filename='images/' ~ icon) }}"
              alt="{{ label }}"
              class="w-8 h-8 mb-2"
              onerror="this.style.display='none'">
-        <div class="text-xs text-gray-500 mb-1">{{ label }}</div>
-        <div class="text-sm font-bold text-gray-800">{{ tile_amount | format_resource }}</div>
+        <div class="text-xs text-slate-400 mb-1">{{ label }}</div>
+        <div class="text-sm font-bold text-slate-100">{{ tile_amount | format_resource }}</div>
     </div>
-    {% endif %}
     {% endfor %}
 </div>

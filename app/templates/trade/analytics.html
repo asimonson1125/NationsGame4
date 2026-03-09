@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}Trade Analytics — {{ nation.name }}{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-6xl mx-auto" x-data="analyticsData()">
+
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-slate-100">Trade Analytics</h1>
+        <a href="{{ url_for('trade.trade_page') }}"
+           class="text-sm text-amber-500 hover:text-amber-400 font-medium">
+            <i class="fas fa-exchange-alt mr-1"></i> Back to Trade
+        </a>
+    </div>
+
+    {# Resource selector + time range #}
+    <div class="flex flex-wrap items-end gap-4 mb-6">
+        <div>
+            <label class="block text-sm font-medium text-slate-400 mb-1">Resource</label>
+            <select x-model="resource" @change="loadData()"
+                    class="bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
+                <optgroup label="Commodities">
+                    {% for c in commodities %}
+                    <option value="{{ c }}">{{ c.replace('_', ' ').title() }}</option>
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="Natural Resources">
+                    {% for nr in natural_resources %}
+                    <option value="{{ nr }}">{{ nr.replace('_', ' ').title() }}</option>
+                    {% endfor %}
+                </optgroup>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-400 mb-1">Time Range</label>
+            <select x-model="days" @change="loadData()"
+                    class="bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
+                <option value="7">7 Days</option>
+                <option value="30" selected>30 Days</option>
+                <option value="90">90 Days</option>
+            </select>
+        </div>
+    </div>
+
+    {# Stats cards #}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4">
+            <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Best Bid</div>
+            <div class="text-lg font-bold text-emerald-400" x-text="stats.best_bid ? stats.best_bid.toFixed(2) : '—'"></div>
+        </div>
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4">
+            <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Best Ask</div>
+            <div class="text-lg font-bold text-red-400" x-text="stats.best_ask ? stats.best_ask.toFixed(2) : '—'"></div>
+        </div>
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4">
+            <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">24h Volume</div>
+            <div class="text-lg font-bold text-slate-100" x-text="stats.volume_24h ? stats.volume_24h.toLocaleString() : '0'"></div>
+        </div>
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4">
+            <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">24h Range</div>
+            <div class="text-lg font-bold text-slate-100">
+                <span x-text="stats.low_24h ? stats.low_24h.toFixed(2) : '—'"></span>
+                <span class="text-slate-500 text-sm mx-1">-</span>
+                <span x-text="stats.high_24h ? stats.high_24h.toFixed(2) : '—'"></span>
+            </div>
+        </div>
+    </div>
+
+    {# Price chart #}
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6">
+        <h2 class="text-lg font-semibold text-slate-100 mb-3">Price History</h2>
+        <div class="relative" style="height: 300px;">
+            <canvas id="priceChart"></canvas>
+        </div>
+    </div>
+
+    {# Volume chart #}
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-4">
+        <h2 class="text-lg font-semibold text-slate-100 mb-3">Trade Volume</h2>
+        <div class="relative" style="height: 200px;">
+            <canvas id="volumeChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function analyticsData() {
+    return {
+        resource: '{{ selected_resource }}',
+        days: 30,
+        stats: {},
+        priceChart: null,
+        volumeChart: null,
+
+        init() {
+            this.loadData();
+        },
+
+        async loadData() {
+            const resp = await fetch(`/trade/analytics/data?resource=${this.resource}&days=${this.days}`);
+            const data = await resp.json();
+            this.stats = data;
+            this.renderCharts(data);
+        },
+
+        renderCharts(data) {
+            if (this.priceChart) this.priceChart.destroy();
+            if (this.volumeChart) this.volumeChart.destroy();
+
+            const darkGrid = { color: 'rgba(148, 163, 184, 0.1)' };
+            const darkTicks = { color: '#94a3b8' };
+
+            const priceCtx = document.getElementById('priceChart').getContext('2d');
+            this.priceChart = new Chart(priceCtx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Last Price',
+                        data: data.prices,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 3,
+                    }, {
+                        label: 'High',
+                        data: data.highs,
+                        borderColor: '#22c55e',
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        fill: false,
+                    }, {
+                        label: 'Low',
+                        data: data.lows,
+                        borderColor: '#ef4444',
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        fill: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { color: '#94a3b8' } } },
+                    scales: {
+                        y: { beginAtZero: false, grid: darkGrid, ticks: darkTicks },
+                        x: { ticks: { ...darkTicks, maxTicksLimit: 10 }, grid: darkGrid }
+                    }
+                }
+            });
+
+            const volCtx = document.getElementById('volumeChart').getContext('2d');
+            this.volumeChart = new Chart(volCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Volume',
+                        data: data.volumes,
+                        backgroundColor: 'rgba(245, 158, 11, 0.5)',
+                        borderColor: '#f59e0b',
+                        borderWidth: 1,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: darkGrid, ticks: darkTicks },
+                        x: { ticks: { ...darkTicks, maxTicksLimit: 10 }, grid: darkGrid }
+                    }
+                }
+            });
+        }
+    }
+}
+</script>
+{% endblock %}

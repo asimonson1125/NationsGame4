@@ -1,0 +1,108 @@
+{% from 'shared/_equipment_macros.html' import stat_icon %}
+{# Expects: unit, udef, divisions (from parent scope) #}
+<div class="bg-slate-700/50 rounded-lg border border-slate-700 p-3">
+    {# Clickable header area opens detail popup #}
+    <div class="cursor-pointer hover:bg-slate-700 -m-3 p-3 mb-0 rounded-t-lg transition-colors"
+         hx-get="{{ url_for('military.unit_detail', unit_id=unit.id) }}"
+         hx-target="#unit-detail-content"
+         hx-swap="innerHTML"
+         hx-on::after-request="if(event.detail.successful) { openUnitDetail(); }">
+        <div class="flex items-center justify-between mb-2">
+            <div>
+                <span class="font-semibold text-slate-200 text-sm">{{ unit.custom_name or udef.name if udef else unit.unit_key }}</span>
+                {% if unit.custom_name and udef %}
+                <span class="text-xs text-slate-500 ml-1">({{ udef.name }})</span>
+                {% endif %}
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded-full
+                {% if udef and udef.unit_type == 'Infantry' %}bg-emerald-500/20 text-emerald-400
+                {% elif udef and udef.unit_type == 'Armour' %}bg-blue-500/20 text-blue-400
+                {% elif udef and udef.unit_type == 'Static' %}bg-slate-700 text-slate-400
+                {% elif udef and udef.unit_type == 'Air' %}bg-purple-500/20 text-purple-400
+                {% elif udef and udef.unit_type == 'Special Forces' %}bg-red-500/20 text-red-400
+                {% else %}bg-slate-700 text-slate-400{% endif %}">
+                {{ udef.unit_type if udef else '?' }}
+            </span>
+        </div>
+
+        {# HP Bar #}
+        <div class="mb-2">
+            <div class="flex justify-between text-xs text-slate-500 mb-0.5">
+                <span>HP</span>
+                <span>{{ unit.hp }}/{{ unit.effective_max_hp }}</span>
+            </div>
+            <div class="w-full bg-slate-600 rounded-full h-1.5">
+                {% set hp_pct = (unit.hp / unit.effective_max_hp * 100) if unit.effective_max_hp > 0 else 0 %}
+                <div class="h-1.5 rounded-full transition-all
+                    {% if hp_pct > 60 %}bg-green-500{% elif hp_pct > 30 %}bg-yellow-500{% else %}bg-red-500{% endif %}"
+                     style="width: {{ hp_pct | round(1) }}%"></div>
+            </div>
+        </div>
+
+        {# Stat Bars #}
+        <div class="grid grid-cols-3 gap-2 mb-2 text-xs">
+            <div>
+                <div class="text-slate-500 mb-0.5">{{ stat_icon('Firepower', extra='mr-0.5', shade='400') }}FP {{ unit.effective_firepower }}</div>
+                <div class="w-full bg-slate-600 rounded-full h-1">
+                    <div class="bg-red-400 h-1 rounded-full" style="width: {{ [unit.effective_firepower * 2, 100] | min }}%"></div>
+                </div>
+            </div>
+            <div>
+                <div class="text-slate-500 mb-0.5">{{ stat_icon('Armour', extra='mr-0.5', shade='400') }}AR {{ unit.effective_armour }}</div>
+                <div class="w-full bg-slate-600 rounded-full h-1">
+                    <div class="bg-blue-400 h-1 rounded-full" style="width: {{ [unit.effective_armour * 3, 100] | min }}%"></div>
+                </div>
+            </div>
+            <div>
+                <div class="text-slate-500 mb-0.5">{{ stat_icon('Maneuver', extra='mr-0.5', shade='400') }}MN {{ unit.effective_maneuver }}</div>
+                <div class="w-full bg-slate-600 rounded-full h-1">
+                    <div class="bg-green-400 h-1 rounded-full" style="width: {{ [unit.effective_maneuver * 10, 100] | min }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        {# Level/XP + Equipment indicators #}
+        <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+            <span>Lv.{{ unit.level }} &middot; {{ unit.xp }} XP</span>
+            {% set eq_count = (1 if unit.weapon_id else 0) + (1 if unit.accessory_id else 0) + (1 if unit.armour_eq_id else 0) %}
+            {% if eq_count > 0 %}
+            <span class="text-amber-400" title="{{ eq_count }} equipment equipped">
+                <i class="fas fa-toolbox mr-0.5"></i>{{ eq_count }}/3
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Actions (not part of the clickable area) #}
+    <div class="flex flex-wrap gap-1 pt-2 border-t border-slate-600 mt-1">
+        {# Move to division #}
+        <div x-data="{ moving: false }">
+            <button @click.stop="moving = !moving" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-2 py-1 rounded transition-colors">
+                <i class="fas fa-arrows-alt mr-0.5"></i>Move
+            </button>
+            <div x-show="moving" x-cloak class="mt-1" @click.stop>
+                <form hx-post="{{ url_for('military.move_unit', unit_id=unit.id) }}"
+                      hx-target="#division-content" hx-swap="innerHTML" class="flex items-center gap-1">
+                    <select name="division_id" class="bg-slate-700 border border-slate-600 text-slate-100 rounded px-1 py-0.5 text-xs">
+                        <option value="none">Reserve</option>
+                        {% for d in divisions %}
+                        <option value="{{ d.id }}" {% if d.id == unit.division_id %}selected{% endif %}>{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="text-xs text-amber-500 font-medium">Go</button>
+                </form>
+            </div>
+        </div>
+
+        {# Disband unit #}
+        <form hx-post="{{ url_for('military.disband_unit', unit_id=unit.id) }}"
+              hx-target="#division-content" hx-swap="innerHTML"
+              hx-confirm="Disband this {{ udef.name if udef else 'unit' }}?"
+              class="inline">
+            <button type="submit" class="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 px-2 py-1 rounded transition-colors"
+                    onclick="event.stopPropagation()">
+                <i class="fas fa-trash mr-0.5"></i>Disband
+            </button>
+        </form>
+    </div>
+</div>

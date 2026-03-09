@@ -1,0 +1,138 @@
+{% if not divisions and not reserve_units %}
+<div class="text-center py-12 text-slate-500">
+    <i class="fas fa-shield-alt text-4xl mb-3 block text-slate-600"></i>
+    <p class="text-lg">No divisions yet.</p>
+    <p class="text-sm">Create a division above, then recruit units from the
+        <a href="#" @click.prevent="tab = 'recruitment'" class="text-amber-500 hover:text-amber-400">Recruitment</a> tab.</p>
+</div>
+{% endif %}
+
+{# Division & Reserve Tabs #}
+{% if divisions or reserve_units %}
+<div class="flex flex-wrap gap-2 mb-4">
+    {% for div in divisions %}
+    <button @click="activeDiv = activeDiv === {{ div.id }} ? null : {{ div.id }}"
+            :class="activeDiv === {{ div.id }} ? 'bg-amber-500 text-slate-900' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'"
+            class="px-4 py-2 rounded-lg border border-slate-700 text-sm font-medium transition-colors">
+        <i class="fas fa-flag mr-1"></i>{{ div.name }}
+        <span class="ml-1 text-xs opacity-75">({{ div.units.count() }})</span>
+        {% if div.mobilization_state == 'mobilized' %}
+        <span class="ml-1 text-xs bg-emerald-500 text-white px-1.5 py-0.5 rounded-full">MOB</span>
+        {% endif %}
+        {% if div.in_combat %}
+        <span class="ml-1 text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full">COMBAT</span>
+        {% endif %}
+    </button>
+    {% endfor %}
+    <button @click="activeDiv = 'reserve'"
+            :class="activeDiv === 'reserve' ? 'bg-slate-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'"
+            class="px-4 py-2 rounded-lg border border-slate-700 text-sm font-medium transition-colors">
+        <i class="fas fa-warehouse mr-1"></i>Reserve
+        <span class="ml-1 text-xs opacity-75">({{ reserve_units | length }})</span>
+    </button>
+</div>
+{% endif %}
+
+{# Division Panels #}
+{% for div in divisions %}
+<div x-show="activeDiv === {{ div.id }}" x-cloak
+     class="bg-slate-800 rounded-lg border border-slate-700 p-5 mb-4">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-100">{{ div.name }}</h2>
+            <span class="text-xs px-2 py-0.5 rounded-full
+                {% if div.mobilization_state == 'mobilized' %}bg-emerald-500/20 text-emerald-400
+                {% elif div.mobilization_state == 'mobilizing' %}bg-amber-500/20 text-amber-400
+                {% else %}bg-slate-700 text-slate-400{% endif %}">
+                {{ div.mobilization_state | title }}
+            </span>
+        </div>
+        <div class="flex items-center gap-2">
+            {% if div.mobilization_state != 'mobilized' %}
+            <form hx-post="{{ url_for('military.mobilize_division', div_id=div.id) }}"
+                  hx-target="#division-content" hx-swap="innerHTML" class="inline">
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium py-1.5 px-3 rounded transition-colors">
+                    <i class="fas fa-bolt mr-1"></i>Mobilize
+                </button>
+            </form>
+            {% else %}
+            <form hx-post="{{ url_for('military.demobilize_division', div_id=div.id) }}"
+                  hx-target="#division-content" hx-swap="innerHTML" class="inline">
+                <button type="submit" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium py-1.5 px-3 rounded transition-colors">
+                    <i class="fas fa-bed mr-1"></i>Demobilize
+                </button>
+            </form>
+            {% endif %}
+
+            {# Rename #}
+            <div x-data="{ renaming: false, rname: '{{ div.name }}' }">
+                <button @click="renaming = !renaming" class="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium py-1.5 px-3 rounded transition-colors">
+                    <i class="fas fa-pen mr-1"></i>Rename
+                </button>
+                <form x-show="renaming" x-cloak
+                      hx-post="{{ url_for('military.rename_division', div_id=div.id) }}"
+                      hx-target="#division-content" hx-swap="innerHTML"
+                      class="inline ml-2">
+                    <input type="text" name="name" x-model="rname"
+                           class="bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1 text-xs w-32">
+                    <button type="submit" class="text-xs text-amber-500 font-medium ml-1">Save</button>
+                </form>
+            </div>
+
+            {# Peacekeeping #}
+            {% if div.mobilization_state == 'mobilized' and not div.in_combat %}
+            <form hx-post="{{ url_for('military.deploy_peacekeeping', div_id=div.id) }}"
+                  hx-confirm="Deploy {{ div.name }} on peacekeeping? They will enter combat against insurgents."
+                  class="inline">
+                <button type="submit" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium py-1.5 px-3 rounded transition-colors">
+                    <i class="fas fa-dove mr-1"></i>Peacekeeping
+                </button>
+            </form>
+            {% endif %}
+
+            {# Disband Division #}
+            {% if not div.in_combat %}
+            <form hx-post="{{ url_for('military.disband_division', div_id=div.id) }}"
+                  hx-target="#division-content" hx-swap="innerHTML"
+                  hx-confirm="Disband {{ div.name }}? Units will be moved to reserve."
+                  class="inline">
+                <button type="submit" class="bg-red-600 hover:bg-red-500 text-white text-xs font-medium py-1.5 px-3 rounded transition-colors">
+                    <i class="fas fa-trash mr-1"></i>Disband
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Units in this division #}
+    {% set div_units = div.units.all() %}
+    {% if div_units %}
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        {% for unit in div_units %}
+        {% set udef = unit_defs.get(unit.unit_key) %}
+        {% include 'military/partials/_unit_card.html' %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-slate-500 text-sm text-center py-6">No units assigned to this division.</p>
+    {% endif %}
+</div>
+{% endfor %}
+
+{# Reserve Units Panel #}
+{% if divisions or reserve_units %}
+<div x-show="activeDiv === 'reserve'" x-cloak
+     class="bg-slate-800 rounded-lg border border-slate-700 p-5 mb-4">
+    <h2 class="text-lg font-semibold text-slate-100 mb-4">Reserve Units</h2>
+    {% if reserve_units %}
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        {% for unit in reserve_units %}
+        {% set udef = unit_defs.get(unit.unit_key) %}
+        {% include 'military/partials/_unit_card.html' %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-slate-500 text-sm text-center py-6">No reserve units.</p>
+    {% endif %}
+</div>
+{% endif %}

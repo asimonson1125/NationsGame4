@@ -1,13 +1,13 @@
 import random
 
 LAND_WEIGHTS = {
-    'Westberg': {'forest': 300, 'grassland': 400, 'mountain': 150, 'river': 100, 'lake': 50},
-    'Amarino': {'jungle': 500, 'river': 200, 'lake': 200, 'grassland': 100},
-    'San Sebastian': {'grassland': 350, 'forest': 250, 'desert': 200, 'mountain': 150, 'river': 50},
-    'Tind': {'mountain': 400, 'tundra': 300, 'forest': 200, 'river': 100},
-    'Zaheria': {'desert': 600, 'mountain': 250, 'tundra': 100, 'grassland': 50},
+    'Westberg': {'cleared_land': 10, 'forest': 43, 'mountain': 10, 'river': 15, 'lake': 15, 'grassland': 20, 'jungle': 5, 'desert': 0, 'tundra': 2},
+    'Amarino': {'cleared_land': 10, 'forest': 10, 'mountain': 5, 'river': 15, 'lake': 15, 'grassland': 5, 'jungle': 60, 'desert': 0, 'tundra': 0},
+    'San Sebastian': {'cleared_land': 10, 'forest': 18, 'mountain': 15, 'river': 15, 'lake': 15, 'grassland': 20, 'jungle': 10, 'desert': 15, 'tundra': 2},
+    'Tind': {'cleared_land': 10, 'forest': 5, 'mountain': 34, 'river': 20, 'lake': 20, 'grassland': 1, 'jungle': 0, 'desert': 0, 'tundra': 30},
+    'Zaheria': {'cleared_land': 10, 'forest': 5, 'mountain': 5, 'river': 5, 'lake': 5, 'grassland': 5, 'jungle': 0, 'desert': 85, 'tundra': 0},
 }
-DEFAULT_LAND_WEIGHTS = {'forest': 250, 'grassland': 300, 'mountain': 200, 'river': 150, 'lake': 100}
+DEFAULT_LAND_WEIGHTS = {'cleared_land': 10, 'forest': 20, 'mountain': 20, 'river': 20, 'lake': 20, 'grassland': 30}
 
 RESOURCE_WEIGHTS = {
     'Westberg': {'apple_tree': 3, 'oak_tree': 5, 'cow': 500, 'coal': 500, 'iron': 250, 'uraninite': 19, 'petroleum': 150, 'marble': 100, 'sheep': 300, 'copper': 200, 'lead': 150, 'silver': 80},
@@ -17,8 +17,6 @@ RESOURCE_WEIGHTS = {
     'Zaheria': {'cactus': 200, 'goat': 300, 'cow': 100, 'petroleum': 1500, 'uraninite': 1500, 'gold': 200, 'silicon': 200, 'sulfur': 300},
 }
 DEFAULT_RESOURCE_WEIGHTS = {'coal': 300, 'iron': 200, 'marble': 150, 'cow': 400, 'sheep': 300}
-
-EXPANSION_LAND_TOTAL = 10_000
 
 
 def _weighted_distribute(weights, total):
@@ -45,36 +43,26 @@ def _pick_weighted(weights):
     return random.choices(keys, weights=wts, k=1)[0]
 
 
-def roll_expansion(continent):
+def roll_expansion(continent, population):
     """Returns (new_land: dict, discovered: dict)."""
     land_weights = LAND_WEIGHTS.get(continent, DEFAULT_LAND_WEIGHTS)
-    new_land = _weighted_distribute(land_weights, EXPANSION_LAND_TOTAL)
+    total_gained = max(1, population // 100)
+    new_land = _weighted_distribute(land_weights, total_gained)
 
     resource_weights = RESOURCE_WEIGHTS.get(continent, DEFAULT_RESOURCE_WEIGHTS)
-    num_discoveries = random.choices([0, 1, 2, 3], weights=[20, 50, 25, 5])[0]
-    discovered = {}
-    for _ in range(num_discoveries):
-        resource = _pick_weighted(resource_weights)
-        if resource:
-            amount = random.randint(50, 500)
-            discovered[resource] = discovered.get(resource, 0) + amount
+    discovered = {res: amt for res, amt in resource_weights.items() if amt > 0}
 
-    return new_land, discovered
+    return new_land, discovered, total_gained
 
 
-def roll_colonization(target_continent):
+def roll_colonization(target_continent, population):
     """Returns (new_land: dict, discovered: dict) — 5x land, more discoveries."""
     land_weights = LAND_WEIGHTS.get(target_continent, DEFAULT_LAND_WEIGHTS)
-    base_land = _weighted_distribute(land_weights, EXPANSION_LAND_TOTAL)
-    new_land = {k: v * 5 for k, v in base_land.items()}
+    # Colonization gives 5x the land of a normal expansion
+    total_gained = max(1, (population // 100) * 5)
+    new_land = _weighted_distribute(land_weights, total_gained)
 
     resource_weights = RESOURCE_WEIGHTS.get(target_continent, DEFAULT_RESOURCE_WEIGHTS)
-    num_discoveries = random.choices([1, 2, 3, 4], weights=[20, 40, 30, 10])[0]
-    discovered = {}
-    for _ in range(num_discoveries):
-        resource = _pick_weighted(resource_weights)
-        if resource:
-            amount = random.randint(200, 2000)
-            discovered[resource] = discovered.get(resource, 0) + amount
+    discovered = {res: amt * 5 for res, amt in resource_weights.items() if amt > 0}
 
-    return new_land, discovered
+    return new_land, discovered, total_gained

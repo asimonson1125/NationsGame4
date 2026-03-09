@@ -1,0 +1,93 @@
+{# Shared macros for equipment & stat display. Import with:
+   {% from 'shared/_equipment_macros.html' import stat_icon, buff_icon, buff_list, equipment_card %}
+#}
+
+
+{# ── Stat icon: renders an <i> tag for a stat name ────────────────
+   stat:  'Firepower', 'Armour', 'Maneuver', 'HP', or a buff_type like 'FPvs_*'/'AllStats_*'
+   extra: additional CSS classes (e.g. 'mr-1' or 'mr-0.5')
+   shade: color shade, default '500' (use '400' for lighter variants)
+#}
+{% macro stat_icon(stat, extra='', shade='500') -%}
+{%- if stat == 'Firepower' -%}
+<i class="fas fa-crosshairs text-red-{{ shade }} {{ extra }}"></i>
+{%- elif stat == 'Armour' -%}
+<i class="fas fa-shield-alt text-blue-{{ shade }} {{ extra }}"></i>
+{%- elif stat == 'Maneuver' -%}
+<i class="fas fa-running text-green-{{ shade }} {{ extra }}"></i>
+{%- elif stat == 'HP' -%}
+<i class="fas fa-heart text-pink-{{ shade }} {{ extra }}"></i>
+{%- elif stat.startswith('FPvs_') -%}
+<i class="fas fa-bullseye text-orange-{{ shade }} {{ extra }}"></i>
+{%- elif stat.startswith('AllStats_') -%}
+<i class="fas fa-globe text-indigo-{{ shade }} {{ extra }}"></i>
+{%- endif -%}
+{%- endmacro %}
+
+
+{# ── Foil overlay: tiled diamond background for foil items ────────── #}
+{% macro foil_overlay() -%}
+<div class="absolute inset-0 pointer-events-none opacity-50 z-0" style="background-image:url('{{ url_for('static', filename='images/diamonds.png') }}'); background-repeat:repeat; filter:invert(0.5)"></div>
+{%- endmacro %}
+
+
+{# ── Buff icon: renders the <i> tag for a buff object ─────────────── #}
+{% macro buff_icon(buff) -%}
+{{ stat_icon(buff.buff_type, extra='w-3 text-center') }}
+{%- endmacro %}
+
+
+{# ── Buff list: renders the full list of buff rows with icons ──────── #}
+{% macro buff_list(buffs) %}
+<div class="space-y-1">
+    {% for buff in buffs %}
+    <div class="flex items-center gap-1.5 text-xs">
+        {{ buff_icon(buff) }}
+        <span class="text-slate-300">{{ buff.description }}</span>
+    </div>
+    {% endfor %}
+</div>
+{%- endmacro %}
+
+
+{# ── Equipment card: renders a standard equipment card ─────────────
+   eq:            Equipment object (needs .equipment_type, .rarity, .is_foil, .buffs)
+   colors:        rarity color dict (from RARITY_COLORS)
+   show_name:     show the name/rarity row in the body (default true)
+   count:         item stack count — shows xN badge when > 1
+   equipped_count: how many are equipped — shows EQUIPPED badge when > 0
+   extra_class:   additional CSS classes on the outer div
+   extra_style:   inline style on the outer div
+#}
+{% macro equipment_card(eq, colors, show_name=true, count=0, equipped_count=0, extra_class='', extra_style='') %}
+<div class="rounded-lg border-2 {{ colors.border }} {{ colors.bg }} overflow-hidden relative flex flex-col h-52 {{ extra_class }}"
+     {% if extra_style %}style="{{ extra_style }}"{% endif %}>
+    <div class="px-3 py-1.5 {{ colors.badge }} flex items-center justify-between">
+        <span class="text-xs font-bold uppercase tracking-wide">{{ eq.equipment_type }}</span>
+        <div class="flex items-center gap-1.5">
+            {% if eq.is_foil %}
+            <span class="text-xs px-1.5 py-0.5 rounded bg-gradient-to-r from-pink-400 to-purple-400 text-white font-bold">FOIL</span>
+            {% endif %}
+            {% if equipped_count > 0 %}
+            <span class="text-xs px-1.5 py-0.5 rounded bg-blue-500 text-white font-semibold">EQUIPPED ({{ equipped_count }})</span>
+            {% endif %}
+            {% if count > 1 %}
+            <span class="text-xs px-1.5 py-0.5 rounded-full bg-slate-900 text-white font-bold">x{{ count }}</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="p-3 relative flex-1 flex flex-col">
+        {% if eq.is_foil %}{{ foil_overlay() }}{% endif %}
+        <div class="relative z-10 flex-1 flex flex-col">
+            {% if show_name %}
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-semibold text-slate-200">{{ eq.equipment_type }}</span>
+                <span class="text-xs font-medium {{ colors.text }}">{{ eq.rarity }}</span>
+            </div>
+            {% endif %}
+            {{ buff_list(eq.buffs) }}
+            {% if caller is defined %}{{ caller() }}{% endif %}
+        </div>
+    </div>
+</div>
+{%- endmacro %}

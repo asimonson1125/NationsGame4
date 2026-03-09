@@ -1,179 +1,194 @@
 {% extends 'base.html' %}
 
-{% block title %}Land — {{ nation.name }}{% endblock %}
+{% block title %}Land & Resources — {{ nation.name }}{% endblock %}
 
 {% block content %}
-<div class="p-6 max-w-6xl mx-auto">
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">Land</h1>
+<div class="p-6 max-w-6xl mx-auto" x-data="{ tab: '{{ default_tab | default('land') }}' }">
+    <h1 class="text-2xl font-bold text-slate-100 mb-6">Land & Resources</h1>
 
-    {# Land Stats Banner #}
-    <div id="land-stats" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-        <div class="flex items-center gap-3">
-            <i class="fas fa-map text-blue-500 text-lg"></i>
-            <span class="text-gray-700 font-medium">Total Land:</span>
-            <span class="text-blue-700 font-bold text-lg">{{ (nation.total_land or 0) | format_resource }}</span>
-            <span class="text-gray-500 text-sm ml-4">Land GP: {{ (nation.land_gp or 0) | format_resource }}</span>
-        </div>
+    {# Tab Bar #}
+    <div class="flex gap-1 border-b border-slate-700 mb-6">
+        <button @click="tab = 'land'"
+                :class="tab === 'land' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-map mr-1"></i> Land
+        </button>
+        <button @click="tab = 'resources'"
+                :class="tab === 'resources' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-gem mr-1"></i> Natural Resources
+        </button>
     </div>
 
-    {# Action Grid #}
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    {# ===== LAND TAB ===== #}
+    <div x-show="tab === 'land'" x-cloak:false>
 
-        {# Expand Borders Card #}
-        <div class="bg-white rounded-lg shadow border border-gray-200 p-5">
-            <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                <i class="fas fa-expand-arrows-alt text-green-600"></i> Expand Borders
-            </h2>
-            <p class="text-sm text-gray-500 mb-4">Expand your borders by 10,000 land tiles on your home continent.</p>
-            <div class="space-y-1.5 mb-4">
-                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Cost</div>
-                <div class="flex items-center gap-2 text-sm">
-                    <img src="{{ url_for('static', filename='images/money_icon.png') }}" alt="Money" class="w-4 h-4">
-                    <span class="{% if (nation.money or 0) < 7_500_000 %}text-red-500 font-semibold{% else %}text-gray-700{% endif %}">7,500,000 money</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                    <img src="{{ url_for('static', filename='images/food_icon.png') }}" alt="Food" class="w-4 h-4">
-                    <span class="{% if (nation.food or 0) < 1_500_000 %}text-red-500 font-semibold{% else %}text-gray-700{% endif %}">1,500,000 food</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                    <img src="{{ url_for('static', filename='images/building_materials_icon.png') }}" alt="Building Materials" class="w-4 h-4">
-                    <span class="{% if (nation.building_materials or 0) < 1_500_000 %}text-red-500 font-semibold{% else %}text-gray-700{% endif %}">1,500,000 building materials</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                    <img src="{{ url_for('static', filename='images/consumer_goods_icon.png') }}" alt="Consumer Goods" class="w-4 h-4">
-                    <span class="{% if (nation.consumer_goods or 0) < 375_000 %}text-red-500 font-semibold{% else %}text-gray-700{% endif %}">375,000 consumer goods</span>
-                </div>
+        {# Land Stats Banner #}
+        <div id="land-stats" class="bg-slate-800 border border-amber-500/30 rounded-lg p-4 mb-6">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-map text-amber-500 text-lg"></i>
+                <span class="text-slate-300 font-medium">Total Land:</span>
+                <span class="text-amber-400 font-bold text-lg">{{ (nation.total_land or 0) | format_resource }}</span>
+                <span class="text-slate-500 text-sm ml-4">Land GP: {{ (nation.land_gp or 0) | format_resource }}</span>
             </div>
-            <button
-                hx-post="{{ url_for('economy.expand_borders') }}"
-                hx-target="#expansion-results"
-                hx-swap="innerHTML"
-                hx-on::htmx:after-swap="showExpansionModal()"
-                class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm">
-                <i class="fas fa-expand-arrows-alt mr-1"></i> Expand Borders
-            </button>
         </div>
 
-        {# Colonists Card #}
-        <div class="bg-white rounded-lg shadow border border-gray-200 p-5">
-            <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                <i class="fas fa-globe text-purple-600"></i> Colonists
-                <span class="ml-auto text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-medium">Requires Tier 6+</span>
-            </h2>
-            <p class="text-sm text-gray-500 mb-3">Send colonists to a new continent and claim 50,000 land tiles.</p>
-            <div class="mb-3">
-                <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Target Continent</label>
-                <select name="continent" form="colonize-form" class="w-full border border-gray-300 rounded px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-400">
-                    {% for c in continents %}
-                    <option value="{{ c }}">{{ c }}</option>
+        {# Action Grid #}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+
+            {# Expand Borders Card #}
+            <div class="bg-slate-800 rounded-lg border border-slate-700 p-5">
+                <h2 class="text-lg font-semibold text-slate-100 mb-3 flex items-center gap-2">
+                    <i class="fas fa-expand-arrows-alt text-emerald-500"></i> Expand Borders
+                </h2>
+                <p class="text-sm text-slate-400 mb-4">Expand your borders on your home continent.</p>
+                <div class="space-y-1.5 mb-4">
+                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Cost</div>
+                    {% for res, amount in expand_cost.items() %}
+                    <div class="flex items-center gap-2 text-sm">
+                        <img src="{{ url_for('static', filename='images/' ~ res ~ '_icon.png') }}" alt="{{ res | replace('_', ' ') | title }}" class="w-4 h-4">
+                        <span class="{{ amount | cost_class(nation | attr(res)) }}">{{ amount | format_resource }} {{ res | replace('_', ' ') }}</span>
+                    </div>
                     {% endfor %}
-                </select>
-            </div>
-            <div class="space-y-1.5 mb-4">
-                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Cost</div>
-                <div class="flex items-center gap-2 text-sm">
-                    <img src="{{ url_for('static', filename='images/money_icon.png') }}" alt="Money" class="w-4 h-4">
-                    <span class="{% if (nation.money or 0) < 37_500_000 %}text-red-500 font-semibold{% else %}text-gray-700{% endif %}">37,500,000 money</span>
                 </div>
-                <div class="flex items-center gap-2 text-sm">
-                    <img src="{{ url_for('static', filename='images/food_icon.png') }}" alt="Food" class="w-4 h-4">
-                    <span class="{% if (nation.food or 0) < 7_500_000 %}text-red-500 font-semibold{% else %}text-gray-700{% endif %}">7,500,000 food</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                    <img src="{{ url_for('static', filename='images/building_materials_icon.png') }}" alt="Building Materials" class="w-4 h-4">
-                    <span class="{% if (nation.building_materials or 0) < 7_500_000 %}text-red-500 font-semibold{% else %}text-gray-700{% endif %}">7,500,000 building materials</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                    <img src="{{ url_for('static', filename='images/consumer_goods_icon.png') }}" alt="Consumer Goods" class="w-4 h-4">
-                    <span class="{% if (nation.consumer_goods or 0) < 1_875_000 %}text-red-500 font-semibold{% else %}text-gray-700{% endif %}">1,875,000 consumer goods</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                    <img src="{{ url_for('static', filename='images/metal_icon.png') }}" alt="Metal" class="w-4 h-4">
-                    <span class="{% if (nation.metal or 0) < 1_000 %}text-red-500 font-semibold{% else %}text-gray-700{% endif %}">1,000 metal</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                    <img src="{{ url_for('static', filename='images/fuel_icon.png') }}" alt="Fuel" class="w-4 h-4">
-                    <span class="{% if (nation.fuel or 0) < 1_000 %}text-red-500 font-semibold{% else %}text-gray-700{% endif %}">1,000 fuel</span>
-                </div>
-            </div>
-            <form id="colonize-form"
-                  hx-post="{{ url_for('economy.colonize') }}"
-                  hx-target="#expansion-results"
-                  hx-swap="innerHTML"
-                  hx-on::htmx:after-swap="showExpansionModal()">
-                <button type="submit"
-                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm {% if (nation.tier or 1) < 6 %}opacity-50 cursor-not-allowed{% endif %}"
-                    {% if (nation.tier or 1) < 6 %}disabled title="Requires Tier 6"{% endif %}>
-                    <i class="fas fa-globe mr-1"></i> Send Colonists
+                <button
+                    hx-post="{{ url_for('economy.expand_borders') }}"
+                    hx-target="#expansion-results"
+                    hx-swap="innerHTML"
+                    class="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
+                    <i class="fas fa-expand-arrows-alt mr-1"></i> Expand Borders
                 </button>
-            </form>
+            </div>
+
+            {# Colonists Card #}
+            <div class="bg-slate-800 rounded-lg border border-slate-700 p-5">
+                <h2 class="text-lg font-semibold text-slate-100 mb-3 flex items-center gap-2">
+                    <i class="fas fa-globe text-purple-400"></i> Colonists
+                    <span class="ml-auto text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded font-medium">Requires Tier 6+</span>
+                </h2>
+                <p class="text-sm text-slate-400 mb-3">Send colonists to a new continent.</p>
+                <div class="mb-3">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1">Target Continent</label>
+                    <select name="continent" form="colonize-form" class="w-full bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
+                        {% for c in continents %}
+                        <option value="{{ c }}">{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="space-y-1.5 mb-4">
+                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Cost</div>
+                    {% for res, amount in colonize_cost.items() %}
+                    <div class="flex items-center gap-2 text-sm">
+                        <img src="{{ url_for('static', filename='images/' ~ res ~ '_icon.png') }}" alt="{{ res | replace('_', ' ') | title }}" class="w-4 h-4">
+                        <span class="{{ amount | cost_class(nation | attr(res)) }}">{{ amount | format_resource }} {{ res | replace('_', ' ') }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                <form id="colonize-form"
+                      hx-post="{{ url_for('economy.colonize') }}"
+                      hx-target="#expansion-results"
+                      hx-swap="innerHTML">
+                    <button type="submit"
+                        class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2 px-4 rounded-md transition-colors text-sm {% if (nation.tier or 1) < 6 %}opacity-50 cursor-not-allowed{% endif %}"
+                        {% if (nation.tier or 1) < 6 %}disabled title="Requires Tier 6"{% endif %}>
+                        <i class="fas fa-globe mr-1"></i> Send Colonists
+                    </button>
+                </form>
+            </div>
+
+            {# Buy Cleared Land Card #}
+            <div class="bg-slate-800 rounded-lg border border-slate-700 p-5">
+                <h2 class="text-lg font-semibold text-slate-100 mb-3 flex items-center gap-2">
+                    <i class="fas fa-tractor text-amber-500"></i> Buy Cleared Land
+                </h2>
+                <p class="text-sm text-slate-400 mb-1">Purchase pre-cleared tiles ready for development.</p>
+                <p class="text-xs text-slate-500 mb-4">Cost: <span class="font-medium text-slate-300">1,000 money per tile</span></p>
+                <div class="flex gap-2 items-center mb-2">
+                    <input type="number"
+                           name="buy_amount"
+                           id="buy_amount"
+                           min="1"
+                           value="1"
+                           class="w-full bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
+                    <button
+                        hx-post="{{ url_for('economy.buy_cleared_land') }}"
+                        hx-include="[name='buy_amount']"
+                        hx-target="#land-panel"
+                        hx-swap="outerHTML"
+                        class="whitespace-nowrap bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold py-1.5 px-4 rounded-md transition-colors text-sm">
+                        Buy
+                    </button>
+                </div>
+                <p class="text-xs text-slate-500">Current cleared land: <span class="font-medium text-slate-300">{{ (nation.cleared_land or 0) | format_resource }}</span></p>
+            </div>
+
+            {# Build Urban Areas Card #}
+            <div class="bg-slate-800 rounded-lg border border-slate-700 p-5">
+                <h2 class="text-lg font-semibold text-slate-100 mb-3 flex items-center gap-2">
+                    <i class="fas fa-city text-sky-400"></i> Build Urban Areas
+                </h2>
+                <p class="text-sm text-slate-400 mb-1">Convert cleared land into urban areas.</p>
+                <p class="text-xs text-slate-500 mb-4">Cost: <span class="font-medium text-slate-300">500 money per tile. Requires cleared land.</span></p>
+                <div class="flex gap-2 items-center mb-2">
+                    <input type="number"
+                           name="build_amount"
+                           id="build_amount"
+                           min="1"
+                           max="{{ nation.cleared_land or 0 }}"
+                           value="1"
+                           class="w-full bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
+                    <button
+                        hx-post="{{ url_for('economy.build_urban_areas') }}"
+                        hx-include="[name='build_amount']"
+                        hx-target="#land-panel"
+                        hx-swap="outerHTML"
+                        class="whitespace-nowrap bg-sky-600 hover:bg-sky-500 text-white font-semibold py-1.5 px-4 rounded-md transition-colors text-sm">
+                        Build
+                    </button>
+                </div>
+                <p class="text-xs text-slate-500">Available cleared land: <span class="font-medium text-slate-300">{{ (nation.cleared_land or 0) | format_resource }}</span></p>
+            </div>
+
         </div>
 
-        {# Buy Cleared Land Card #}
-        <div class="bg-white rounded-lg shadow border border-gray-200 p-5">
-            <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                <i class="fas fa-tractor text-yellow-600"></i> Buy Cleared Land
-            </h2>
-            <p class="text-sm text-gray-500 mb-1">Purchase pre-cleared tiles ready for development.</p>
-            <p class="text-xs text-gray-400 mb-4">Cost: <span class="font-medium text-gray-600">1,000 money per tile</span></p>
-            <div class="flex gap-2 items-center mb-2">
-                <input type="number"
-                       name="buy_amount"
-                       id="buy_amount"
-                       min="1"
-                       value="1"
-                       class="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
-                <button
-                    hx-post="{{ url_for('economy.buy_cleared_land') }}"
-                    hx-include="[name='buy_amount']"
-                    hx-target="#land-panel"
-                    hx-swap="outerHTML"
-                    class="whitespace-nowrap bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-1.5 px-4 rounded transition-colors text-sm">
-                    Buy
-                </button>
-            </div>
-            <p class="text-xs text-gray-400">Current cleared land: <span class="font-medium text-gray-600">{{ (nation.cleared_land or 0) | format_resource }}</span></p>
-        </div>
-
-        {# Build Urban Areas Card #}
-        <div class="bg-white rounded-lg shadow border border-gray-200 p-5">
-            <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                <i class="fas fa-city text-blue-600"></i> Build Urban Areas
-            </h2>
-            <p class="text-sm text-gray-500 mb-1">Convert cleared land into urban areas.</p>
-            <p class="text-xs text-gray-400 mb-4">Cost: <span class="font-medium text-gray-600">500 money per tile. Requires cleared land.</span></p>
-            <div class="flex gap-2 items-center mb-2">
-                <input type="number"
-                       name="build_amount"
-                       id="build_amount"
-                       min="1"
-                       max="{{ nation.cleared_land or 0 }}"
-                       value="1"
-                       class="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <button
-                    hx-post="{{ url_for('economy.build_urban_areas') }}"
-                    hx-include="[name='build_amount']"
-                    hx-target="#land-panel"
-                    hx-swap="outerHTML"
-                    class="whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded transition-colors text-sm">
-                    Build
-                </button>
-            </div>
-            <p class="text-xs text-gray-400">Available cleared land: <span class="font-medium text-gray-600">{{ (nation.cleared_land or 0) | format_resource }}</span></p>
-        </div>
+        {# Land Panel #}
+        {% include 'economy/partials/land_panel.html' %}
 
     </div>
 
-    {# Land Panel #}
-    {% include 'economy/partials/land_panel.html' %}
+    {# ===== RESOURCES TAB ===== #}
+    <div x-show="tab === 'resources'" x-cloak>
+
+        <div id="resources-panel" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+            {% if natural_resources %}
+                {% for nr in natural_resources %}
+                <div class="bg-slate-800 rounded-lg border border-slate-700 p-3 flex flex-col items-center text-center">
+                    <img src="{{ url_for('static', filename='images/' ~ nr.resource_key ~ '_icon.png') }}"
+                         alt="{{ nr.resource_key }}"
+                         class="w-8 h-8 mb-2"
+                         onerror="this.style.display='none'">
+                    <div class="text-xs text-slate-400 mb-1">{{ nr.resource_key | replace('_', ' ') | title }}</div>
+                    <div class="text-sm font-bold text-slate-100">{{ nr.amount | format_resource }}</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-span-full text-center py-12">
+                    <i class="fas fa-gem text-slate-600 text-4xl mb-3"></i>
+                    <p class="text-slate-400 text-sm">No natural resources discovered yet.</p>
+                    <p class="text-slate-500 text-xs mt-1">Expand your borders to discover resources on your continent.</p>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
 
 </div>
 
 {# Expansion Results Modal #}
-<div id="expansion-modal-wrapper" class="hidden fixed inset-0 bg-black/50 z-[1200] flex items-center justify-center"
+<div id="expansion-modal-wrapper" class="hidden fixed inset-0 bg-black/60 z-[1200] flex items-center justify-center"
      onclick="if(event.target===this) closeExpansionModal()">
     <div id="expansion-results"
-         class="bg-white rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto mx-4">
+         class="bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto mx-4">
         Loading...
     </div>
 </div>
@@ -187,5 +202,8 @@
     function closeExpansionModal() {
         document.getElementById('expansion-modal-wrapper').classList.add('hidden');
     }
+    document.body.addEventListener('showExpansionModal', function() {
+        showExpansionModal();
+    });
 </script>
 {% endblock %}

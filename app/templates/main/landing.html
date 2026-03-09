@@ -1,0 +1,144 @@
+{% extends layout %}
+
+{% block title %}Nations Simulator{% endblock %}
+
+{% block head %}
+<style>
+    .marquee-track {
+        animation: marquee 60s linear infinite;
+        width: max-content;
+    }
+    @keyframes marquee {
+        0%   { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ===== LATEST UPDATE MARQUEE ===== #}
+{% if latest_update %}
+<a href="{{ url_for('main.changelog_page') }}" class="block bg-slate-900 border-b border-slate-800 overflow-hidden py-2 sticky top-14 z-30 hover:bg-slate-800/80 transition-colors">
+    <div class="marquee-track flex items-center gap-8 text-xs text-slate-400 whitespace-nowrap">
+        <span>
+            <i class="fas fa-bullhorn text-amber-500 mr-1"></i>
+            <span class="text-amber-500 font-semibold">{{ latest_update.title }}</span>
+            <span class="text-slate-500 mx-2">&middot;</span>
+            {{ latest_update.body }}
+        </span>
+        <span>
+            <i class="fas fa-bullhorn text-amber-500 mr-1"></i>
+            <span class="text-amber-500 font-semibold">{{ latest_update.title }}</span>
+            <span class="text-slate-500 mx-2">&middot;</span>
+            {{ latest_update.body }}
+        </span>
+    </div>
+</a>
+{% endif %}
+
+{# ===== HERO ===== #}
+<div class="relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-transparent"></div>
+    <div class="relative max-w-5xl mx-auto px-6 pt-20 pb-16 text-center">
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Nations" class="w-20 h-20 mx-auto mb-6">
+        <h1 class="text-4xl sm:text-5xl font-bold mb-4">Nations Simulator</h1>
+        <p class="text-lg text-slate-300 max-w-2xl mx-auto mb-8">
+            Build your nation from the ground up. Expand your borders, develop industry,
+            raise armies, and trade on the global market. Compete with players worldwide
+            for dominance across five unique continents.
+        </p>
+        {% if not current_user.is_authenticated %}
+        <div class="flex flex-wrap justify-center gap-4">
+            <a href="{{ url_for('auth.register') }}"
+               class="px-8 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded-lg transition-colors text-lg">
+                Create Your Nation
+            </a>
+            <a href="{{ url_for('auth.login') }}"
+               class="px-8 py-3 border border-slate-600 hover:border-slate-400 text-slate-200 font-semibold rounded-lg transition-colors text-lg">
+                Sign In
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# ===== FEATURES GRID ===== #}
+<div class="max-w-5xl mx-auto px-6 pb-20">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6">
+            <div class="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
+                <i class="fas fa-map text-emerald-400 text-lg"></i>
+            </div>
+            <h3 class="font-semibold text-slate-100 mb-2">Explore &amp; Expand</h3>
+            <p class="text-sm text-slate-400">
+                Claim territory across five continents &mdash; from the frozen peaks of Tind
+                to the deserts of Zaheria. Each region offers unique terrain and natural resources.
+            </p>
+        </div>
+
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6">
+            <div class="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center mb-4">
+                <i class="fas fa-industry text-amber-400 text-lg"></i>
+            </div>
+            <h3 class="font-semibold text-slate-100 mb-2">Build Your Economy</h3>
+            <p class="text-sm text-slate-400">
+                Construct over 60 types of factories. Manage supply chains from raw materials
+                to advanced goods. Balance inputs, outputs, and production capacity.
+            </p>
+        </div>
+
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6">
+            <div class="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center mb-4">
+                <i class="fas fa-shield-alt text-red-400 text-lg"></i>
+            </div>
+            <h3 class="font-semibold text-slate-100 mb-2">Military &amp; Combat</h3>
+            <p class="text-sm text-slate-400">
+                Recruit units, organise divisions, and equip them with randomised loot-crate gear.
+                Battle other players or fight PvE encounters for rewards.
+            </p>
+        </div>
+
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6">
+            <div class="w-10 h-10 bg-sky-500/10 rounded-lg flex items-center justify-center mb-4">
+                <i class="fas fa-exchange-alt text-sky-400 text-lg"></i>
+            </div>
+            <h3 class="font-semibold text-slate-100 mb-2">Global Market</h3>
+            <p class="text-sm text-slate-400">
+                Trade commodities and natural resources on a player-driven market.
+                Set buy and sell orders, track price history, and profit from the spread.
+            </p>
+        </div>
+
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6">
+            <div class="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mb-4">
+                <i class="fas fa-users text-purple-400 text-lg"></i>
+            </div>
+            <h3 class="font-semibold text-slate-100 mb-2">Alliances</h3>
+            <p class="text-sm text-slate-400">
+                Join forces with other nations. Form alliances for mutual defence,
+                coordinate strategy, and climb the leaderboards together.
+            </p>
+        </div>
+
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6">
+            <div class="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center mb-4">
+                <i class="fas fa-trophy text-amber-400 text-lg"></i>
+            </div>
+            <h3 class="font-semibold text-slate-100 mb-2">Compete &amp; Rise</h3>
+            <p class="text-sm text-slate-400">
+                Earn Greatness Points from population, land, factories, buildings, and military.
+                Compete on global and continental leaderboards.
+            </p>
+        </div>
+
+    </div>
+</div>
+
+{# ===== FOOTER ===== #}
+<div class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+    Nations Simulator{% if latest_update %} &mdash; <a href="{{ url_for('main.changelog_page') }}" class="text-slate-400 hover:text-slate-300 transition-colors">v{{ latest_update.version }}</a>{% endif %}
+</div>
+
+{% endblock %}

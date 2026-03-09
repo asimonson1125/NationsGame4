@@ -1,29 +1,33 @@
-{% set resources = [
-    ('money',              nation.money,              'Money',              'money_icon.png',              'text-green-600'),
-    ('food',               nation.food,               'Food',               'food_icon.png',               'text-red-500'),
-    ('power',              nation.power,              'Power',              'power_icon.png',              'text-red-500'),
-    ('building_materials', nation.building_materials, 'Building Materials', 'building_materials_icon.png', 'text-gray-700'),
-    ('consumer_goods',     nation.consumer_goods,     'Consumer Goods',     'consumer_goods_icon.png',     'text-red-500'),
-    ('metal',              nation.metal,              'Metal',              'metal_icon.png',              'text-gray-700'),
-    ('fuel',               nation.fuel,               'Fuel',               'fuel_icon.png',               'text-gray-700'),
-    ('ammunition',         nation.ammunition,         'Ammunition',         'ammunition_icon.png',         'text-gray-700'),
-    ('uranium',            nation.uranium,            'Uranium',            'uranium_icon.png',            'text-gray-700'),
-    ('whz',                nation.whz,                'WHZ',                'whz_icon.png',                'text-gray-700'),
-] %}
 <div class="flex justify-around flex-wrap max-w-screen-xl mx-auto px-4">
-    {% for _field, value, label, icon, color_class in resources %}
-    {% set rate = (net_income.get(_field, 0) if net_income is defined else 0) %}
-    <div class="flex items-center gap-1.5 px-1">
-        <img src="{{ url_for('static', filename='images/' ~ icon) }}"
-             alt="{{ label }}" title="{{ label }}"
+    {% for r in resource_data %}
+    <div class="group relative flex items-center gap-1.5 px-1 cursor-default">
+        <img src="{{ url_for('static', filename='images/' ~ r.icon) }}"
+             alt="{{ r.label }}" title="{{ r.label }}"
              class="w-4 h-4 inline-block">
-        <div class="flex flex-col items-center">
-            <span class="text-sm font-medium {{ color_class }}">{{ value | format_resource }}</span>
-            {% if rate != 0 %}
-            <span class="text-xs {{ 'text-green-500' if rate > 0 else 'text-red-400' }}">
-                {{ '+' if rate > 0 else '' }}{{ rate | format_resource }}/h
-            </span>
+        <span class="text-sm font-medium
+            {% if r.net > 0 %}text-emerald-400{% elif r.net < 0 %}text-red-400{% else %}text-slate-200{% endif %}">
+            {{ r.stockpile | format_resource }}
+        </span>
+
+        {# Hover breakdown tooltip #}
+        <div class="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-800 border border-slate-600 text-slate-100 rounded-lg shadow-lg z-[9999] whitespace-nowrap text-xs p-2.5 min-w-[160px]">
+            <div class="font-semibold text-slate-200 mb-1.5 flex justify-between gap-4">
+                <span>{{ r.label }}:</span>
+                <span>{{ '{:,.0f}'.format(r.stockpile) }}</span></div>
+            {% if r.lines %}
+            {% for lbl, amt in r.lines %}
+            <div class="flex justify-between gap-4">
+                <span>{{ lbl }}:</span>
+                <span class="{{ 'text-emerald-400' if amt > 0 else 'text-red-400' }}">{{ '+' if amt > 0 else '' }}{{ '{:,.0f}'.format(amt) }}/h</span>
+            </div>
+            {% endfor %}
+            <div class="border-t border-slate-600 mt-1.5 pt-1.5 flex justify-between gap-4 font-semibold">
+                <span>Net:</span>
+                <span class="{{ 'text-emerald-400' if r.net > 0 else 'text-red-400' if r.net < 0 else 'text-slate-300' }}">{{ '+' if r.net > 0 else '' }}{{ '{:,.0f}'.format(r.net) }}/h</span>
+            </div>
             {% endif %}
+            {# Arrow #}
+            <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-800"></div>
         </div>
     </div>
     {% endfor %}

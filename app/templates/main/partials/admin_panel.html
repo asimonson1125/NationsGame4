@@ -1,0 +1,59 @@
+<div id="admin-panel-content">
+    {# Nation header #}
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h3 class="text-lg font-bold text-slate-100">{{ target.name }}</h3>
+            <span class="text-sm text-slate-500">ID: {{ target.id }}</span>
+        </div>
+        <span class="px-2 py-1 bg-slate-700 rounded text-xs text-slate-400">Tier {{ target.tier }}</span>
+    </div>
+
+    {# ── Resource grid ── #}
+    <h4 class="font-semibold text-slate-300 mb-2 border-b border-slate-700 pb-1">Resources</h4>
+    <div class="space-y-2 mb-6">
+        {% for res in resources %}
+        <form hx-post="{{ url_for('main.admin_edit_resource', nation_id=target.id) }}"
+              hx-target="#admin-panel-content" hx-swap="outerHTML"
+              class="flex items-center gap-2 text-sm">
+            <span class="w-40 font-mono text-slate-400 truncate" title="{{ res }}">{{ res }}</span>
+            <span class="w-28 text-right font-mono text-slate-200">{{ '{:,.2f}'.format(res_values[res]) }}</span>
+            <input type="hidden" name="resource" value="{{ res }}">
+            <select name="mode" class="bg-slate-700 border border-slate-600 text-slate-100 rounded px-1 py-1 text-xs">
+                <option value="set">Set</option>
+                <option value="add">Add</option>
+                <option value="subtract">Subtract</option>
+            </select>
+            <input type="number" name="value" step="any" placeholder="0"
+                   class="w-28 bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1 text-xs font-mono" required>
+            <button type="submit"
+                    class="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-500 transition-colors">
+                Apply
+            </button>
+        </form>
+        {% endfor %}
+    </div>
+
+    {# ── Recruitment queue ── #}
+    <h4 class="font-semibold text-slate-300 mb-2 border-b border-slate-700 pb-1">Recruitment Queue</h4>
+    {% if queue %}
+    <div class="space-y-2">
+        {% for entry in queue %}
+        <div class="flex items-center justify-between bg-slate-700/50 rounded px-3 py-2 text-sm">
+            <div>
+                <span class="font-medium text-slate-200">{{ entry.unit_key }}</span>
+                <span class="text-slate-500 ml-2">Completes: {{ entry.completes_at.strftime('%Y-%m-%d %H:%M UTC') }}</span>
+            </div>
+            <form hx-post="{{ url_for('main.admin_complete_queue', nation_id=target.id, entry_id=entry.id) }}"
+                  hx-target="#admin-panel-content" hx-swap="outerHTML">
+                <button type="submit"
+                        class="px-3 py-1 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-500 transition-colors">
+                    Complete Now
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-500 italic">No items in queue.</p>
+    {% endif %}
+</div>

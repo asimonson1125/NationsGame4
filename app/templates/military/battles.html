@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Battle Reports{% endblock %}
+
+{% macro battle_table(battles, empty_msg) %}
+<div class="overflow-x-auto bg-slate-800 rounded-lg border border-slate-700">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="bg-slate-700/50 text-left text-slate-400">
+                <th class="px-4 py-3 w-20">Battle #</th>
+                <th class="px-4 py-3">Attacker</th>
+                <th class="px-4 py-3">Defender</th>
+                <th class="px-4 py-3 w-20">Type</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Started</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in battles %}
+            <tr class="border-t border-slate-700 {% if loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %} hover:bg-slate-700/50 transition-colors">
+                <td class="px-4 py-3">
+                    <a href="{{ url_for('military.battle_view', battle_id=b.id) }}" class="text-amber-500 hover:text-amber-400 font-medium">#{{ b.id }}</a>
+                </td>
+                <td class="px-4 py-3"><a href="{{ url_for('main.nation_view', nation_id=b.attacker_nation_id) }}" class="text-amber-500 hover:text-amber-400">{{ b.attacker_nation.name }}</a></td>
+                <td class="px-4 py-3"><a href="{{ url_for('main.nation_view', nation_id=b.defender_nation_id) }}" class="text-amber-500 hover:text-amber-400">{{ b.defender_nation.name }}</a></td>
+                <td class="px-4 py-3">
+                    {% if b.battle_type == 'pve' %}
+                        <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/20 text-emerald-400">PvE</span>
+                    {% else %}
+                        <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-red-500/20 text-red-400">PvP</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                    {% if b.status == 'active' %}
+                        <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-400">Active</span>
+                    {% elif b.winner == 'attacker' %}
+                        <span class="text-emerald-400 font-medium"><a href="{{ url_for('main.nation_view', nation_id=b.attacker_nation_id) }}" class="hover:underline">{{ b.attacker_nation.name }}</a> won</span>
+                    {% elif b.winner == 'defender' %}
+                        <span class="text-emerald-400 font-medium"><a href="{{ url_for('main.nation_view', nation_id=b.defender_nation_id) }}" class="hover:underline">{{ b.defender_nation.name }}</a> won</span>
+                    {% else %}
+                        <span class="text-slate-500">Finished</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-slate-500">{{ b.started_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-slate-500">{{ empty_msg }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="p-6 max-w-6xl mx-auto" x-data="{ tab: '{{ default_tab | default('active') }}' }">
+    <h1 class="text-2xl font-bold text-slate-100 mb-6">
+        <i class="fas fa-crosshairs mr-2 text-slate-400"></i>Battle Reports
+    </h1>
+
+    {# Tab Bar #}
+    <div class="flex gap-1 border-b border-slate-700 mb-6">
+        <button @click="tab = 'active'"
+                :class="tab === 'active' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-bolt mr-1"></i> My Battles
+        </button>
+        <button @click="tab = 'history'"
+                :class="tab === 'history' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-history mr-1"></i> Battle History
+        </button>
+        <button @click="tab = 'global'"
+                :class="tab === 'global' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-globe mr-1"></i> Global Battles
+        </button>
+        <button @click="tab = 'wars'"
+                :class="tab === 'wars' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-person-rifle mr-1"></i> Wars
+        </button>
+    </div>
+
+    <div x-show="tab === 'active'" x-cloak:false>
+        {{ battle_table(my_active, 'You have no active battles.') }}
+    </div>
+    <div x-show="tab === 'history'" x-cloak>
+        {{ battle_table(my_history, 'No finished battles yet.') }}
+    </div>
+    <div x-show="tab === 'global'" x-cloak>
+        {{ battle_table(global_active, 'No active battles worldwide.') }}
+    </div>
+    <div x-show="tab === 'wars'" x-cloak>
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-12 text-center">
+            <i class="fas fa-person-rifle text-slate-600 text-5xl mb-4"></i>
+            <p class="text-slate-500 text-sm">Wars coming soon.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

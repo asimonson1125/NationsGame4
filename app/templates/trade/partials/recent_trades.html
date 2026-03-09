@@ -1,0 +1,40 @@
+<div class="p-4">
+    {% if executions %}
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-xs text-slate-500 border-b border-slate-700 uppercase tracking-wider">
+                <th class="text-left py-2 font-medium">Time</th>
+                <th class="text-left py-2 font-medium">Buyer</th>
+                <th class="text-left py-2 font-medium">Seller</th>
+                <th class="text-right py-2 font-medium">Price</th>
+                <th class="text-right py-2 font-medium">Qty</th>
+                <th class="text-right py-2 font-medium">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ex in executions %}
+            <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+                <td class="py-2 text-slate-500 text-xs whitespace-nowrap">{{ ex.executed_at.strftime('%b %d, %H:%M') }}</td>
+                <td class="py-2 text-xs">
+                    <a href="{{ url_for('main.nation_view', nation_id=ex.buyer_nation_id) }}"
+                       class="text-emerald-400 hover:text-emerald-300 truncate max-w-[100px] inline-block align-bottom"
+                       title="{{ ex.buyer_nation.name }}">{{ ex.buyer_nation.name }}</a>
+                </td>
+                <td class="py-2 text-xs">
+                    <a href="{{ url_for('main.nation_view', nation_id=ex.seller_nation_id) }}"
+                       class="text-red-400 hover:text-red-300 truncate max-w-[100px] inline-block align-bottom"
+                       title="{{ ex.seller_nation.name }}">{{ ex.seller_nation.name }}</a>
+                </td>
+                <td class="py-2 text-right font-medium text-slate-300">{{ '%.2f'|format(ex.price_per_unit) }}</td>
+                <td class="py-2 text-right text-slate-300">{{ '{:,}'.format(ex.quantity) }}</td>
+                <td class="py-2 text-right text-slate-400">{{ '{:,.0f}'.format(ex.total_cost) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="text-slate-500 text-sm text-center py-6">No trades yet for this resource</p>
+    {% endif %}
+</div>

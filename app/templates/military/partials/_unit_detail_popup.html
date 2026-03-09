@@ -1,0 +1,203 @@
+{% from 'shared/_equipment_macros.html' import stat_icon, equipment_card %}
+{# Expects: unit, udef, equippable, bonuses, hp_bonus, hp_mult, eq_abilities, slots_info, rarity_colors #}
+<div class="p-6">
+
+    {# ── HEADER ─────────────────────────────────────────────── #}
+    <div class="flex items-start justify-between mb-5">
+        <div>
+            <h2 class="text-xl font-bold text-slate-100">
+                {{ unit.custom_name or (udef.name if udef else unit.unit_key) }}
+            </h2>
+            {% if unit.custom_name and udef %}
+            <div class="text-sm text-slate-500">{{ udef.name }}</div>
+            {% endif %}
+            <div class="flex items-center gap-2 mt-1.5">
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium
+                    {% if udef and udef.unit_type == 'Infantry' %}bg-emerald-500/20 text-emerald-400
+                    {% elif udef and udef.unit_type == 'Armour' %}bg-blue-500/20 text-blue-400
+                    {% elif udef and udef.unit_type == 'Static' %}bg-slate-700 text-slate-400
+                    {% elif udef and udef.unit_type == 'Air' %}bg-purple-500/20 text-purple-400
+                    {% elif udef and udef.unit_type == 'Special Forces' %}bg-red-500/20 text-red-400
+                    {% else %}bg-slate-700 text-slate-400{% endif %}">
+                    {{ udef.unit_type if udef else '?' }}
+                </span>
+                {% if udef %}
+                <span class="text-xs text-slate-500">Tier {{ udef.tier }}</span>
+                {% endif %}
+                <span class="text-xs text-slate-400 font-medium">Lv.{{ unit.level }}</span>
+                <span class="text-xs text-slate-500">{{ unit.xp }} XP</span>
+            </div>
+        </div>
+        <button onclick="closeUnitDetail()" class="text-slate-400 hover:text-slate-200 p-1 -mt-1 -mr-1">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+    </div>
+
+    {# ── TWO-COLUMN LAYOUT ── #}
+    <div class="{% if slots_info %}grid grid-cols-1 lg:grid-cols-2 gap-6{% endif %}">
+
+        {# ── LEFT COLUMN: Stats & Abilities ─────────────────── #}
+        <div>
+            {# HP Bar #}
+            {% set effective_max_hp = (unit.max_hp * hp_mult) | round | int %}
+            <div class="mb-5">
+                <div class="flex justify-between text-sm text-slate-400 mb-1">
+                    <span class="font-medium">{{ stat_icon('HP', extra='mr-1', shade='400') }}HP</span>
+                    <span>
+                        {{ unit.hp }} / {{ unit.max_hp }}
+                        {% if hp_bonus > 0 %}
+                        <span class="text-amber-400 font-medium">+ {{ hp_bonus }} = {{ effective_max_hp }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="w-full bg-slate-700 rounded-full h-3">
+                    {% set hp_pct = (unit.hp / effective_max_hp * 100) if effective_max_hp > 0 else 0 %}
+                    <div class="h-3 rounded-full transition-all
+                        {% if hp_pct > 60 %}bg-green-500{% elif hp_pct > 30 %}bg-yellow-500{% else %}bg-red-500{% endif %}"
+                         style="width: {{ hp_pct | round(1) }}%"></div>
+                </div>
+            </div>
+
+            {# Stat Bars with Equipment Bonuses #}
+            {% set stats = [
+                ('Firepower', 'firepower', unit.firepower, bonuses.firepower, 'red'),
+                ('Armour', 'armour', unit.armour, bonuses.armour, 'blue'),
+                ('Maneuver', 'maneuver', unit.maneuver, bonuses.maneuver, 'green'),
+            ] %}
+            {% set max_stat = 20 %}
+            <div class="space-y-3 mb-6">
+                {% for label, key, base, bonus, color in stats %}
+                {% set total = base + bonus %}
+                {% set base_pct = [base / max_stat * 100, 100] | min %}
+                {% set total_pct = [total / max_stat * 100, 100] | min %}
+                <div>
+                    <div class="flex items-center justify-between text-sm mb-1">
+                        <span class="text-slate-400 font-medium">
+                            {{ stat_icon(label, extra='mr-1', shade='400') }}{{ label }}
+                        </span>
+                        <span class="text-slate-300">
+                            <span class="font-bold">{{ base }}</span>
+                            {% if bonus > 0 %}
+                            <span class="text-{{ color }}-400 font-medium">+ {{ bonus }}</span>
+                            <span class="font-bold">= {{ total }}</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-700 rounded-full h-3 relative overflow-hidden">
+                        {% if bonus > 0 %}
+                        <div class="absolute top-0 left-0 h-3 rounded-full bg-{{ color }}-800 transition-all"
+                             style="width: {{ total_pct }}%"></div>
+                        {% endif %}
+                        <div class="absolute top-0 left-0 h-3 rounded-full bg-{{ color }}-500 transition-all"
+                             style="width: {{ base_pct }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {# ── Abilities ──────────────────────────────────── #}
+            {% set has_innate = udef and udef.special_abilities %}
+            {% set has_eq_abilities = eq_abilities | length > 0 %}
+            {% if has_innate or has_eq_abilities %}
+            <div class="bg-slate-700/50 rounded-lg border border-slate-700 p-4">
+                <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                    <i class="fas fa-bolt mr-1 text-amber-500"></i>Abilities
+                </h3>
+
+                {% if has_innate %}
+                <div class="mb-3">
+                    <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Innate</div>
+                    <ul class="space-y-1.5">
+                        {% for ability in udef.special_abilities %}
+                        <li class="text-sm text-slate-300 flex items-start gap-2">
+                            <i class="fas fa-chevron-right text-amber-400 mt-0.5 flex-shrink-0"></i>
+                            {{ ability }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if has_eq_abilities %}
+                <div{% if has_innate %} class="pt-3 border-t border-slate-600"{% endif %}>
+                    <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">
+                        <i class="fas fa-toolbox mr-0.5 text-blue-400"></i> From Equipment
+                    </div>
+                    <ul class="space-y-1.5">
+                        {% for ability in eq_abilities %}
+                        <li class="text-sm text-blue-300 flex items-start gap-2">
+                            <i class="fas fa-chevron-right text-blue-400 mt-0.5 flex-shrink-0"></i>
+                            {{ ability }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        {% if slots_info %}
+        {# ── RIGHT COLUMN: Equipment Slots ──────────────────── #}
+        <div>
+            <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                <i class="fas fa-toolbox mr-1"></i>Equipment Slots
+            </h3>
+
+            {% if not equippable %}
+            <div class="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded px-3 py-2 mb-3">
+                <i class="fas fa-lock mr-1"></i>Unit is mobilized — equipment changes are locked.
+            </div>
+            {% endif %}
+
+            <div class="space-y-4">
+                {% for slot in slots_info %}
+                <div>
+                    {# Slot header #}
+                    <div class="flex items-center justify-between mb-1.5">
+                        <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">
+                            {{ slot.label }}
+                            <span class="text-slate-600 font-normal">&mdash; {{ slot.type }}</span>
+                        </div>
+                        {% if slot.equipped and equippable %}
+                        <form hx-post="{{ url_for('equipment.unequip_item', unit_id=unit.id, slot=slot.name) }}"
+                              hx-target="#unit-detail-content"
+                              hx-swap="innerHTML"
+                              hx-vals='{"from_unit_detail": "1"}'>
+                            <button type="submit" class="text-xs text-red-400 hover:text-red-300 font-medium transition-colors">
+                                <i class="fas fa-times mr-0.5"></i>Unequip
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+
+                    {% if slot.equipped %}
+                    {% set eq = slot.equipped %}
+                    {% set colors = rarity_colors.get(eq.rarity, rarity_colors.get('Common', {})) %}
+                    {{ equipment_card(eq, colors) }}
+
+                    {% elif equippable %}
+                    <div class="rounded-lg border-2 border-dashed border-slate-600 bg-slate-700/50 p-4 text-center">
+                        <button hx-get="{{ url_for('military.equipment_picker', unit_id=unit.id, slot=slot.name) }}"
+                                hx-target="#eq-picker-content"
+                                hx-swap="innerHTML"
+                                hx-on::after-request="if(event.detail.successful) { openEqPicker(); }"
+                                class="text-sm text-amber-500 hover:text-amber-400 font-medium transition-colors">
+                            <i class="fas fa-plus-circle mr-1"></i>Select Equipment
+                        </button>
+                        <div class="text-xs text-slate-500 mt-1">No {{ slot.type | lower }} equipped</div>
+                    </div>
+
+                    {% else %}
+                    <div class="rounded-lg border-2 border-dashed border-slate-600 bg-slate-700/50 p-4 text-center">
+                        <div class="text-xs text-slate-500"><i class="fas fa-lock mr-1"></i>Empty</div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>{# /grid #}
+</div>

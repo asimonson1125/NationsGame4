@@ -5,15 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}Nations{% endblock %} - Nations Simulator</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        sidebar: '#2c3e50',
-                        'sidebar-hover': '#34495e',
-                        'sidebar-accent': '#3498db',
+                        brand: { DEFAULT: '#f59e0b', light: '#fbbf24', dark: '#d97706' },
+                        slate: {
+                            50:  '#f4f5f7',
+                            100: '#e7e9ed',
+                            200: '#ced1d8',
+                            300: '#adb2bc',
+                            400: '#8a919f',
+                            500: '#6b7486',
+                            600: '#545d70',
+                            700: '#404a5c',
+                            800: '#2f3848',
+                            900: '#252d3c',
+                            950: '#1c2332',
+                        },
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
                     }
                 }
             }
@@ -22,153 +40,158 @@
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>[x-cloak] { display: none !important; }</style>
+    <style>
+        [x-cloak] { display: none !important; }
+        .rv { position: relative; cursor: help; }
+        .rv::before {
+            content: attr(data-raw);
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2f3848;
+            color: #e7e9ed;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: nowrap;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+            border: 1px solid #404a5c;
+        }
+        .rv::after {
+            content: '';
+            position: absolute;
+            bottom: calc(100% + 2px);
+            left: 50%;
+            transform: translateX(-50%);
+            border: 4px solid transparent;
+            border-top-color: #2f3848;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .rv:hover::before, .rv:hover::after { opacity: 1; }
+    </style>
     {% block head %}{% endblock %}
 </head>
-<body class="bg-gray-100 min-h-screen flex font-sans">
+<body class="bg-slate-950 min-h-screen text-slate-100 font-sans" x-data="{ mobileMenu: false }">
 
-{# ===== SIDEBAR ===== #}
-<aside class="w-[220px] bg-[#2c3e50] fixed left-0 top-0 h-screen z-50 flex flex-col overflow-y-auto"
-       style="scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.2) rgba(0,0,0,.1)">
-    <nav class="flex-1">
-        <ul class="list-none p-0 m-0">
+{# ===== TOP NAVBAR ===== #}
+<nav class="fixed top-0 left-0 right-0 h-14 bg-slate-900 border-b border-slate-700 z-50 flex items-center px-4">
 
-            {# Simple nav item macro #}
-            {% macro nav_link(href, icon, label, endpoint=None) %}
-            <li>
-                <a href="{{ href }}"
-                   class="flex items-center px-4 py-2 text-[#ecf0f1] text-sm transition-all border-l-4
-                          {% if endpoint and request.endpoint == endpoint %}bg-[#34495e] border-[#3498db] font-semibold{% else %}border-transparent hover:bg-[#34495e] hover:border-[#3498db]{% endif %}">
-                    <i class="{{ icon }} w-4 mr-2 text-center text-xs"></i> {{ label }}
-                </a>
-            </li>
-            {% endmacro %}
+    {# Left: Brand #}
+    <a href="{{ url_for('main.index') }}" class="flex items-center gap-2 mr-6 shrink-0">
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="NG4" class="w-8 h-8">
+        <span class="text-lg font-bold text-amber-500 tracking-tight">NATIONS</span>
+    </a>
 
-            {# Dropdown nav item macro #}
-            {% macro nav_dropdown(icon, label, items, endpoints=[]) %}
-            <li x-data="{ open: {{ 'true' if request.endpoint in endpoints else 'false' }} }">
-                <a href="#" @click.prevent="open = !open"
-                   class="flex justify-between items-center px-4 py-2 text-[#ecf0f1] text-sm hover:bg-[#34495e] cursor-pointer border-l-4 border-transparent transition-all select-none">
-                    <span><i class="{{ icon }} w-4 mr-2 text-center text-xs"></i> {{ label }}</span>
-                    <i class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
-                </a>
-                <ul x-show="open" x-cloak class="pl-5 bg-[#34495e]">
-                    {{ caller() }}
-                </ul>
-            </li>
-            {% endmacro %}
+    {# Center: Nav Links (desktop) #}
+    <div class="hidden lg:flex items-center gap-1 flex-1">
+        {% macro nav_link(href, icon, label, endpoint=None) %}
+        <a href="{{ href }}"
+           class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors
+                  {% if endpoint and request.endpoint == endpoint %}text-amber-400 bg-slate-800{% else %}text-slate-300 hover:text-slate-100 hover:bg-slate-800{% endif %}">
+            <i class="{{ icon }} text-xs"></i> {{ label }}
+        </a>
+        {% endmacro %}
 
-            {% macro sub_link(href, icon, label) %}
-            <li>
-                <a href="{{ href }}"
-                   class="flex items-center px-4 py-1.5 text-[#ecf0f1] text-xs hover:bg-[#2c3e50] transition-colors border-l-4 border-transparent hover:border-[#3498db]">
-                    <i class="{{ icon }} w-4 mr-1.5 text-center"></i> {{ label }}
-                </a>
-            </li>
-            {% endmacro %}
+        {% macro nav_dropdown(icon, label, items, endpoints=[]) %}
+        <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+            <button @click="open = !open"
+                    class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors
+                           {% if request.endpoint in endpoints %}text-amber-400 bg-slate-800{% else %}text-slate-300 hover:text-slate-100 hover:bg-slate-800{% endif %}">
+                <i class="{{ icon }} text-xs"></i> {{ label }}
+                <i class="fas fa-chevron-down text-[10px] ml-0.5 transition-transform" :class="open ? 'rotate-180' : ''"></i>
+            </button>
+            <div x-show="open" x-cloak x-transition
+                 class="absolute top-full left-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 min-w-[180px] z-50">
+                {{ caller() }}
+            </div>
+        </div>
+        {% endmacro %}
 
-            {{ nav_link(url_for('main.home'), 'fas fa-home', 'Home', 'main.home') }}
-            {{ nav_link(url_for('economy.land'), 'fas fa-map', 'Land', 'economy.land') }}
-            {{ nav_link(url_for('economy.industry'), 'fas fa-industry', 'Industry', 'economy.industry') }}
-            {{ nav_link('#', 'fas fa-building', 'Buildings') }}
-            {{ nav_link('#', 'fas fa-tree', 'Natural Resources') }}
+        {% macro dropdown_link(href, icon, label) %}
+        <a href="{{ href }}" class="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700 transition-colors">
+            <i class="{{ icon }} w-4 text-center text-xs"></i> {{ label }}
+        </a>
+        {% endmacro %}
 
-            {# Trade dropdown #}
-            <li x-data="{ open: false }">
-                <a href="#" @click.prevent="open = !open"
-                   class="flex justify-between items-center px-4 py-2 text-[#ecf0f1] text-sm hover:bg-[#34495e] cursor-pointer border-l-4 border-transparent transition-all select-none">
-                    <span><i class="fas fa-exchange-alt w-4 mr-2 text-center text-xs"></i> Trade</span>
-                    <i class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
-                </a>
-                <ul x-show="open" x-cloak class="pl-5 bg-[#34495e]">
-                    {{ sub_link('#', 'fas fa-money-bill-transfer', 'Trade') }}
-                    {{ sub_link('#', 'fas fa-chart-line', 'Trade Analytics') }}
-                </ul>
-            </li>
+        {{ nav_link(url_for('main.home'), 'fas fa-home', 'Home', 'main.home') }}
+        {{ nav_link(url_for('economy.industry'), 'fas fa-industry', 'Industry', 'economy.industry') }}
+        {{ nav_link(url_for('economy.land'), 'fas fa-map', 'Land & Resources', 'economy.land') }}
 
-            {{ nav_link('#', 'fas fa-handshake', 'Alliance') }}
-            {{ nav_link('#', 'fas fa-person-rifle', 'Wars') }}
+        {{ nav_link(url_for('trade.trade_page'), 'fas fa-exchange-alt', 'Trade', 'trade.trade_page') }}
 
-            {# Military dropdown #}
-            <li x-data="{ open: false }">
-                <a href="#" @click.prevent="open = !open"
-                   class="flex justify-between items-center px-4 py-2 text-[#ecf0f1] text-sm hover:bg-[#34495e] cursor-pointer border-l-4 border-transparent transition-all select-none">
-                    <span><i class="fas fa-shield-alt w-4 mr-2 text-center text-xs"></i> Military</span>
-                    <i class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
-                </a>
-                <ul x-show="open" x-cloak class="pl-5 bg-[#34495e]">
-                    {{ sub_link('#', 'fas fa-flag', 'Military Overview') }}
-                    {{ sub_link('#', 'fas fa-user-plus', 'Recruitment') }}
-                    {{ sub_link('#', 'fas fa-crosshairs', 'Battle Reports') }}
-                    {{ sub_link('#', 'fas fa-tasks', 'Missions') }}
-                    {{ sub_link('#', 'fas fa-person-rifle', 'Military Training League') }}
-                </ul>
-            </li>
+        {# Military dropdown #}
+        {% call(items) nav_dropdown('fas fa-shield-alt', 'Military', [], []) %}
+            {{ dropdown_link(url_for('military.overview'), 'fas fa-flag', 'Military Overview') }}
+            {{ dropdown_link(url_for('military.battles'), 'fas fa-crosshairs', 'Battle Reports') }}
+            {{ dropdown_link(url_for('equipment.inventory'), 'fas fa-tools', 'Equipment') }}
+            {{ dropdown_link('#', 'fas fa-person-rifle', 'Training League') }}
+        {% endcall %}
 
-            {# Equipment dropdown #}
-            <li x-data="{ open: false }">
-                <a href="#" @click.prevent="open = !open"
-                   class="flex justify-between items-center px-4 py-2 text-[#ecf0f1] text-sm hover:bg-[#34495e] cursor-pointer border-l-4 border-transparent transition-all select-none">
-                    <span><i class="fas fa-tools w-4 mr-2 text-center text-xs"></i> Equipment</span>
-                    <i class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
-                </a>
-                <ul x-show="open" x-cloak class="pl-5 bg-[#34495e]">
-                    {{ sub_link('#', 'fas fa-wrench', 'Equipment') }}
-                    {{ sub_link('#', 'fas fa-box-open', 'Loot Crate Shop') }}
-                </ul>
-            </li>
-
-            {# Cards dropdown #}
-            <li x-data="{ open: false }">
-                <a href="#" @click.prevent="open = !open"
-                   class="flex justify-between items-center px-4 py-2 text-[#ecf0f1] text-sm hover:bg-[#34495e] cursor-pointer border-l-4 border-transparent transition-all select-none">
-                    <span><i class="fas fa-diamond w-4 mr-2 text-center text-xs"></i> Cards</span>
-                    <i class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
-                </a>
-                <ul x-show="open" x-cloak class="pl-5 bg-[#34495e]">
-                    {{ sub_link('#', 'fas fa-diamond', 'Cards') }}
-                    {{ sub_link('#', 'fas fa-box-open', 'Card Pack Shop') }}
-                </ul>
-            </li>
-
-            {# Leaderboards dropdown #}
-            <li x-data="{ open: false }">
-                <a href="#" @click.prevent="open = !open"
-                   class="flex justify-between items-center px-4 py-2 text-[#ecf0f1] text-sm hover:bg-[#34495e] cursor-pointer border-l-4 border-transparent transition-all select-none">
-                    <span><i class="fas fa-trophy w-4 mr-2 text-center text-xs"></i> Leaderboards</span>
-                    <i class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
-                </a>
-                <ul x-show="open" x-cloak class="pl-5 bg-[#34495e]">
-                    {{ sub_link('#', 'fas fa-medal', 'Nation Leaderboard') }}
-                    {{ sub_link('#', 'fas fa-medal', 'Military Leaderboard') }}
-                    {{ sub_link('#', 'fas fa-users', 'Alliance Leaderboard') }}
-                </ul>
-            </li>
-
-            {{ nav_link('#', 'fas fa-bell', 'Notifications') }}
-            {{ nav_link('https://nations.miraheze.org/wiki/Rules', 'fas fa-gavel', 'Rules') }}
-            {{ nav_link('https://discord.gg/b6VBBDKWSG', 'fab fa-discord', 'Discord Server') }}
-            {{ nav_link('#', 'fas fa-heart', 'Donate') }}
-            {{ nav_link('https://nations.miraheze.org/wiki/Main_Page', 'fas fa-book', 'Wiki') }}
-            {{ nav_link(url_for('auth.logout'), 'fas fa-sign-out-alt', 'Logout') }}
-
-        </ul>
-    </nav>
-    <div class="px-3 py-2 text-center text-xs text-[#95a5a6] border-t border-white/10">v0.1.0-alpha (NG4)</div>
-    <div class="p-3 bg-[#34495e]">
-        <div class="text-[#ecf0f1] text-sm text-center my-0.5">Next turn in: --:--</div>
-        <div class="text-[#ecf0f1] text-sm text-center my-0.5">Next day in: --:--</div>
+        {# Leaderboards dropdown #}
+        {% call(items) nav_dropdown('fas fa-trophy', 'Leaderboards', [], []) %}
+            {{ dropdown_link(url_for('main.leaderboard'), 'fas fa-medal', 'Nation Leaderboard') }}
+            {{ dropdown_link('#', 'fas fa-medal', 'Military Leaderboard') }}
+            {{ dropdown_link('#', 'fas fa-users', 'Alliance Leaderboard') }}
+        {% endcall %}
     </div>
-</aside>
+
+    {# Right: Version + Countdown + Logout #}
+    <div class="hidden lg:flex items-center gap-3 ml-auto shrink-0">
+        <a href="{{ url_for('main.changelog_page') }}" class="text-[11px] font-mono font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/30 px-1.5 py-0.5 rounded hover:bg-amber-500/20 transition-colors">v{{ latest_update.version if latest_update else '0.0.0' }}</a>
+        <div id="turn-countdown" class="text-xs text-slate-400"><i class="fas fa-clock mr-1"></i>--:--</div>
+        <div id="day-countdown" class="text-xs text-slate-400"><i class="fas fa-calendar-day mr-1"></i>--:--:--</div>
+        <a href="{{ url_for('auth.logout') }}" class="text-slate-400 hover:text-slate-200 transition-colors text-sm" title="Logout">
+            <i class="fas fa-sign-out-alt"></i>
+        </a>
+    </div>
+
+    {# Mobile hamburger #}
+    <button @click="mobileMenu = !mobileMenu" class="lg:hidden ml-auto text-slate-300 hover:text-slate-100 p-2">
+        <i class="fas fa-bars text-lg"></i>
+    </button>
+</nav>
+
+{# ===== MOBILE MENU ===== #}
+<div x-show="mobileMenu" x-cloak x-transition
+     class="fixed top-14 left-0 right-0 bg-slate-900 border-b border-slate-700 z-40 lg:hidden max-h-[calc(100vh-3.5rem)] overflow-y-auto">
+    <div class="p-3 space-y-1">
+        <a href="{{ url_for('main.home') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-home w-5"></i> Home</a>
+        <a href="{{ url_for('economy.industry') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-industry w-5"></i> Industry</a>
+        <a href="{{ url_for('economy.land') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-map w-5"></i> Land</a>
+        <a href="#" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-handshake w-5"></i> Alliance</a>
+        <div class="border-t border-slate-700 my-2"></div>
+        <a href="{{ url_for('trade.trade_page') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-money-bill-transfer w-5"></i> Trade</a>
+        <div class="border-t border-slate-700 my-2"></div>
+        <a href="{{ url_for('military.overview') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-flag w-5"></i> Military Overview</a>
+        <a href="{{ url_for('military.battles') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-crosshairs w-5"></i> Battle Reports</a>
+        <a href="{{ url_for('equipment.inventory') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-tools w-5"></i> Equipment</a>
+        <div class="border-t border-slate-700 my-2"></div>
+        <a href="{{ url_for('main.leaderboard') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-medal w-5"></i> Leaderboard</a>
+        <div class="border-t border-slate-700 my-2"></div>
+        <div class="flex items-center gap-4 px-3 py-2 text-xs text-slate-500">
+            <span id="turn-countdown-mobile"><i class="fas fa-clock mr-1"></i>--:--</span>
+            <span id="day-countdown-mobile"><i class="fas fa-calendar-day mr-1"></i>--:--:--</span>
+        </div>
+        <a href="{{ url_for('auth.logout') }}" class="block px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-slate-800 rounded-md"><i class="fas fa-sign-out-alt w-5"></i> Logout</a>
+    </div>
+    <a href="{{ url_for('main.changelog_page') }}" class="block px-3 py-2 text-center text-xs text-slate-600 hover:text-slate-400 border-t border-slate-700 transition-colors">v{{ latest_update.version if latest_update else '0.0.0' }} (NG4)</a>
+</div>
 
 {# ===== MAIN CONTENT ===== #}
-<div class="ml-[220px] flex-1 flex flex-col min-h-screen pb-[52px]">
+<div class="pt-14 pb-14 min-h-screen">
     {% block content %}{% endblock %}
 </div>
 
 {# ===== RESOURCE FOOTER ===== #}
-<footer class="fixed bottom-0 right-0 bg-gray-50 border-t border-gray-300 z-40 py-1.5"
-        style="width: calc(100% - 220px)">
+<footer class="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 z-40 py-1.5">
     <div id="resource-footer-content"
          hx-get="{{ url_for('main.resource_footer') }}"
          hx-trigger="load, every 60s"
@@ -179,15 +202,15 @@
 
 {# ===== GP BREAKDOWN MODAL ===== #}
 <div id="gp-overlay"
-     class="hidden fixed inset-0 bg-black/50 z-[1050]"
+     class="hidden fixed inset-0 bg-black/60 z-[1050]"
      onclick="closeGPModal()"></div>
 <div id="gp-popup"
-     class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-5 rounded-lg shadow-2xl z-[1100] w-[90%] max-w-md">
+     class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 p-5 rounded-lg shadow-2xl z-[1100] w-[90%] max-w-md">
     <button onclick="closeGPModal()"
-            class="absolute top-2.5 right-3 text-gray-400 hover:text-gray-700 text-2xl leading-none cursor-pointer bg-transparent border-0 p-0">&times;</button>
-    <h2 class="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2.5 mt-0">GP Breakdown</h2>
+            class="absolute top-2.5 right-3 text-slate-400 hover:text-slate-200 text-2xl leading-none cursor-pointer bg-transparent border-0 p-0">&times;</button>
+    <h2 class="text-lg font-semibold text-slate-100 border-b border-slate-700 pb-2.5 mt-0">GP Breakdown</h2>
     <div id="gp-content" class="mt-3">
-        <p class="text-gray-400 text-sm">Loading...</p>
+        <p class="text-slate-500 text-sm">Loading...</p>
     </div>
 </div>
 
@@ -196,13 +219,41 @@
 
 {# ===== SCRIPTS ===== #}
 <script>
+    // Countdown timers
+    (function() {
+        function pad(n) { return String(n).padStart(2, '0'); }
+        function update() {
+            var now = new Date();
+            var nextHour = new Date(now);
+            nextHour.setUTCMinutes(0, 0, 0);
+            nextHour.setUTCHours(nextHour.getUTCHours() + 1);
+            var ts = Math.max(0, Math.floor((nextHour - now) / 1000));
+            var turnText = Math.floor(ts / 3600) + ':' + pad(Math.floor((ts % 3600) / 60));
+            var el1 = document.getElementById('turn-countdown');
+            if (el1) el1.innerHTML = '<i class="fas fa-clock mr-1"></i>' + turnText;
+            var el1m = document.getElementById('turn-countdown-mobile');
+            if (el1m) el1m.innerHTML = '<i class="fas fa-clock mr-1"></i>' + turnText;
+
+            var nextDay = new Date(now);
+            nextDay.setUTCHours(24, 0, 0, 0);
+            var ds = Math.max(0, Math.floor((nextDay - now) / 1000));
+            var dayText = Math.floor(ds / 3600) + ':' + pad(Math.floor((ds % 3600) / 60));
+            var el2 = document.getElementById('day-countdown');
+            if (el2) el2.innerHTML = '<i class="fas fa-calendar-day mr-1"></i>' + dayText;
+            var el2m = document.getElementById('day-countdown-mobile');
+            if (el2m) el2m.innerHTML = '<i class="fas fa-calendar-day mr-1"></i>' + dayText;
+        }
+        update();
+        setInterval(update, 1000);
+    })();
+
     // Send CSRF token with every HTMX request
     document.body.addEventListener('htmx:configRequest', function (evt) {
         const token = document.querySelector('meta[name="csrf-token"]');
         if (token) evt.detail.headers['X-CSRFToken'] = token.content;
     });
 
-    // Toast system — triggered by HX-Trigger: {"showMessage": {"message": "...", "type": "success|error"}}
+    // Toast system
     document.body.addEventListener('showMessage', function (evt) {
         showToast(evt.detail.message, evt.detail.type || 'success');
     });
@@ -210,10 +261,16 @@
     function showToast(message, type) {
         const container = document.getElementById('toast-container');
         const el = document.createElement('div');
+        const colors = {
+            success: 'border-l-4 border-emerald-500 bg-slate-800',
+            error: 'border-l-4 border-red-500 bg-slate-800',
+            warning: 'border-l-4 border-amber-500 bg-slate-800',
+            info: 'border-l-4 border-sky-500 bg-slate-800',
+        };
         el.className = [
-            'px-5 py-3 rounded shadow-lg text-white text-sm font-medium min-w-[200px] text-center',
+            'px-5 py-3 rounded shadow-lg text-slate-100 text-sm font-medium min-w-[200px]',
             'opacity-0 translate-x-8 transition-all duration-300',
-            type === 'error' ? 'bg-red-500' : 'bg-green-500'
+            colors[type] || colors.success
         ].join(' ');
         el.textContent = message;
         container.appendChild(el);

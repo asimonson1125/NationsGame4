@@ -1,50 +1,35 @@
 import json
+from datetime import datetime, timedelta, timezone
 from flask import render_template, request, current_app
 from flask_login import login_required, current_user
 from .. import db
-from ..models import NaturalResource
-from ..game.discovery import roll_expansion, roll_colonization, EXPANSION_LAND_TOTAL
+from ..models import NaturalResource, FactoryBuildQueue
+from ..helpers import error_response as _error_response, can_afford as _can_afford, deduct_cost as _deduct_cost
+from ..game.constants import CONTINENTS
+from ..game.discovery import roll_expansion, roll_colonization
 from ..game.factories import FACTORY_DEFS
 from . import economy
 
-CONTINENTS = ['Westberg', 'Amarino', 'San Sebastian', 'Tind', 'Zaheria']
-
-EXPAND_COST = {
-    'money': 7_500_000,
-    'food': 1_500_000,
-    'building_materials': 1_500_000,
-    'consumer_goods': 375_000,
-}
-
-COLONIZE_COST = {
-    'money': 37_500_000,
-    'food': 7_500_000,
-    'building_materials': 7_500_000,
-    'consumer_goods': 1_875_000,
-    'metal': 1_000,
-    'fuel': 1_000,
-}
+def get_expand_cost(population):
+    pop = population or 0
+    return {
+        'money': pop / 10,
+        'food': pop / 50,
+        'building_materials': pop / 50,
+        'consumer_goods': pop / 200,
+    }
 
 
-def _error_response(message, status=422):
-    resp = current_app.response_class(status=status)
-    resp.headers['HX-Trigger'] = json.dumps(
-        {'showMessage': {'message': message, 'type': 'error'}}
-    )
-    return resp
-
-
-def _can_afford(nation, cost_dict):
-    for resource, amount in cost_dict.items():
-        if (getattr(nation, resource, 0) or 0) < amount:
-            return False
-    return True
-
-
-def _deduct_cost(nation, cost_dict):
-    for resource, amount in cost_dict.items():
-        current = getattr(nation, resource, 0) or 0
-        setattr(nation, resource, current - amount)
+def get_colonize_cost(population):
+    pop = population or 0
+    return {
+        'money': (pop / 10) * 5,
+        'food': (pop / 50) * 5,
+        'building_materials': (pop / 50) * 5,
+        'consumer_goods': (pop / 200) * 5,
+        'metal': 1000,
+        'fuel': 1000,
+    }
 
 
 def _upsert_resources(nation, discovered):
@@ -59,20 +44,10 @@ def _upsert_resources(nation, discovered):
             db.session.add(nr)
 
 
-def _apply_land(nation, new_land):
+def _apply_land(nation, new_land, total_gained):
     for land_type, amount in new_land.items():
-        current = getattr(nation, land_type, 0) or 0
-        setattr(nation, land_type, current + amount)
-    nation.total_land = (nation.total_land or 0) + EXPANSION_LAND_TOTAL
-    nation.land_gp = (nation.total_land or 0) // 10
-
-
-def _apply_colonize_land(nation, new_land):
-    colonize_total = EXPANSION_LAND_TOTAL * 5
-    for land_type, amount in new_land.items():
-        current = getattr(nation, land_type, 0) or 0
-        setattr(nation, land_type, current + amount)
-    nation.total_land = (nation.total_land or 0) + colonize_total
+        nation.add_resource(land_type, amount)
+    nation.total_land = (nation.total_land or 0) + total_gained
     nation.land_gp = (nation.total_land or 0) // 10
 
 
@@ -80,12 +55,14 @@ def _apply_colonize_land(nation, new_land):
 @login_required
 def land():
     nation = current_user.nation
+    natural_resources = NaturalResource.query.filter_by(nation_id=nation.id).order_by(NaturalResource.amount.desc()).all()
     return render_template(
         'economy/land.html',
         nation=nation,
-        expand_cost=EXPAND_COST,
-        colonize_cost=COLONIZE_COST,
+        expand_cost=get_expand_cost(nation.population),
+        colonize_cost=get_colonize_cost(nation.population),
         continents=CONTINENTS,
+        natural_resources=natural_resources,
     )
 
 
@@ -95,13 +72,15 @@ def expand_borders():
     nation = current_user.nation
     if not nation:
         return _error_response('No nation found.')
-    if not _can_afford(nation, EXPAND_COST):
+
+    cost = get_expand_cost(nation.population)
+    if not _can_afford(nation, cost):
         return _error_response('Insufficient resources to expand borders.')
 
-    _deduct_cost(nation, EXPAND_COST)
+    _deduct_cost(nation, cost)
     continent = nation.continent or 'Westberg'
-    new_land, discovered = roll_expansion(continent)
-    _apply_land(nation, new_land)
+    new_land, discovered, total_gained = roll_expansion(continent, nation.population)
+    _apply_land(nation, new_land, total_gained)
     _upsert_resources(nation, discovered)
     db.session.commit()
 
@@ -111,11 +90,14 @@ def expand_borders():
         new_land=new_land,
         discovered=discovered,
         action='expand',
+        total_gained=total_gained,
     )
     resp = current_app.response_class(resp_html, status=200, mimetype='text/html')
-    resp.headers['HX-Trigger'] = json.dumps(
-        {'showMessage': {'message': 'Borders expanded successfully!', 'type': 'success'}}
-    )
+    resp.headers['HX-Trigger'] = json.dumps({
+        'showMessage': {'message': 'Borders expanded successfully!', 'type': 'success'},
+        'refreshResourceFooter': True,
+        'showExpansionModal': True,
+    })
     return resp
 
 
@@ -127,16 +109,18 @@ def colonize():
         return _error_response('No nation found.')
     if (nation.tier or 1) < 6:
         return _error_response('Colonization requires Tier 6 or higher.')
-    if not _can_afford(nation, COLONIZE_COST):
+
+    cost = get_colonize_cost(nation.population)
+    if not _can_afford(nation, cost):
         return _error_response('Insufficient resources to colonize.')
 
     target_continent = request.form.get('continent', 'Westberg')
     if target_continent not in CONTINENTS:
         return _error_response('Invalid continent selected.')
 
-    _deduct_cost(nation, COLONIZE_COST)
-    new_land, discovered = roll_colonization(target_continent)
-    _apply_colonize_land(nation, new_land)
+    _deduct_cost(nation, cost)
+    new_land, discovered, total_gained = roll_colonization(target_continent, nation.population)
+    _apply_land(nation, new_land, total_gained)
     _upsert_resources(nation, discovered)
     db.session.commit()
 
@@ -146,11 +130,14 @@ def colonize():
         new_land=new_land,
         discovered=discovered,
         action='colonize',
+        total_gained=total_gained,
     )
     resp = current_app.response_class(resp_html, status=200, mimetype='text/html')
-    resp.headers['HX-Trigger'] = json.dumps(
-        {'showMessage': {'message': f'Colonized {target_continent} successfully!', 'type': 'success'}}
-    )
+    resp.headers['HX-Trigger'] = json.dumps({
+        'showMessage': {'message': f'Colonized {target_continent} successfully!', 'type': 'success'},
+        'refreshResourceFooter': True,
+        'showExpansionModal': True,
+    })
     return resp
 
 
@@ -179,9 +166,10 @@ def buy_cleared_land():
 
     land_panel_html = render_template('economy/partials/land_panel.html', nation=nation)
     resp = current_app.response_class(land_panel_html, status=200, mimetype='text/html')
-    resp.headers['HX-Trigger'] = json.dumps(
-        {'showMessage': {'message': f'Purchased {amount:,} cleared land tiles.', 'type': 'success'}}
-    )
+    resp.headers['HX-Trigger'] = json.dumps({
+        'showMessage': {'message': f'Purchased {amount:,} cleared land tiles.', 'type': 'success'},
+        'refreshResourceFooter': True,
+    })
     return resp
 
 
@@ -213,9 +201,10 @@ def build_urban_areas():
 
     land_panel_html = render_template('economy/partials/land_panel.html', nation=nation)
     resp = current_app.response_class(land_panel_html, status=200, mimetype='text/html')
-    resp.headers['HX-Trigger'] = json.dumps(
-        {'showMessage': {'message': f'Built {amount:,} urban area tiles.', 'type': 'success'}}
-    )
+    resp.headers['HX-Trigger'] = json.dumps({
+        'showMessage': {'message': f'Built {amount:,} urban area tiles.', 'type': 'success'},
+        'refreshResourceFooter': True,
+    })
     return resp
 
 
@@ -224,14 +213,22 @@ def build_urban_areas():
 def industry():
     nation = current_user.nation
     factory_map = {}
+    build_queue = []
     if nation:
         for nf in nation.factories:
             factory_map[nf.factory_key] = nf
+        build_queue = FactoryBuildQueue.query.filter_by(nation_id=nation.id).all()
+    # Build a map of factory_key -> list of queue entries for template use
+    queue_map = {}
+    for entry in build_queue:
+        queue_map.setdefault(entry.factory_key, []).append(entry)
     return render_template(
         'economy/industry.html',
         nation=nation,
         factory_defs=FACTORY_DEFS,
         factory_map=factory_map,
+        build_queue=build_queue,
+        queue_map=queue_map,
     )
 
 
@@ -261,7 +258,7 @@ def build_factory():
     # Check land
     for land_type, per_factory in fdef.land_required.items():
         needed = qty * per_factory
-        available = getattr(nation, land_type, 0) or 0
+        available = nation.get_resource(land_type)
         if available < needed:
             label = land_type.replace('_', ' ').title()
             return _error_response(f'Insufficient {label}. Need {needed:,}, have {available:,}.')
@@ -270,45 +267,82 @@ def build_factory():
     total_cost = {res: qty * rate for res, rate in fdef.build_cost.items()}
     if not _can_afford(nation, total_cost):
         for res, needed in total_cost.items():
-            if (getattr(nation, res, 0) or 0) < needed:
+            if nation.get_resource(res) < needed:
                 return _error_response(
                     f'Insufficient {res.replace("_", " ")}. Need {needed:,}.'
                 )
 
     # Deduct land
     for land_type, per_factory in fdef.land_required.items():
-        current = getattr(nation, land_type, 0) or 0
-        setattr(nation, land_type, current - qty * per_factory)
+        nation.add_resource(land_type, -qty * per_factory)
     nation.used_land = (nation.used_land or 0) + qty * sum(fdef.land_required.values())
 
     # Deduct build costs
     _deduct_cost(nation, total_cost)
 
-    # Upsert factory record
-    nf = NationFactory.query.filter_by(nation_id=nation.id, factory_key=factory_key).first()
-    if nf:
-        nf.count += qty
-    else:
-        nf = NationFactory(nation_id=nation.id, factory_key=factory_key, count=qty, production_capacity=0)
-        db.session.add(nf)
+    # Queue the build instead of instant completion
+    # Use naive UTC datetimes — SQLite doesn't store timezone info
+    now = datetime.utcnow()
+    new_completes_at = now + timedelta(minutes=fdef.build_time)
 
-    nation.factory_gp = (nation.factory_gp or 0) + qty * fdef.gp_value
+    # Check for existing queue entry of same type completing within 5 min
+    existing = FactoryBuildQueue.query.filter_by(
+        nation_id=nation.id, factory_key=factory_key
+    ).filter(
+        FactoryBuildQueue.completes_at >= new_completes_at - timedelta(minutes=5),
+        FactoryBuildQueue.completes_at <= new_completes_at + timedelta(minutes=5),
+    ).first()
+
+    if existing:
+        existing.quantity += qty
+        if new_completes_at > existing.completes_at:
+            existing.completes_at = new_completes_at
+    else:
+        entry = FactoryBuildQueue(
+            nation_id=nation.id,
+            factory_key=factory_key,
+            quantity=qty,
+            completes_at=new_completes_at,
+        )
+        db.session.add(entry)
+
     db.session.commit()
 
     factory_map = {nf_item.factory_key: nf_item for nf_item in nation.factories}
+    build_queue = FactoryBuildQueue.query.filter_by(nation_id=nation.id).all()
+    queue_map = {}
+    for e in build_queue:
+        queue_map.setdefault(e.factory_key, []).append(e)
     resp_html = render_template(
         'economy/partials/industry_content.html',
         nation=nation,
         factory_defs=FACTORY_DEFS,
         factory_map=factory_map,
+        build_queue=build_queue,
+        queue_map=queue_map,
         default_tab='build',
     )
     resp = current_app.response_class(resp_html, status=200, mimetype='text/html')
     resp.headers['HX-Trigger'] = json.dumps({
-        'showMessage': {'message': f'Built {qty}x {fdef.name}.', 'type': 'success'},
+        'showMessage': {'message': f'Queued {qty}x {fdef.name} — completes in {_format_duration(fdef.build_time)}.', 'type': 'success'},
         'refreshResourceFooter': True,
     })
     return resp
+
+
+def _format_duration(minutes):
+    """Format minutes into a human-readable duration string."""
+    if minutes < 60:
+        return f'{minutes}m'
+    hours = minutes // 60
+    mins = minutes % 60
+    if hours < 24:
+        return f'{hours}h {mins}m' if mins else f'{hours}h'
+    days = hours // 24
+    remaining_hours = hours % 24
+    if remaining_hours:
+        return f'{days}d {remaining_hours}h'
+    return f'{days}d'
 
 
 @economy.route('/industry/collect/<factory_key>', methods=['POST'])
@@ -340,7 +374,7 @@ def collect_factory(factory_key):
     # Check inputs
     for resource, rate in fdef.inputs.items():
         needed = rate * nf.count * hours
-        available = getattr(nation, resource, 0) or 0
+        available = nation.get_resource(resource)
         if available < needed:
             return _error_response(
                 f'Insufficient {resource}. Need {needed:,.1f}, have {available:,.1f}.'
@@ -348,15 +382,11 @@ def collect_factory(factory_key):
 
     # Deduct inputs
     for resource, rate in fdef.inputs.items():
-        needed = rate * nf.count * hours
-        current = getattr(nation, resource, 0) or 0
-        setattr(nation, resource, current - needed)
+        nation.add_resource(resource, -(rate * nf.count * hours))
 
     # Add outputs
     for resource, rate in fdef.outputs.items():
-        gained = rate * nf.count * hours
-        current = getattr(nation, resource, 0) or 0
-        setattr(nation, resource, current + gained)
+        nation.add_resource(resource, rate * nf.count * hours)
 
     nf.production_capacity -= hours
     db.session.commit()
@@ -365,5 +395,6 @@ def collect_factory(factory_key):
     resp.headers['HX-Trigger'] = json.dumps({
         'showMessage': {'message': f'Collected {hours}h of {fdef.name} output.', 'type': 'success'},
         'refreshResourceFooter': True,
+        'collect-success': {'factoryKey': factory_key, 'collected': hours, 'newCapacity': nf.production_capacity},
     })
     return resp

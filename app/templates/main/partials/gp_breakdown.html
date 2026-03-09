@@ -8,13 +8,13 @@
 
 <div>
     {% for label, value in gp_rows %}
-    <div class="flex justify-between py-2 border-b border-gray-100 text-sm">
-        <span class="text-gray-600">{{ label }}</span>
-        <span class="text-gray-800 font-medium">{{ "{:,}".format(value) }}</span>
+    <div class="flex justify-between py-2 border-b border-slate-700 text-sm">
+        <span class="text-slate-400">{{ label }}</span>
+        <span class="text-slate-200 font-medium">{{ "{:,}".format(value) }}</span>
     </div>
     {% endfor %}
-    <div class="flex justify-between pt-2.5 mt-1 font-bold text-sm border-t-2 border-gray-200">
-        <span class="text-gray-800">Total GP</span>
-        <span class="text-gray-900">{{ "{:,}".format(nation.total_gp) }}</span>
+    <div class="flex justify-between pt-2.5 mt-1 font-bold text-sm border-t-2 border-slate-600">
+        <span class="text-slate-100">Total GP</span>
+        <span class="text-amber-400">{{ "{:,}".format(nation.total_gp) }}</span>
     </div>
 </div>

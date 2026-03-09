@@ -12,27 +12,25 @@ class FactoryDef:
     build_cost: Dict[str, float] = field(default_factory=dict)   # resource -> amount per factory
     land_required: Dict[str, int] = field(default_factory=dict)  # land_type -> tiles per factory
     gp_value: int = 1
+    build_time: int = 30       # minutes to construct
 
 
-def _fd(name, tier, inp, out, cost, land, gp=None, max_h=24):
+_TIER_BUILD_TIME = {1: 60, 2: 180, 3: 480, 4: 1440, 5: 2880, 6: 5760, 10: 8640}
+
+
+def _fd(name, tier, inp, out, cost, land, gp=None, max_h=24, bt=None):
+    if bt is None:
+        bt = _TIER_BUILD_TIME.get(tier, 60)
     return FactoryDef(
         name=name, tier=tier, inputs=inp, outputs=out,
         max_collect_hours=max_h,
         build_cost=cost, land_required=land,
         gp_value=gp if gp is not None else tier,
+        build_time=bt,
     )
 
 
-_M  = 'money'
-_P  = 'power'
-_F  = 'food'
-_BM = 'building_materials'
-_CG = 'consumer_goods'
-_ME = 'metal'
-_AM = 'ammunition'
-_FU = 'fuel'
-_UR = 'uranium'
-_WH = 'whz'
+from .constants import _M, _P, _F, _BM, _CG, _ME, _AM, _FU, _UR, _WH
 
 FACTORY_DEFS: Dict[str, FactoryDef] = {
 
@@ -40,37 +38,37 @@ FACTORY_DEFS: Dict[str, FactoryDef] = {
     'farm': _fd(
         'Farm', 1,
         inp={_M: 9}, out={_F: 3},
-        cost={_M: 500}, land={'cleared_land': 5}, gp=1, max_h=6,
+        cost={_M: 500}, land={'cleared_land': 5}, gp=1, max_h=6, bt=30,
     ),
     'windmill': _fd(
         'Windmill', 1,
         inp={_M: 5}, out={_P: 5},
-        cost={_M: 250}, land={'cleared_land': 5}, gp=1,
+        cost={_M: 250}, land={'cleared_land': 5}, gp=1, bt=30,
     ),
     'quarry': _fd(
         'Quarry', 1,
         inp={_M: 27}, out={_BM: 3},
-        cost={_M: 1000}, land={'mountain': 5}, gp=1,
+        cost={_M: 1000}, land={'mountain': 5}, gp=1, bt=30,
     ),
     'sandstone_quarry': _fd(
         'Sandstone Quarry', 1,
         inp={_M: 27}, out={_BM: 3},
-        cost={_M: 1000}, land={'desert': 5},
+        cost={_M: 1000}, land={'desert': 5}, bt=30,
     ),
     'sawmill': _fd(
         'Sawmill', 1,
         inp={_M: 27}, out={_BM: 3},
-        cost={_M: 1000}, land={'forest': 5},
+        cost={_M: 1000}, land={'forest': 5}, bt=30,
     ),
     'jungle_sawmill': _fd(
         'Jungle Sawmill', 1,
         inp={_M: 27}, out={_BM: 3},
-        cost={_M: 1000}, land={'jungle': 5},
+        cost={_M: 1000}, land={'jungle': 5}, bt=30,
     ),
     'concrete_factory': _fd(
         'Concrete Factory', 1,
         inp={_M: 27}, out={_BM: 3},
-        cost={_M: 1000}, land={'cleared_land': 10},
+        cost={_M: 1000}, land={'cleared_land': 10}, bt=30,
     ),
     'stationery_factory': _fd(
         'Stationery Factory', 1,

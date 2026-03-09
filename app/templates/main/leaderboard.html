@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Nation Leaderboard{% endblock %}
+
+{% block content %}
+<div class="p-6 md:p-10" x-data="{ continent: 'all' }">
+    <h1 class="text-3xl font-bold text-slate-100 mb-6">Nation Leaderboard</h1>
+
+    {# Continent filter tabs #}
+    <div class="flex flex-wrap gap-2 mb-5">
+        {% set continents = ['all', 'Westberg', 'Amarino', 'San Sebastian', 'Tind', 'Zaheria'] %}
+        {% for c in continents %}
+        <button
+            @click="continent = '{{ c }}'"
+            :class="continent === '{{ c }}'
+                ? 'bg-amber-500 text-slate-900'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'"
+            class="px-4 py-1.5 rounded text-sm font-medium border border-slate-700 transition-colors cursor-pointer"
+            hx-get="{{ url_for('main.leaderboard_table') }}?continent={{ c }}"
+            hx-target="#leaderboard-table"
+            hx-swap="innerHTML">
+            {{ 'Global' if c == 'all' else c }}
+        </button>
+        {% endfor %}
+    </div>
+
+    {# Leaderboard table #}
+    <div id="leaderboard-table"
+         hx-get="{{ url_for('main.leaderboard_table') }}?continent=all"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <p class="text-slate-500 text-sm">Loading leaderboard...</p>
+    </div>
+
+    {# Search section #}
+    <div class="mt-10 bg-slate-800 rounded-lg border border-slate-700 p-5">
+        <h2 class="text-xl font-semibold text-slate-100 mb-4">Search Nations</h2>
+        <div class="flex gap-2">
+            <input type="text"
+                   name="q"
+                   placeholder="Search by nation name or leader..."
+                   class="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded text-sm placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50"
+                   hx-get="{{ url_for('main.leaderboard_search') }}"
+                   hx-trigger="keyup changed delay:300ms, search"
+                   hx-target="#search-results"
+                   hx-swap="innerHTML"
+                   hx-include="this">
+        </div>
+        <div id="search-results" class="mt-4"></div>
+    </div>
+</div>
+{% endblock %}

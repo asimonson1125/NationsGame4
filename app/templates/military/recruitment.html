@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}Recruitment — {{ nation.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-6xl mx-auto">
+    <h1 class="text-2xl font-bold text-slate-100 mb-6">
+        <i class="fas fa-user-plus mr-2 text-slate-400"></i>Recruitment
+    </h1>
+
+    {% include 'military/partials/recruitment_grid.html' %}
+</div>
+{% endblock %}

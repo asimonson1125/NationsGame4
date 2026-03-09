@@ -1,0 +1,46 @@
+{% if query %}
+<div class="overflow-x-auto bg-slate-800 rounded-lg border border-slate-700">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="bg-slate-700/50 text-left text-slate-400">
+                <th class="px-4 py-2">Nation</th>
+                <th class="px-4 py-2">Alliance</th>
+                <th class="px-4 py-2">Leader</th>
+                <th class="px-4 py-2">Continent</th>
+                <th class="px-4 py-2 text-right">Population</th>
+                <th class="px-4 py-2 text-right">GP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for nation in results %}
+            <tr class="border-t border-slate-700 {% if loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %} hover:bg-slate-700/50 transition-colors">
+                <td class="px-4 py-2">
+                    <div class="flex items-center">
+                        {% if nation.flag_url %}
+                        <img src="{{ nation.flag_url }}" alt="Flag" class="w-6 h-auto mr-2 rounded-sm" onerror="this.style.display='none'">
+                        {% endif %}
+                        <a href="{{ url_for('main.nation_view', nation_id=nation.id) }}" class="text-amber-500 hover:text-amber-400 font-medium">{{ nation.name }}</a>
+                    </div>
+                </td>
+                <td class="px-4 py-2">
+                    {% if nation.alliance %}
+                        <span class="text-amber-500">{{ nation.alliance.name }}</span>
+                    {% else %}
+                        <span class="text-slate-500 italic">Unallied</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-2 text-slate-300">{{ nation.leader or '—' }}</td>
+                <td class="px-4 py-2 text-slate-500">{{ nation.continent or '—' }}</td>
+                <td class="px-4 py-2 text-right text-slate-300">{{ '{:,}'.format(nation.population | int) }}</td>
+                <td class="px-4 py-2 text-right font-semibold text-amber-400">{{ '{:,}'.format(nation.total_gp | int) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="px-4 py-6 text-center text-slate-500">No nations match "{{ query }}".</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="text-xs text-slate-500 mt-1">{{ results | length }} result{{ 's' if results | length != 1 else '' }} for "{{ query }}"</p>
+{% endif %}

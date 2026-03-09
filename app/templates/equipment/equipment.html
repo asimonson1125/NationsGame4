@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+
+{% block title %}Equipment — {{ nation.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-6xl mx-auto"
+     x-data="{ tab: '{{ default_tab | default('inventory') }}', tradeMode: false, selected: new Set(), selectAll: false }">
+    <h1 class="text-2xl font-bold text-slate-100 mb-6"><i class="fas fa-tools mr-2"></i>Equipment</h1>
+
+    {# Tab Bar #}
+    <div class="flex gap-1 border-b border-slate-700 mb-6">
+        <button @click="tab = 'inventory'"
+                :class="tab === 'inventory' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-wrench mr-1"></i> Inventory
+        </button>
+        <button @click="tab = 'crates'"
+                :class="tab === 'crates' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-box-open mr-1"></i> Loot Crate Shop
+        </button>
+    </div>
+
+    {# ===== INVENTORY TAB ===== #}
+    <div x-show="tab === 'inventory'" x-cloak:false>
+
+        {# Controls #}
+        <div class="flex items-center justify-end mb-4">
+            <button @click="tradeMode = !tradeMode; selected = new Set(); selectAll = false"
+                    :class="tradeMode ? 'bg-red-600 hover:bg-red-500' : 'bg-slate-700 hover:bg-slate-600'"
+                    class="px-4 py-2 text-white text-sm rounded-lg font-medium transition-colors">
+                <i class="fas fa-exchange-alt mr-1"></i>
+                <span x-text="tradeMode ? 'Cancel Trade-In' : 'Trade In'"></span>
+            </button>
+        </div>
+
+        {# Filters #}
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-4">
+            <div class="flex flex-wrap gap-3 items-end">
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Type</label>
+                    <select id="filter-type" class="text-sm bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1.5"
+                            hx-get="{{ url_for('equipment.equipment_grid') }}"
+                            hx-target="#equipment-grid"
+                            hx-include="#filter-type, #filter-rarity, #filter-foil, #filter-equipped"
+                            name="type">
+                        <option value="">All Types</option>
+                        {% for cat, slots in equipment_slots.items() %}
+                        <optgroup label="{{ cat }}">
+                            {% for slot in slots %}
+                            <option value="{{ slot }}">{{ slot }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Rarity</label>
+                    <select id="filter-rarity" class="text-sm bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1.5"
+                            hx-get="{{ url_for('equipment.equipment_grid') }}"
+                            hx-target="#equipment-grid"
+                            hx-include="#filter-type, #filter-rarity, #filter-foil, #filter-equipped"
+                            name="rarity">
+                        <option value="">All Rarities</option>
+                        {% for r in rarity_order %}
+                        <option value="{{ r }}">{{ r }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Foil</label>
+                    <select id="filter-foil" class="text-sm bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1.5"
+                            hx-get="{{ url_for('equipment.equipment_grid') }}"
+                            hx-target="#equipment-grid"
+                            hx-include="#filter-type, #filter-rarity, #filter-foil, #filter-equipped"
+                            name="foil">
+                        <option value="">Any</option>
+                        <option value="yes">Foil Only</option>
+                        <option value="no">Non-Foil Only</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Equipped</label>
+                    <select id="filter-equipped" class="text-sm bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1.5"
+                            hx-get="{{ url_for('equipment.equipment_grid') }}"
+                            hx-target="#equipment-grid"
+                            hx-include="#filter-type, #filter-rarity, #filter-foil, #filter-equipped"
+                            name="equipped">
+                        <option value="">Any</option>
+                        <option value="yes">Equipped</option>
+                        <option value="no">Unequipped</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        {# Trade-in bar #}
+        <div x-show="tradeMode" x-cloak class="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4 flex items-center justify-between">
+            <div class="text-sm text-red-400">
+                <i class="fas fa-info-circle mr-1"></i>
+                Select equipment to trade in. Trades all unequipped copies of each selected stack. Equipped items cannot be traded.
+                <span class="font-semibold" x-text="'(' + selected.size + ' selected)'"></span>
+            </div>
+            <button @click="
+                if (selected.size === 0) return;
+                let ids = Array.from(selected).join(',');
+                htmx.ajax('POST', '{{ url_for('equipment.trade_in') }}', {
+                    target: '#equipment-grid',
+                    swap: 'none',
+                    values: { ids: ids }
+                }).then(() => {
+                    selected = new Set();
+                    htmx.ajax('GET', '{{ url_for('equipment.equipment_grid') }}', { target: '#equipment-grid', swap: 'innerHTML' });
+                });
+            "
+                    class="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white text-sm rounded font-medium transition-colors">
+                <i class="fas fa-trash mr-1"></i> Trade In Selected
+            </button>
+        </div>
+
+        {# Equipment grid #}
+        <div id="equipment-grid">
+            {% include 'equipment/partials/equipment_grid.html' %}
+        </div>
+
+    </div>
+
+    {# ===== LOOT CRATE SHOP TAB ===== #}
+    <div x-show="tab === 'crates'" x-cloak>
+
+        {# Token balance #}
+        <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-6 flex items-center gap-3">
+            <i class="fas fa-coins text-amber-500 text-xl"></i>
+            <span class="text-slate-300 font-medium">Loot Tokens:</span>
+            <span id="token-balance" class="text-xl font-bold text-amber-400">{{ '{:,.0f}'.format(nation.loot_tokens or 0) }}</span>
+        </div>
+
+        {# Crate results modal overlay #}
+        <div id="crate-overlay" class="hidden fixed inset-0 bg-black/60 z-[1050]" onclick="closeCrateModal()"></div>
+        <div id="crate-popup" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 p-5 rounded-lg shadow-2xl z-[1100] w-[90%] max-w-2xl max-h-[80vh] overflow-y-auto">
+            <button onclick="closeCrateModal()"
+                    class="absolute top-2.5 right-3 text-slate-400 hover:text-slate-200 text-2xl leading-none cursor-pointer bg-transparent border-0 p-0">&times;</button>
+            <div id="crate-content"></div>
+        </div>
+
+        {# Unit category sections #}
+        {% for category in unit_categories %}
+        <div class="mb-8">
+            <h2 class="text-lg font-semibold text-slate-200 mb-3 flex items-center gap-2">
+                {% if category == 'Infantry' %}<i class="fas fa-person-rifle text-slate-400"></i>
+                {% elif category == 'Armour' %}<i class="fas fa-truck-monster text-slate-400"></i>
+                {% elif category == 'Air' %}<i class="fas fa-plane text-slate-400"></i>
+                {% elif category == 'Static' %}<i class="fas fa-tower-observation text-slate-400"></i>
+                {% elif category == 'Special Forces' %}<i class="fas fa-user-secret text-slate-400"></i>
+                {% endif %}
+                {{ category }} Crates
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for size_key, crate in crate_sizes.items() %}
+                {% set size_labels = {'small': 'Small', 'medium': 'Medium', 'epic': 'Epic'} %}
+                {% set size_colors = {'small': {'bg': 'bg-slate-800', 'border': 'border-slate-600', 'btn': 'bg-slate-600 hover:bg-slate-500'},
+                                      'medium': {'bg': 'bg-blue-500/5', 'border': 'border-blue-500/30', 'btn': 'bg-blue-600 hover:bg-blue-500'},
+                                      'epic': {'bg': 'bg-purple-500/5', 'border': 'border-purple-500/30', 'btn': 'bg-purple-600 hover:bg-purple-500'}} %}
+                {% set sc = size_colors[size_key] %}
+                <div class="rounded-lg border-2 {{ sc.border }} {{ sc.bg }} p-4">
+                    {% set num_items = crate['items'] %}
+                    {% set crate_cost = crate['cost'] %}
+                    {% set g_epic = crate['guaranteed_epic'] %}
+                    {% set g_rare = crate['guaranteed_rare'] %}
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-bold text-slate-100">{{ size_labels[size_key] }} Crate</h3>
+                        <span class="text-sm font-medium text-amber-400">
+                            <i class="fas fa-coins mr-0.5"></i> {{ crate_cost }}
+                        </span>
+                    </div>
+                    <div class="text-xs text-slate-400 space-y-1 mb-3">
+                        <div><i class="fas fa-gift mr-1"></i> {{ num_items }} item{{ 's' if num_items > 1 else '' }}</div>
+                        {% if g_epic > 0 %}
+                        <div><i class="fas fa-star text-purple-400 mr-1"></i> {{ g_epic }} guaranteed Epic+</div>
+                        {% endif %}
+                        {% if g_rare > 0 %}
+                        <div><i class="fas fa-gem text-blue-400 mr-1"></i> {{ g_rare }} guaranteed Rare+</div>
+                        {% endif %}
+                        {% if g_epic == 0 and g_rare == 0 %}
+                        <div class="text-slate-500">No guaranteed rarity</div>
+                        {% endif %}
+                    </div>
+                    <button hx-post="{{ url_for('equipment.buy_crate') }}"
+                            hx-vals='{"size": "{{ size_key }}", "category": "{{ category }}"}'
+                            hx-target="#crate-content"
+                            hx-swap="innerHTML"
+                            hx-on::after-request="if(event.detail.successful) { document.getElementById('crate-overlay').classList.remove('hidden'); document.getElementById('crate-popup').classList.remove('hidden'); }"
+                            class="w-full px-3 py-2 {{ sc.btn }} text-white text-sm rounded-lg font-medium transition-colors">
+                        <i class="fas fa-box-open mr-1"></i> Open Crate
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function closeCrateModal() {
+    document.getElementById('crate-overlay').classList.add('hidden');
+    document.getElementById('crate-popup').classList.add('hidden');
+}
+document.body.addEventListener('updateTokenBalance', function(evt) {
+    var el = document.getElementById('token-balance');
+    if (el && evt.detail && evt.detail.tokens !== undefined) {
+        el.textContent = Number(evt.detail.tokens).toLocaleString();
+    }
+});
+</script>
+{% endblock %}
