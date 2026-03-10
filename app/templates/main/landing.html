@@ -155,6 +155,18 @@
     </div>
 </div>
 
+{# ===== MOBILE SHOWCASE ===== #}
+<div class="max-w-5xl mx-auto px-6 pb-20">
+    <div class="text-center mb-10">
+        <h2 class="text-2xl font-bold mb-2">Play Anywhere</h2>
+        <p class="text-slate-400">Nations Simulator is fully mobile-friendly &mdash; manage your nation on the go.</p>
+    </div>
+    <div class="flex flex-wrap justify-center gap-6">
+        <img src="{{ url_for('static', filename='IMG_0403.png') }}" alt="Mobile screenshot" class="w-48 sm:w-56 rounded-2xl border border-slate-700 shadow-xl object-contain">
+        <img src="{{ url_for('static', filename='IMG_0404.png') }}" alt="Mobile screenshot" class="w-48 sm:w-56 rounded-2xl border border-slate-700 shadow-xl object-contain">
+    </div>
+</div>
+
 {# ===== FOOTER ===== #}
 <div class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
     Nations Simulator{% if latest_update %} &mdash; <a href="{{ url_for('main.changelog_page') }}" class="text-slate-400 hover:text-slate-300 transition-colors">v{{ latest_update.version }}</a>{% endif %}

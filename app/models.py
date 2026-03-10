@@ -48,7 +48,7 @@ class Nation(db.Model):
     ), index=True)
 
     # Core resources
-    money = db.Column(db.Float, default=10_000.0)
+    money = db.Column(db.Float, default=50_000.0)
     food = db.Column(db.Float, default=5_000.0)
     power = db.Column(db.Float, default=2500.0)
     building_materials = db.Column(db.Float, default=2500.0)
