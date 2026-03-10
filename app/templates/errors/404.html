@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}404 - Region Not Found{% endblock %}
+
+{% block content %}
+{# Explicit inline padding to bypass potential CSS purge/build issues #}
+<div style="padding-top: 120px; padding-bottom: 80px;" class="px-6">
+    <div class="max-w-md mx-auto text-center">
+        
+        {# Decorative Icon Group - Using inline styles for fixed dimensions #}
+        <div style="display: inline-flex; position: relative; width: 96px; height: 96px; align-items: center; justify-content: center; margin-bottom: 2rem;">
+            {# Glow effect #}
+            <div style="position: absolute; inset: 0; background: rgba(245, 158, 11, 0.1); filter: blur(24px); border-radius: 9999px;"></div>
+            
+            {# Primary Icon Circle #}
+            <div style="position: relative; width: 80px; height: 80px; background: #1e293b; border: 1px solid #475569; border-radius: 9999px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);">
+                <i class="fas fa-compass" style="font-size: 40px; color: #f59e0b; display: block;"></i>
+                
+                {# Question Mark Badge #}
+                <div style="position: absolute; top: -2px; right: -2px; width: 28px; height: 28px; background: #0f172a; border: 1px solid #475569; border-radius: 9999px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);">
+                    <i class="fas fa-question" style="font-size: 14px; color: #94a3b8; display: block;"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-100 tracking-tight">
+                404 <span class="text-amber-500">—</span> Lost in the Wilderness
+            </h1>
+            <p class="text-slate-400 text-lg leading-relaxed">
+                The coordinates you provided lead to a region that does not exist or has been reclaimed by nature.
+            </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 mt-10">
+            <a href="{{ url_for('main.home') }}" 
+               class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded-lg shadow-lg transition-all active:scale-95">
+                <i class="fas fa-home"></i> Return Home
+            </a>
+            <a href="{{ url_for('main.leaderboard') }}" 
+               class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold border border-slate-700 rounded-lg transition-all active:scale-95">
+                <i class="fas fa-medal"></i> Leaderboards
+            </a>
+        </div>
+
+        <p class="text-xs text-slate-600 italic mt-12">
+            "Not all who wander are lost, but those who follow broken links certainly are."
+        </p>
+    </div>
+</div>
+{% endblock %}

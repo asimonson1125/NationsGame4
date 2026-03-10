@@ -73,7 +73,7 @@
                         }
                      }"
                      @collect-success.window="onCollect($event)"
-                     :class="{ 'hidden': filter && !{{ fdef.outputs | tojson }}.hasOwnProperty(filter) }"
+                     :class='{ "hidden": filter && !{{ fdef.outputs | tojson }}.hasOwnProperty(filter) }'
                      class="bg-slate-800 rounded-lg border border-slate-700 p-5">
                     <form hx-post="{{ url_for('economy.collect_factory', factory_key=key) }}"
                           hx-include="closest form"

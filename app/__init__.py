@@ -99,6 +99,12 @@ def create_app(config_name='default'):
             ).count()
         return dict(unread_mail_count=count)
 
+    from flask import render_template
+
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('errors/404.html'), 404
+
     import os
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         from .tasks import register_tasks

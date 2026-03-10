@@ -1,7 +1,7 @@
 {% from 'shared/_equipment_macros.html' import stat_icon, unit_type_icon %}
 {# Expects: unit, udef, divisions (from parent scope) #}
 <div class="bg-slate-700/50 rounded-lg border border-slate-700"
-     x-data="{ showActions: false, renaming: false, moving: false, rname: '{{ unit.custom_name | default('', true) }}' }">
+     x-data='{ showActions: false, renaming: false, moving: false, rname: {{ (unit.custom_name or "") | tojson }} }'>
 
     {# ── Clickable header: opens detail popup ── #}
     <div class="cursor-pointer hover:bg-slate-700 p-3 rounded-t-lg transition-colors"

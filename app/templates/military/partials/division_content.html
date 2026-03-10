@@ -64,7 +64,7 @@
             {% endif %}
 
             {# Rename #}
-            <div x-data="{ renaming: false, rname: '{{ div.name }}' }">
+            <div x-data='{ renaming: false, rname: {{ div.name | tojson }} }'>
                 <button @click="renaming = !renaming" class="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium py-1.5 px-3 rounded transition-colors">
                     <i class="fas fa-pen mr-1"></i>Rename
                 </button>
