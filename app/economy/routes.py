@@ -232,6 +232,51 @@ def build_urban_areas():
     return resp
 
 
+@economy.route('/convert-to-cleared-land', methods=['POST'])
+@login_required
+def convert_to_cleared_land():
+    nation = current_user.nation
+    if not nation:
+        return _error_response('No nation found.')
+
+    land_type = request.form.get('land_type')
+    valid_types = ['forest', 'grassland', 'jungle', 'mountain', 'desert', 'tundra']
+    if land_type not in valid_types:
+        return _error_response('Invalid land type.')
+
+    try:
+        amount = int(request.form.get('convert_amount', 0))
+    except (ValueError, TypeError):
+        return _error_response('Invalid amount.')
+
+    if amount <= 0:
+        return _error_response('Amount must be greater than zero.')
+    if amount > _MAX_LAND_TX:
+        return _error_response(f'Cannot convert more than {_MAX_LAND_TX:,} tiles at once.')
+
+    current_tiles = getattr(nation, land_type, 0)
+    if current_tiles < amount:
+        return _error_response(f'Not enough {land_type.replace("_", " ")}. Have {current_tiles:,}, need {amount:,}.')
+
+    cost = amount * 100
+    if (nation.money or 0) < cost:
+        return _error_response(f'Insufficient money. Need {cost:,} money.')
+
+    # Deduct cost and land, add to cleared_land
+    nation.money = (nation.money or 0) - cost
+    setattr(nation, land_type, current_tiles - amount)
+    nation.cleared_land = (nation.cleared_land or 0) + amount
+    db.session.commit()
+
+    land_panel_html = render_template('economy/partials/land_panel.html', nation=nation)
+    resp = current_app.response_class(land_panel_html, status=200, mimetype='text/html')
+    resp.headers['HX-Trigger'] = json.dumps({
+        'showMessage': {'message': f'Converted {amount:,} {land_type} tiles to cleared land.', 'type': 'success'},
+        'refreshResourceFooter': True,
+    })
+    return resp
+
+
 @economy.route('/industry')
 @login_required
 def industry():

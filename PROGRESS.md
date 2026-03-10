@@ -112,3 +112,4 @@ Future:
 - Alliance leaderboard — server-rendered table
 - Live alliance search — `hx-trigger="keyup changed delay:500ms"`\
 - Rate Limiting
+- DB-compulted columns (like land_gp)

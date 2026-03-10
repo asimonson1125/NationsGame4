@@ -6,6 +6,10 @@
     ('Military',   nation.military_gp),
 ] %}
 
+<div class="mb-4 text-center">
+    <span class="text-xs font-semibold text-slate-500 uppercase tracking-widest">{{ nation.name }}</span>
+</div>
+
 <div>
     {% for label, value in gp_rows %}
     <div class="flex justify-between py-2 border-b border-slate-700 text-sm">

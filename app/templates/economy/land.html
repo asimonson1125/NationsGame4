@@ -127,6 +127,86 @@
                 <p class="text-xs text-slate-400">Current cleared land: <span class="font-medium text-slate-200">{{ (nation.cleared_land or 0) | format_resource }}</span></p>
             </div>
 
+            {# Convert Terrain Card #}
+            <div class="bg-slate-800 rounded-lg border border-slate-700 p-5 col-span-1 md:col-span-2" 
+                 x-data="{ 
+                    selectedType: '', 
+                    convertAmount: 1, 
+                    nationMoney: {{ nation.money or 0 }},
+                    fmt(n) {
+                        if (n == null || isNaN(n)) return '0';
+                        if (n >= 1e9) return (n / 1e9).toFixed(1) + 'b';
+                        if (n >= 1e6) return (n / 1e6).toFixed(1) + 'm';
+                        if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+                        return Math.floor(n).toLocaleString();
+                    }
+                 }"
+                 @htmx:after-request="if(event.detail.successful && event.detail.target.id !== 'expansion-results') { nationMoney -= (convertAmount * 100); }">
+                <h2 class="text-lg font-semibold text-slate-100 mb-3 flex items-center gap-2">
+                    <i class="fas fa-hammer text-amber-500"></i> Convert Terrain
+                </h2>
+                <p class="text-sm text-slate-400 mb-1">Convert various terrain types into <span class="text-slate-200 font-medium">cleared land</span>.</p>
+                <p class="text-xs text-slate-400 mb-4 flex items-center gap-1.5">Cost: <span class="flex items-center gap-1 font-medium text-slate-200">100 {{ res_icon('money', 'w-3.5 h-3.5') }} per tile</span></p>
+                
+                <div class="space-y-6">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-2">Target Type</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                            {% for land_type in ['forest', 'grassland', 'jungle', 'mountain', 'desert', 'tundra'] %}
+                            <button
+                                @click="selectedType = '{{ land_type }}'"
+                                :class="selectedType === '{{ land_type }}' ? 'bg-amber-500 text-slate-900 border-amber-500' : 'bg-slate-700 hover:bg-slate-600 border-slate-600 text-slate-100'"
+                                class="border font-medium py-2 px-3 rounded text-xs transition-colors">
+                                {{ land_type | title }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-end border-t border-slate-700/50 pt-6">
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide block">Tiles to Convert</label>
+                            <input type="number"
+                                   name="convert_amount"
+                                   id="convert_amount"
+                                   min="1"
+                                   x-model.number="convertAmount"
+                                   class="w-full bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
+                        </div>
+                        
+                        <div class="space-y-1 border-l-0 sm:border-l border-slate-700 sm:pl-6">
+                            <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide block">Total Cost</label>
+                            <div class="flex items-center gap-1.5 h-7">
+                                <span :class="(convertAmount * 100) > nationMoney ? 'text-red-400' : 'text-amber-400'" 
+                                      class="tt font-bold text-lg transition-colors cursor-help" 
+                                      :data-tooltip="(convertAmount * 100).toLocaleString() + ' money'"
+                                      x-text="fmt(convertAmount * 100)"></span>
+                                {{ res_icon('money', 'w-4 h-4') }}
+                            </div>
+                        </div>
+
+                        <div class="lg:text-right">
+                            <button
+                                hx-post="{{ url_for('economy.convert_to_cleared_land') }}"
+                                hx-include="[name='convert_amount']"
+                                :hx-vals="'{&quot;land_type&quot;: &quot;' + selectedType + '&quot;}'"
+                                hx-target="#land-panel"
+                                hx-swap="outerHTML"
+                                :disabled="!selectedType || (convertAmount * 100) > nationMoney || convertAmount <= 0"
+                                :class="(!selectedType || (convertAmount * 100) > nationMoney || convertAmount <= 0) 
+                                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed border-slate-600' 
+                                    : 'bg-amber-500 hover:bg-amber-400 text-slate-900 shadow-lg shadow-amber-500/20 border-amber-500'"
+                                class="w-full lg:w-auto whitespace-nowrap font-semibold py-2 px-6 rounded-md transition-all text-sm border">
+                                <i class="fas fa-check mr-1" x-show="selectedType && (convertAmount * 100) <= nationMoney"></i>
+                                <span x-show="!selectedType">Select Type</span>
+                                <span x-show="selectedType && (convertAmount * 100) > nationMoney">Insufficient Funds</span>
+                                <span x-show="selectedType && (convertAmount * 100) <= nationMoney">Convert <span x-text="selectedType.charAt(0).toUpperCase() + selectedType.slice(1)"></span></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         {# Land Panel #}

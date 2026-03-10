@@ -89,7 +89,14 @@ def nation_view(nation_id):
 @main.route('/gp-breakdown')
 @login_required
 def gp_breakdown():
-    return render_template('main/partials/gp_breakdown.html', nation=current_user.nation)
+    nation_id = request.args.get('nation_id', type=int)
+    if nation_id:
+        nation = db.session.get(Nation, nation_id)
+        if not nation:
+            abort(404)
+    else:
+        nation = current_user.nation
+    return render_template('main/partials/gp_breakdown.html', nation=nation)
 
 
 @main.route('/population-delta')
@@ -360,6 +367,13 @@ def admin_edit_resource(nation_id):
         setattr(nation, resource, current + value)
     elif mode == 'subtract':
         setattr(nation, resource, current - value)
+
+    # Auto-recalculate GP components if their source was edited
+    if resource == 'total_land':
+        nation.land_gp = (nation.total_land or 0) // 10
+    elif resource == 'population':
+        from ..game.population import compute_population_gp
+        nation.population_gp = compute_population_gp(nation.population)
 
     db.session.commit()
 

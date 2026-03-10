@@ -264,10 +264,16 @@
     }
 
     // GP Modal
-    function showGPBreakdown() {
+    function showGPBreakdown(nationId) {
         document.getElementById('gp-overlay').classList.remove('hidden');
         document.getElementById('gp-popup').classList.remove('hidden');
-        htmx.ajax('GET', '{{ url_for("main.gp_breakdown") }}', {
+        
+        let url = '{{ url_for("main.gp_breakdown") }}';
+        if (nationId) {
+            url += '?nation_id=' + nationId;
+        }
+
+        htmx.ajax('GET', url, {
             target: '#gp-content',
             swap: 'innerHTML'
         });
