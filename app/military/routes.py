@@ -6,9 +6,10 @@ from flask import redirect, render_template, request, url_for, current_app
 from flask_login import login_required, current_user
 from .. import db
 from sqlalchemy import or_, and_
-from ..models import Division, Unit, RecruitmentQueue, Battle, CombatReport, Nation, User, Equipment
+from ..models import Division, Unit, RecruitmentQueue, Battle, CombatReport, Nation, User, Equipment, MissionOffer, MissionRecord
 from ..helpers import error_response as _error_response, can_afford as _can_afford, deduct_cost as _deduct_cost, compute_total_upkeep
 from ..game.units import UNIT_DEFS
+from ..game.missions import MISSION_DEFS, roll_two_missions
 from ..game.equipment import EQUIPMENT_SLOTS, RARITY_COLORS, get_slot_category, BUFF_FILTER_OPTIONS, apply_buff_filter
 from . import military
 
@@ -27,12 +28,13 @@ def overview():
 
     total_upkeep = compute_total_upkeep(nation.id)
 
+    player_unit_defs = {k: v for k, v in UNIT_DEFS.items() if not v.npc_only}
     return render_template(
         'military/overview.html',
         nation=nation,
         divisions=divisions,
         reserve_units=reserve_units,
-        unit_defs=UNIT_DEFS,
+        unit_defs=player_unit_defs,
         queue=queue,
         total_upkeep=total_upkeep,
         default_tab=request.args.get('tab', 'overview'),
@@ -491,6 +493,13 @@ def battles():
     )
 
 
+@military.route('/military/training-league')
+@login_required
+def training_league():
+    nation = current_user.nation
+    return render_template('military/training_league.html', nation=nation)
+
+
 # ── BATTLE ────────────────────────────────────────────────────────────────
 
 def _snapshot_to_units(snapshot_json):
@@ -750,3 +759,263 @@ def _render_snapshot_detail(snap):
         slots_info=slots_info,
         rarity_colors=RARITY_COLORS,
     )
+
+
+# ── MISSIONS ──────────────────────────────────────────────────────────────
+
+def _get_completed_mission_keys(nation_id):
+    """Return set of mission keys permanently completed by this nation."""
+    records = MissionRecord.query.filter_by(nation_id=nation_id).all()
+    return {r.mission_key for r in records}
+
+
+def _get_or_create_offers(nation):
+    """Ensure the nation always has 2 MissionOffer rows. Refresh stale slots."""
+    now = datetime.now(timezone.utc)
+    offers = {o.slot: o for o in MissionOffer.query.filter_by(nation_id=nation.id).all()}
+    completed_keys = _get_completed_mission_keys(nation.id)
+
+    for slot in (1, 2):
+        offer = offers.get(slot)
+
+        if offer is None:
+            # No offer exists for this slot — create one
+            _create_offer(nation, slot, completed_keys, {o.mission_key for o in offers.values()})
+            continue
+
+        # completed/failed slots are refreshed only when the player collects/acknowledges
+
+    db.session.flush()
+    return MissionOffer.query.filter_by(nation_id=nation.id).order_by(MissionOffer.slot).all()
+
+
+def _create_offer(nation, slot, completed_keys, exclude_keys):
+    """Roll a new mission for a slot and upsert the MissionOffer row."""
+    missions = roll_two_missions(
+        nation_tier=nation.tier or 1,
+        completed_keys=completed_keys,
+        exclude_keys=exclude_keys,
+    )
+    if not missions:
+        return
+
+    mdef = missions[0]
+    existing = MissionOffer.query.filter_by(nation_id=nation.id, slot=slot).first()
+    if existing:
+        existing.mission_key = mdef.key
+        existing.offered_at = datetime.now(timezone.utc)  # noqa: F821 — imported at module top
+        existing.status = 'available'
+        existing.battle_id = None
+        existing.completed_at = None
+    else:
+        db.session.add(MissionOffer(
+            nation_id=nation.id,
+            slot=slot,
+            mission_key=mdef.key,
+        ))
+
+
+@military.route('/military/missions')
+@login_required
+def missions():
+    """Return the missions tab partial (loaded by HTMX on tab click)."""
+    nation = current_user.nation
+    offers = _get_or_create_offers(nation)
+    db.session.commit()
+
+    divisions = Division.query.filter_by(nation_id=nation.id).order_by(Division.id).all()
+
+    offer_data = []
+    for offer in offers:
+        mdef = MISSION_DEFS.get(offer.mission_key)
+        offer_data.append({'offer': offer, 'mdef': mdef})
+
+    return render_template(
+        'military/partials/missions_content.html',
+        offer_data=offer_data,
+        divisions=divisions,
+        unit_defs=UNIT_DEFS,
+    )
+
+
+@military.route('/military/mission/<int:offer_id>/deploy', methods=['POST'])
+@login_required
+def deploy_mission(offer_id):
+    nation = current_user.nation
+    offer = MissionOffer.query.filter_by(
+        id=offer_id, nation_id=nation.id, status='available'
+    ).first()
+    if not offer:
+        return _error_response('Mission not available.')
+
+    mdef = MISSION_DEFS.get(offer.mission_key)
+    if not mdef:
+        return _error_response('Mission definition not found.')
+
+    div_id = request.form.get('division_id', type=int)
+    div = Division.query.filter_by(id=div_id, nation_id=nation.id).first()
+    if not div:
+        return _error_response('Division not found.')
+    if div.mobilization_state != 'mobilized':
+        return _error_response('Division must be mobilized to deploy on a mission.')
+    if div.in_combat:
+        return _error_response('Division is already in combat.')
+
+    alive_count = Unit.query.filter_by(division_id=div.id).filter(Unit.hp > 0).count()
+    if alive_count < 1:
+        return _error_response('Division has no alive units.')
+
+    npc_nation = _get_or_create_npc_nation()
+    npc_div = _generate_mission_opponent(mdef, npc_nation.id)
+
+    battle = Battle(
+        attacker_division_id=div.id,
+        defender_division_id=npc_div.id,
+        attacker_division_name=div.name,
+        defender_division_name=f'{mdef.location} Forces',
+        attacker_nation_id=nation.id,
+        defender_nation_id=npc_nation.id,
+        battle_type='pve_mission',
+        mission_offer_id=offer.id,
+    )
+    db.session.add(battle)
+    div.in_combat = True
+    npc_div.in_combat = True
+    offer.status = 'active'
+    db.session.flush()
+
+    offer.battle_id = battle.id
+    db.session.commit()
+
+    resp = current_app.response_class('', status=200, mimetype='text/html')
+    resp.headers['HX-Trigger'] = json.dumps({
+        'showMessage': {'message': f'"{div.name}" deployed on mission: {mdef.name}!', 'type': 'success'},
+        'refreshDivisionContent': True,
+        'refreshMissions': True,
+        'refreshResourceFooter': True,
+    })
+    return resp
+
+
+@military.route('/military/mission/<int:offer_id>/skip', methods=['POST'])
+@login_required
+def skip_mission(offer_id):
+    nation = current_user.nation
+    offer = MissionOffer.query.filter_by(
+        id=offer_id, nation_id=nation.id, status='available'
+    ).first()
+    if not offer:
+        return _error_response('Mission not available or already active.')
+
+    completed_keys = _get_completed_mission_keys(nation.id)
+    other_offers = MissionOffer.query.filter(
+        MissionOffer.nation_id == nation.id,
+        MissionOffer.id != offer.id,
+    ).all()
+    exclude = {o.mission_key for o in other_offers} | {offer.mission_key}
+
+    _create_offer(nation, offer.slot, completed_keys, exclude)
+    db.session.commit()
+
+    resp = current_app.response_class('', status=200, mimetype='text/html')
+    resp.headers['HX-Trigger'] = json.dumps({
+        'showMessage': {'message': 'Mission skipped. A new one has been offered.', 'type': 'info'},
+        'refreshMissions': True,
+    })
+    return resp
+
+
+@military.route('/military/mission/<int:offer_id>/collect', methods=['POST'])
+@login_required
+def collect_mission(offer_id):
+    """Grant rewards for a completed mission and roll a new offer for that slot."""
+    nation = current_user.nation
+    offer = MissionOffer.query.filter_by(
+        id=offer_id, nation_id=nation.id, status='completed'
+    ).first()
+    if not offer:
+        return _error_response('No completed mission to collect.')
+
+    mdef = MISSION_DEFS.get(offer.mission_key)
+    if not mdef:
+        return _error_response('Mission definition not found.')
+
+    for res, amount in mdef.rewards.items():
+        nation.add_resource(res, amount)
+
+    existing = MissionRecord.query.filter_by(
+        nation_id=nation.id, mission_key=offer.mission_key
+    ).first()
+    if not existing:
+        db.session.add(MissionRecord(
+            nation_id=nation.id,
+            mission_key=offer.mission_key,
+            completed_at=offer.completed_at or datetime.now(timezone.utc),
+        ))
+
+    completed_keys = _get_completed_mission_keys(nation.id)
+    other_offers = MissionOffer.query.filter(
+        MissionOffer.nation_id == nation.id,
+        MissionOffer.id != offer.id,
+    ).all()
+    _create_offer(nation, offer.slot, completed_keys,
+                  {o.mission_key for o in other_offers})
+    db.session.commit()
+
+    resp = current_app.response_class('', status=200, mimetype='text/html')
+    resp.headers['HX-Trigger'] = json.dumps({
+        'showMessage': {'message': f'Rewards collected for "{mdef.name}"!', 'type': 'success'},
+        'refreshMissions': True,
+        'refreshResourceFooter': True,
+    })
+    return resp
+
+
+@military.route('/military/mission/<int:offer_id>/acknowledge', methods=['POST'])
+@login_required
+def acknowledge_mission(offer_id):
+    """Dismiss a failed mission and roll a new offer for that slot."""
+    nation = current_user.nation
+    offer = MissionOffer.query.filter_by(
+        id=offer_id, nation_id=nation.id, status='failed'
+    ).first()
+    if not offer:
+        return _error_response('No failed mission to acknowledge.')
+
+    completed_keys = _get_completed_mission_keys(nation.id)
+    other_offers = MissionOffer.query.filter(
+        MissionOffer.nation_id == nation.id,
+        MissionOffer.id != offer.id,
+    ).all()
+    _create_offer(nation, offer.slot, completed_keys,
+                  {o.mission_key for o in other_offers})
+    db.session.commit()
+
+    resp = current_app.response_class('', status=200, mimetype='text/html')
+    resp.headers['HX-Trigger'] = json.dumps({
+        'showMessage': {'message': 'Mission acknowledged. A new one has been offered.', 'type': 'info'},
+        'refreshMissions': True,
+    })
+    return resp
+
+
+def _generate_mission_opponent(mdef, npc_nation_id):
+    """Create an NPC division populated according to the mission enemy composition."""
+    npc_div = Division(
+        nation_id=npc_nation_id,
+        name=f'{mdef.location} Forces',
+        mobilization_state='mobilized',
+    )
+    db.session.add(npc_div)
+    db.session.flush()
+
+    count = random.randint(*mdef.enemy_count)
+    keys = list(mdef.enemy_composition.keys())
+    weights = [mdef.enemy_composition[k] for k in keys]
+
+    for _ in range(count):
+        unit_key = random.choices(keys, weights=weights, k=1)[0]
+        unit = Unit.create_from_def(npc_nation_id, unit_key, division_id=npc_div.id)
+        db.session.add(unit)
+
+    return npc_div

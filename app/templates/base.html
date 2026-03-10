@@ -43,18 +43,27 @@
     {# Center: Nav Links (desktop) #}
     <div class="hidden lg:flex items-center gap-1 flex-1">
         {% macro nav_link(href, icon, label, endpoint=None) %}
+        {% set is_active = endpoint and (request.endpoint == endpoint or (endpoint.endswith('.') and request.endpoint and request.endpoint.startswith(endpoint))) %}
         <a href="{{ href }}"
            class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors
-                  {% if endpoint and request.endpoint == endpoint %}text-amber-400 bg-slate-800{% else %}text-slate-300 hover:text-slate-100 hover:bg-slate-800{% endif %}">
+                  {% if is_active %}text-amber-400 bg-slate-800{% else %}text-slate-300 hover:text-slate-100 hover:bg-slate-800{% endif %}">
             <i class="{{ icon }} text-xs"></i> {{ label }}
         </a>
         {% endmacro %}
 
         {% macro nav_dropdown(icon, label, items, endpoints=[]) %}
+        {% set ns = namespace(is_active=false) %}
+        {% if request.endpoint %}
+            {% for ep in endpoints %}
+                {% if request.endpoint == ep or (ep.endswith('.') and request.endpoint.startswith(ep)) %}
+                    {% set ns.is_active = true %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
         <div class="relative" x-data="{ open: false }" @close-nav-dropdowns.window="open = false" @click.outside="open = false">
             <button @click="if(open) { open = false } else { $dispatch('close-nav-dropdowns'); open = true }"
                     class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors
-                           {% if request.endpoint in endpoints %}text-amber-400 bg-slate-800{% else %}text-slate-300 hover:text-slate-100 hover:bg-slate-800{% endif %}">
+                           {% if ns.is_active %}text-amber-400 bg-slate-800{% else %}text-slate-300 hover:text-slate-100 hover:bg-slate-800{% endif %}">
                 <i class="{{ icon }} text-xs"></i> {{ label }}
                 <i class="fas fa-chevron-down text-[10px] ml-0.5 transition-transform" :class="open ? 'rotate-180' : ''"></i>
             </button>
@@ -77,7 +86,7 @@
         {{ nav_link(url_for('economy.land'), 'fas fa-map', 'Land & Resources', 'economy.land') }}
 
         {{ nav_link(url_for('trade.trade_page'), 'fas fa-exchange-alt', 'Trade', 'trade.trade_page') }}
-        {{ nav_link(url_for('alliance.my_alliance'), 'fas fa-users', 'Alliance', 'alliance.my_alliance') }}
+        {{ nav_link(url_for('alliance.my_alliance'), 'fas fa-users', 'Alliance', 'alliance.') }}
 
         {# Mail with unread badge #}
         <a href="{{ url_for('mail.inbox') }}"
@@ -90,11 +99,11 @@
         </a>
 
         {# Military dropdown #}
-        {% call(items) nav_dropdown('fa fa-fighter-jet fa-fw', 'Military', [], []) %}
+        {% call(items) nav_dropdown('fa fa-fighter-jet fa-fw', 'Military', [], ['military.', 'equipment.']) %}
             {{ dropdown_link(url_for('military.overview'), 'fas fa-flag', 'Military Overview') }}
             {{ dropdown_link(url_for('military.battles'), 'fas fa-crosshairs', 'Battle Reports') }}
             {{ dropdown_link(url_for('equipment.inventory'), 'fas fa-tools', 'Equipment') }}
-            {{ dropdown_link('#', 'fas fa-person-rifle', 'Training League') }}
+            {{ dropdown_link(url_for('military.training_league'), 'fas fa-person-rifle', 'Training League') }}
         {% endcall %}
 
         {# Leaderboards dropdown #}
@@ -150,7 +159,7 @@
                 <a href="{{ url_for('military.overview') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-flag w-5"></i> Military Overview</a>
                 <a href="{{ url_for('military.battles') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-crosshairs w-5"></i> Battle Reports</a>
                 <a href="{{ url_for('equipment.inventory') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-tools w-5"></i> Equipment</a>
-                <a href="#" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-person-rifle w-5"></i> Training League</a>
+                <a href="{{ url_for('military.training_league') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-person-rifle w-5"></i> Training League</a>
             </div>
         </div>
 

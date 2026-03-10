@@ -1,0 +1,246 @@
+{% from 'shared/_macros.html' import res_icon %}
+{% from 'shared/_equipment_macros.html' import unit_type_icon %}
+
+{# Rarity styles: header bg / border / text / badge bg #}
+{% set rarity_styles = {
+    'common':    ('bg-slate-700',    'border-slate-500', 'text-slate-200',  'bg-slate-600 text-slate-300'),
+    'uncommon':  ('bg-green-950',    'border-green-700', 'text-green-300',  'bg-green-900 text-green-300'),
+    'rare':      ('bg-blue-950',     'border-blue-700',  'text-blue-300',   'bg-blue-900 text-blue-300'),
+    'epic':      ('bg-purple-950',   'border-purple-700','text-purple-300', 'bg-purple-900 text-purple-300'),
+    'legendary': ('bg-amber-950',    'border-amber-700', 'text-amber-300',  'bg-amber-900 text-amber-300'),
+} %}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+{% for item in offer_data %}
+{% set offer = item.offer %}
+{% set mdef  = item.mdef %}
+{% if mdef %}
+{% set rs = rarity_styles.get(mdef.rarity, rarity_styles['common']) %}
+{% set hdr_bg = rs[0] %}
+{% set hdr_border = rs[1] %}
+{% set hdr_text = rs[2] %}
+{% set badge_cls = rs[3] %}
+
+<div class="bg-slate-800 rounded-lg border border-slate-700 flex flex-col overflow-hidden"
+     x-data="{ deploying: false, selectedDiv: '' }">
+
+    {# ── Header ── #}
+    <div class="px-5 py-4 {{ hdr_bg }} border-b {{ hdr_border }} flex items-center justify-between">
+        <div>
+            <div class="font-bold text-base {{ hdr_text }}">{{ mdef.name }}</div>
+            <div class="text-xs mt-0.5 opacity-75 {{ hdr_text }}">
+                <i class="fas fa-map-marker-alt mr-1"></i>{{ mdef.location }}
+                {% if mdef.tier_required > 1 %}
+                  &nbsp;·&nbsp;<i class="fas fa-lock mr-0.5"></i>Tier {{ mdef.tier_required }}+
+                {% endif %}
+            </div>
+        </div>
+        <span class="text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded {{ badge_cls }}">
+            {{ mdef.rarity }}
+        </span>
+    </div>
+
+    {# ── Body ── #}
+    <div class="p-5 flex flex-col flex-1 gap-4">
+
+        {# Description #}
+        <p class="text-slate-400 text-sm leading-relaxed italic">{{ mdef.description }}</p>
+
+        {# Rewards #}
+        <div>
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                <i class="fas fa-gift mr-1"></i>Rewards
+            </div>
+            <div class="flex flex-wrap gap-x-4 gap-y-1">
+                {% for res, amount in mdef.rewards.items() %}
+                <div class="flex items-center gap-1.5 text-sm text-slate-200">
+                    {{ res_icon(res) }}
+                    <span>{{ amount | int | format_resource }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# Enemy Forces #}
+        <div>
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                <i class="fas fa-skull-crossbones mr-1"></i>Enemy Forces
+                <span class="ml-2 font-normal text-slate-500 normal-case">
+                    {{ mdef.enemy_count[0] }}–{{ mdef.enemy_count[1] }} units
+                </span>
+            </div>
+            <div class="space-y-1.5">
+                {% for unit_key, pct in mdef.enemy_composition.items() %}
+                {% set udef = unit_defs.get(unit_key) %}
+                <div class="flex items-center gap-3 text-xs">
+                    {# Probability bar + label #}
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-0.5">
+                            <span class="flex items-center gap-1 text-slate-300 truncate">
+                                {% if udef %}{{ unit_type_icon(udef.unit_type, cls='w-3.5 h-3.5 inline-block opacity-70') }}{% endif %}
+                                {{ udef.name if udef else unit_key.replace('_',' ').title() }}
+                            </span>
+                            <span class="text-slate-500 ml-2 shrink-0">{{ pct }}%</span>
+                        </div>
+                        <div class="h-1 bg-slate-700 rounded-full">
+                            <div class="h-1 bg-slate-500 rounded-full" style="width:{{ pct }}%"></div>
+                        </div>
+                    </div>
+                    {# Stat boxes (FP / ARM / MAN / HP) #}
+                    {% if udef %}
+                    <div class="flex gap-0.5 shrink-0">
+                        <div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-white bg-red-700"
+                             title="Firepower">{{ udef.firepower }}</div>
+                        <div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-white bg-blue-700"
+                             title="Armour">{{ udef.armour }}</div>
+                        <div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-white bg-orange-600"
+                             title="Maneuver">{{ udef.maneuver }}</div>
+                        <div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-white bg-green-700"
+                             title="HP">{{ udef.max_hp }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>{# /body #}
+
+    {# ── Footer / Actions ── #}
+    <div class="px-5 py-4 border-t border-slate-700 bg-slate-800/60">
+
+        {% if offer.status == 'available' %}
+        {# Deploy button #}
+        <div class="flex gap-2">
+            <button @click="deploying = true"
+                    class="flex-1 py-2 px-4 rounded-md bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold text-sm transition-colors">
+                <i class="fas fa-helicopter-symbol mr-1.5"></i>Deploy Division
+            </button>
+            <form hx-post="{{ url_for('military.skip_mission', offer_id=offer.id) }}"
+                  hx-swap="none">
+                <button type="submit"
+                        class="py-2 px-3 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-400 hover:text-slate-200 text-sm transition-colors"
+                        title="Skip — get a new mission offer">
+                    <i class="fas fa-forward"></i>
+                </button>
+            </form>
+        </div>
+
+        {# Deploy modal (inline Alpine.js) #}
+        <div x-show="deploying" x-cloak
+             class="fixed inset-0 bg-black/60 z-[1050] flex items-center justify-center p-4"
+             @click.self="deploying = false">
+            <div class="bg-slate-800 border border-slate-700 rounded-lg p-6 w-full max-w-sm shadow-2xl">
+                <h3 class="text-base font-semibold text-slate-100 mb-1">Deploy Division</h3>
+                <p class="text-slate-400 text-sm mb-4">
+                    Mission: <span class="text-slate-200">{{ mdef.name }}</span>
+                </p>
+                <form hx-post="{{ url_for('military.deploy_mission', offer_id=offer.id) }}"
+                      hx-swap="none"
+                      @htmx:after-request="deploying = false">
+                    <select name="division_id" x-model="selectedDiv"
+                            class="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm mb-4 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
+                        <option value="">— Select a division —</option>
+                        {% for div in divisions %}
+                        {% if div.mobilization_state == 'mobilized' and not div.in_combat %}
+                        <option value="{{ div.id }}">
+                            {{ div.name }} ({{ div.units.count() }} units)
+                        </option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                    {% set has_eligible = namespace(val=false) %}
+                    {% for div in divisions %}
+                    {% if div.mobilization_state == 'mobilized' and not div.in_combat %}
+                    {% set has_eligible.val = true %}
+                    {% endif %}
+                    {% endfor %}
+                    {% if not has_eligible.val %}
+                    <p class="text-red-400 text-xs mb-3">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        No mobilized divisions available. Mobilize a division first.
+                    </p>
+                    {% endif %}
+                    <div class="flex gap-3">
+                        <button type="button" @click="deploying = false"
+                                class="flex-1 py-2 rounded bg-slate-700 text-slate-300 text-sm hover:bg-slate-600 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                :disabled="!selectedDiv"
+                                class="flex-1 py-2 rounded bg-amber-500 text-slate-900 font-semibold text-sm hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                            Deploy
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% elif offer.status == 'active' %}
+        {# In progress #}
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 text-amber-400 text-sm font-medium">
+                <i class="fas fa-circle-notch fa-spin text-xs"></i>
+                Mission In Progress
+            </div>
+            {% if offer.battle_id %}
+            <a href="{{ url_for('military.battle_view', battle_id=offer.battle_id) }}"
+               class="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                View Battle <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+            {% endif %}
+        </div>
+
+        {% elif offer.status == 'completed' %}
+        {# Completed — collect rewards #}
+        <div class="flex items-center gap-2 text-green-400 text-sm font-medium mb-3">
+            <i class="fas fa-check-circle text-xs"></i>
+            Mission Complete
+        </div>
+        <div class="flex flex-wrap gap-x-3 gap-y-1 mb-3">
+            {% for res, amount in mdef.rewards.items() %}
+            <div class="flex items-center gap-1 text-sm text-slate-200">
+                {{ res_icon(res) }}
+                <span>{{ amount | int | format_resource }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        <form hx-post="{{ url_for('military.collect_mission', offer_id=offer.id) }}"
+              hx-swap="none">
+            <button type="submit"
+                    class="w-full py-2 px-4 rounded-md bg-green-700 hover:bg-green-600 text-white font-semibold text-sm transition-colors">
+                <i class="fas fa-gift mr-1.5"></i>Collect Rewards
+            </button>
+        </form>
+
+        {% elif offer.status == 'failed' %}
+        {# Failed — acknowledge and get new mission #}
+        <div class="flex items-center gap-2 text-red-400 text-sm font-medium mb-3">
+            <i class="fas fa-times-circle text-xs"></i>
+            Mission Failed
+        </div>
+        <form hx-post="{{ url_for('military.acknowledge_mission', offer_id=offer.id) }}"
+              hx-swap="none">
+            <button type="submit"
+                    class="w-full py-2 px-4 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-slate-100 font-semibold text-sm transition-colors">
+                <i class="fas fa-forward mr-1.5"></i>Acknowledge &amp; Get New Mission
+            </button>
+        </form>
+
+        {% endif %}
+
+    </div>{# /footer #}
+
+</div>{# /card #}
+{% endif %}{# mdef #}
+{% endfor %}
+
+{% if not offer_data %}
+<div class="col-span-2 bg-slate-800 rounded-lg border border-slate-700 p-12 text-center">
+    <i class="fas fa-tasks text-slate-600 text-4xl mb-3"></i>
+    <p class="text-slate-500 text-sm">No missions available at your current tier.</p>
+</div>
+{% endif %}
+
+</div>{# /grid #}

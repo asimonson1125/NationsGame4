@@ -703,7 +703,7 @@ def _destroyed_unit_names(units):
 
 
 def _battle_message(div_name, enemy_name, battle_id, is_victory,
-                    tokens=0, destroyed_names=None):
+                    tokens=0, destroyed_names=None, mission_rewards=None):
     """Build the HTML body for a battle result system message."""
     link = (f'<a href="/military/battle/{battle_id}" '
             f'class="text-amber-400 hover:text-amber-300 underline">'
@@ -715,6 +715,11 @@ def _battle_message(div_name, enemy_name, battle_id, is_victory,
             '',
             f'Loot tokens earned: {tokens:,}',
         ]
+        if mission_rewards:
+            lines.append('')
+            lines.append('Mission rewards ready to collect:')
+            for res, amt in mission_rewards.items():
+                lines.append(f'  \u2022 {int(amt):,} {res.replace("_", " ")}')
     else:
         lines = [
             f'Your division "{div_name}" was defeated by {enemy_name}.',
@@ -735,7 +740,7 @@ def _send_battle_notifications(battle, atk_units, def_units, db_session):
     """Send system mail to battle participants and grant loot tokens to the winner."""
     from ..models import Message, Nation
 
-    is_pve = battle.battle_type == 'pve'
+    is_pve = battle.battle_type in ('pve', 'pve_mission')
     winner_side = battle.winner  # 'attacker' or 'defender'
 
     atk_nation = db_session.get(Nation, battle.attacker_nation_id)
@@ -748,14 +753,28 @@ def _send_battle_notifications(battle, atk_units, def_units, db_session):
     atk_destroyed = _destroyed_unit_names(atk_units)
     def_destroyed = _destroyed_unit_names(def_units)
 
+    # Look up mission rewards for pve_mission battles
+    mission_rewards = None
+    mission_name = None
+    if battle.battle_type == 'pve_mission' and battle.mission_offer_id and winner_side == 'attacker':
+        from ..models import MissionOffer
+        from .missions import MISSION_DEFS
+        offer = db_session.get(MissionOffer, battle.mission_offer_id)
+        if offer:
+            mdef = MISSION_DEFS.get(offer.mission_key)
+            if mdef:
+                mission_rewards = mdef.rewards
+                mission_name = mdef.name
+
     # --- Attacker notification ---
     if winner_side == 'attacker':
         tokens = math.ceil(def_strength / 25)
         atk_nation.loot_tokens = (atk_nation.loot_tokens or 0) + tokens
-        subject = f'Victory \u2014 {atk_div_name}'
+        subject = f'Victory \u2014 {mission_name}' if mission_name else f'Victory \u2014 {atk_div_name}'
         body = _battle_message(atk_div_name, def_nation.name, battle.id,
                                is_victory=True, tokens=tokens,
-                               destroyed_names=atk_destroyed)
+                               destroyed_names=atk_destroyed,
+                               mission_rewards=mission_rewards)
     else:
         subject = f'Defeat \u2014 {atk_div_name}'
         body = _battle_message(atk_div_name, def_nation.name, battle.id,
@@ -807,8 +826,12 @@ def _end_battle(battle, db_session):
     # Send notifications and grant loot tokens (before units are deleted)
     _send_battle_notifications(battle, atk_units, def_units, db_session)
 
-    # For PvE, the NPC defender division is disposable — delete it entirely
-    is_pve = battle.battle_type == 'pve'
+    # Resolve mission rewards before NPC cleanup
+    if battle.battle_type == 'pve_mission' and battle.mission_offer_id:
+        _resolve_mission(battle, db_session)
+
+    # For PvE variants, the NPC defender division is disposable — delete it entirely
+    is_pve = battle.battle_type in ('pve', 'pve_mission')
 
     # Destroy destroyed units (reduce military GP, destroy equipment)
     for unit in atk_units:
@@ -843,3 +866,20 @@ def _end_battle(battle, db_session):
     atk_div = db_session.get(Division, (battle.attacker_division_id, battle.attacker_nation_id))
     if atk_div:
         atk_div.in_combat = False
+
+
+def _resolve_mission(battle, db_session):
+    """Mark mission offer as completed/failed on a pve_mission battle end.
+
+    Rewards are not granted here — the player must click Collect to claim them.
+    """
+    from ..models import MissionOffer
+    from datetime import datetime, timezone
+
+    offer = db_session.get(MissionOffer, battle.mission_offer_id)
+    if not offer:
+        return
+
+    now = datetime.now(timezone.utc)
+    offer.status = 'completed' if battle.winner == 'attacker' else 'failed'
+    offer.completed_at = now

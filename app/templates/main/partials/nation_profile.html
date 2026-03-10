@@ -81,7 +81,9 @@
                 <div class="text-sm opacity-80 mb-0.5">Leader</div>
                 <div class="text-2xl font-bold">{{ nation.leader or 'Unknown' }}</div>
             </div>
-            <div class="text-center" x-data="{
+            <div class="text-center"
+                {% if is_owner|default(false) %}
+                 x-data="{
                 delta: 0,
                 foodDays: 0,
                 abundance: 0,
@@ -102,7 +104,6 @@
                             this.growthBlock = d.growth_block || '';
                         });
                 },
-                {% if is_owner|default(false) %}
                 open: false,
                 mode: '{{ nation.growth_mode or "auto" }}',
                 committedRate: {{ nation.growth_rate or 0 }},
@@ -142,13 +143,14 @@
                     this.save(r);  // mode is set above, sent with request
                     this.open = false;
                 },
-                {% endif %}
-            }" x-init="fetchDelta()">
+            }" x-init="fetchDelta()"
+                {% endif %}>
                 <div class="text-sm opacity-80 mb-0.5">Population</div>
                 <div class="text-2xl font-bold flex items-center justify-center gap-2">
                     <img src="{{ url_for('static', filename='images/tier.png') }}" alt="Tier" class="h-5 w-auto">
                     <span class="text-amber-400 text-sm font-bold">{{ nation.tier }}</span>
                     {{ "{:,}".format(nation.population) }}
+                    {% if is_owner|default(false) %}
                     <template x-if="delta > 0">
                         <span class="rv text-emerald-400 text-sm font-semibold flex items-center gap-0.5"
                               :data-raw="'+' + delta.toLocaleString('en-US') + '/hr'">
@@ -161,14 +163,7 @@
                             <i class="fas fa-caret-down"></i><span x-text="fmt(delta) + '/hr'"></span>
                         </span>
                     </template>
-                    {% if is_owner|default(false) %}
                     <template x-if="delta === 0 && committedRate > 0">
-                        <span class="text-slate-400 text-sm font-semibold flex items-center gap-0.5">
-                            <i class="fas fa-pause text-[10px]"></i><span>0/hr</span>
-                        </span>
-                    </template>
-                    {% else %}
-                    <template x-if="delta === 0 && {{ nation.growth_rate or 0 }} > 0">
                         <span class="text-slate-400 text-sm font-semibold flex items-center gap-0.5">
                             <i class="fas fa-pause text-[10px]"></i><span>0/hr</span>
                         </span>
@@ -210,8 +205,6 @@
                         </span>
                     </template>
                 </div>
-                {% endif %}
-                {% if is_owner|default(false) %}
                 <div class="mt-2">
                     <button @click="open = !open"
                             class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-colors"

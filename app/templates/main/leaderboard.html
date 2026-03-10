@@ -8,27 +8,27 @@
     continentNational: 'all',
     continentMilitary: 'all',
     init() {
-        this.refreshTable();
+        this.fetchTable(this.tab);
     },
     loadTab(t) {
-        this.tab = t;
-        this.refreshTable();
+        if (t === this.tab) return;
+        this.fetchTable(t).then(() => { this.tab = t; });
     },
     setContinent(c) {
         if (this.tab === 'national') this.continentNational = c;
         else this.continentMilitary = c;
-        this.refreshTable();
+        this.fetchTable(this.tab);
     },
-    refreshTable() {
+    fetchTable(t) {
         let url = '';
-        if (this.tab === 'national') {
+        if (t === 'national') {
             url = '{{ url_for('main.leaderboard_table') }}?continent=' + this.continentNational;
-        } else if (this.tab === 'military') {
+        } else if (t === 'military') {
             url = '{{ url_for('main.leaderboard_table') }}?type=military&continent=' + this.continentMilitary;
         } else {
             url = '{{ url_for('main.leaderboard_alliance_table') }}';
         }
-        htmx.ajax('GET', url, {target: '#leaderboard-table', swap: 'innerHTML'});
+        return htmx.ajax('GET', url, {target: '#leaderboard-table', swap: 'innerHTML'});
     }
 }">
     <h1 class="text-3xl font-bold text-slate-100 mb-6">Leaderboards</h1>

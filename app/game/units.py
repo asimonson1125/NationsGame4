@@ -16,6 +16,7 @@ class UnitDef:
     tier: int = 1
     gp_value: int = 1
     special_abilities: List[str] = field(default_factory=list)
+    npc_only: bool = False           # NPC-only units: not recruitable, used in missions
 
 
 from .constants import _M, _P, _F, _BM, _CG, _ME, _AM, _FU, _UR
@@ -29,6 +30,18 @@ def _ud(name, unit_type, fp, arm, man, hp, cost, upkeep, time_s,
         recruit_cost=cost, upkeep=upkeep, recruit_time=time_s,
         tier=tier, gp_value=gp if gp is not None else tier,
         special_abilities=abilities or [],
+    )
+
+
+def _npc(name, unit_type, fp, arm, man, hp, abilities=None):
+    """Create an NPC-only unit definition (enemies in missions, not recruitable)."""
+    return UnitDef(
+        name=name, unit_type=unit_type,
+        firepower=fp, armour=arm, maneuver=man, max_hp=hp,
+        recruit_cost={}, upkeep={}, recruit_time=0,
+        tier=99, gp_value=0,
+        special_abilities=abilities or [],
+        npc_only=True,
     )
 
 
@@ -284,4 +297,24 @@ UNIT_DEFS: Dict[str, UnitDef] = {
         abilities=['6x firepower against static units',
                    'Reduces damage to friendly static units by 25% (max 2 per division)'],
     ),
+
+    # ── NPC-ONLY (mission enemies — not recruitable) ──────────────────────
+
+    'rpg_infantry': _npc('RPG Infantry', 'Infantry', fp=3, arm=1, man=2, hp=50),
+    'mg_infantry':  _npc('MG Infantry',  'Infantry', fp=3, arm=1, man=2, hp=50,
+                         abilities=['4x firepower against infantry units']),
+    'rioter':       _npc('Rioter',       'Infantry', fp=2, arm=0, man=1, hp=30),
+    'secret_agent': _npc('Secret Agent', 'Special Forces', fp=4, arm=2, man=3, hp=50,
+                         abilities=['1.5% damage to infantry']),
+    'fsk':          _npc('FSK',          'Special Forces', fp=3, arm=1, man=3, hp=50),
+    'navy_seals':   _npc('Navy SEALs',   'Special Forces', fp=4, arm=1, man=4, hp=50),
+    'black_horns':  _npc('Black Horns',  'Special Forces', fp=4, arm=1, man=4, hp=20),
+    'mobster':      _npc('Mobster',      'Special Forces', fp=4, arm=1, man=1, hp=50),
+    'francisco_ace_of_spades': _npc('Francesco, the Ace of Spades', 'Special Forces',
+                                    fp=6, arm=1, man=5, hp=300),
+    'desert_fox_bodyguard':    _npc('Desert Fox Bodyguard', 'Infantry', fp=4, arm=2, man=2, hp=50),
+    'leopard_2':               _npc('Leopard 2', 'Armour', fp=3, arm=4, man=2, hp=130),
+    'gearhound_prototype':     _npc('GEARHOUND Prototype', 'Armour', fp=6, arm=6, man=3, hp=200),
+    'sectoid':                 _npc('Sectoid',   'Special Forces', fp=8, arm=8, man=9, hp=50),
+    'sectopod':                _npc('Sectopod',  'Armour',         fp=10, arm=10, man=11, hp=300),
 }

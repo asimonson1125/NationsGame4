@@ -28,7 +28,7 @@
             <i class="fas fa-clock mr-1"></i> Queue
             {% if queue %}<span class="ml-1 bg-amber-500/20 text-amber-400 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ queue | length }}</span>{% endif %}
         </button>
-        <button @click="tab = 'missions'"
+        <button @click="tab = 'missions'; $dispatch('loadMissions')"
                 :class="tab === 'missions' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
                 class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
             <i class="fas fa-tasks mr-1"></i> Missions
@@ -127,11 +127,16 @@
         </div>
     </div>
 
-    {# ===== MISSIONS TAB (stub) ===== #}
+    {# ===== MISSIONS TAB ===== #}
     <div x-show="tab === 'missions'" x-cloak>
-        <div class="bg-slate-800 rounded-lg border border-slate-700 p-12 text-center">
-            <i class="fas fa-tasks text-slate-600 text-5xl mb-4"></i>
-            <p class="text-slate-500 text-sm">Missions coming soon.</p>
+        <div id="missions-panel"
+             hx-get="{{ url_for('military.missions') }}"
+             hx-trigger="loadMissions from:window, refreshMissions from:body"
+             hx-swap="innerHTML">
+            <div class="text-center text-slate-500 py-16">
+                <i class="fas fa-tasks text-slate-600 text-4xl mb-3"></i>
+                <p class="text-sm">Click the Missions tab to load your available missions.</p>
+            </div>
         </div>
     </div>
 

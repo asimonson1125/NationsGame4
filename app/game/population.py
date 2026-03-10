@@ -14,6 +14,7 @@ CG_POPULATION_THRESHOLD = 100_000
 # Tier thresholds: (min_population, tier) — checked highest-first
 # T1: <75k | T2: 75k–150k | T3: 150k–350k | T4: 350k–1M | T5: 1M–2.5M | T6: 2.5M+
 TIER_THRESHOLDS = [
+    (6_000_000, 7),
     (2_500_000, 6),
     (1_000_000, 5),
     (350_000,   4),

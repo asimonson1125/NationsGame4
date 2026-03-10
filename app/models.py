@@ -270,7 +270,8 @@ class Battle(db.Model):
     defender_division_name = db.Column(db.String(120), nullable=True)
     status = db.Column(db.String(20), default='active')  # active|finished
     winner = db.Column(db.String(20), nullable=True)      # attacker|defender|null
-    battle_type = db.Column(db.String(10), default='pvp')  # pvp|pve
+    battle_type = db.Column(db.String(20), default='pvp')  # pvp|pve|pve_mission
+    mission_offer_id = db.Column(db.Integer, nullable=True)  # plain int — no FK (partitioned table)
     started_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     finished_at = db.Column(db.DateTime, nullable=True)
     attacker_snapshot = db.Column(db.Text, nullable=True)  # JSON unit state at battle end
@@ -369,6 +370,34 @@ class Message(db.Model):
 
     sender = db.relationship('Nation', foreign_keys=[sender_id])
     recipient = db.relationship('Nation', foreign_keys=[recipient_id], overlaps='messages_received,recipient_nation')
+
+
+class MissionOffer(db.Model):
+    """Active mission slots for a nation — always 2 rows per nation."""
+    __tablename__ = 'mission_offers'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False, index=True)
+    slot = db.Column(db.Integer, nullable=False)    # 1 or 2
+    mission_key = db.Column(db.String(80), nullable=False)
+    offered_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    status = db.Column(db.String(20), default='available')  # available|active|completed|failed
+    battle_id = db.Column(db.Integer, nullable=True)         # plain int — no FK (partitioned table)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    __table_args__ = (
+        db.UniqueConstraint('nation_id', 'slot', name='uq_mission_offer_nation_slot'),
+    )
+
+
+class MissionRecord(db.Model):
+    """Permanent record of completed missions per nation (used for chapter gating)."""
+    __tablename__ = 'mission_records'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False, index=True)
+    mission_key = db.Column(db.String(80), nullable=False)
+    completed_at = db.Column(db.DateTime, nullable=False)
+    __table_args__ = (
+        db.UniqueConstraint('nation_id', 'mission_key', name='uq_mission_record_nation_key'),
+    )
 
 
 @login_manager.user_loader

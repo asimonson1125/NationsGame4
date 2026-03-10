@@ -126,7 +126,7 @@ def nation_view(nation_id):
         abort(404)
     summary = _nation_summary(nation)
     is_owner = current_user.nation and current_user.nation.id == nation_id
-    return render_template('main/nation.html', nation=nation, is_owner=False,
+    return render_template('main/nation.html', nation=nation, is_owner=is_owner,
                            **summary)
 
 

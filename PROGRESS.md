@@ -109,7 +109,6 @@ Future:
 - Wars
 - unit leveling (level bonuses are unit-innate)
 - Events (a la 2.0)
-- Alliance leaderboard — server-rendered table
 - Live alliance search — `hx-trigger="keyup changed delay:500ms"`\
 - Rate Limiting
 - DB-compulted columns (like land_gp)
