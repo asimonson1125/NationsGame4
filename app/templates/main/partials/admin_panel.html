@@ -9,13 +9,17 @@
     </div>
 
     {# ── Resource grid ── #}
-    <h4 class="font-semibold text-slate-300 mb-2 border-b border-slate-700 pb-1">Resources</h4>
-    <div class="space-y-2 mb-6">
-        {% for res in resources %}
+    {% from 'shared/_macros.html' import res_icon %}
+    {% for group_name, group_resources in resource_groups %}
+    <h4 class="font-semibold text-slate-300 mb-2 border-b border-slate-700 pb-1 {{ 'mt-4' if not loop.first }}">{{ group_name }}</h4>
+    <div class="space-y-2 {{ 'mb-6' if loop.last else 'mb-2' }}">
+        {% for res in group_resources %}
         <form hx-post="{{ url_for('main.admin_edit_resource', nation_id=target.id) }}"
               hx-target="#admin-panel-content" hx-swap="outerHTML"
               class="flex items-center gap-2 text-sm">
-            <span class="w-40 font-mono text-slate-400 truncate" title="{{ res }}">{{ res }}</span>
+            <span class="w-40 font-mono text-slate-400 truncate flex items-center gap-1" title="{{ res }}">
+                {{ res_icon(res, 'w-4 h-4') }}{{ res | replace('_', ' ') | title }}
+            </span>
             <span class="w-28 text-right font-mono text-slate-200">{{ '{:,.2f}'.format(res_values[res]) }}</span>
             <input type="hidden" name="resource" value="{{ res }}">
             <select name="mode" class="bg-slate-700 border border-slate-600 text-slate-100 rounded px-1 py-1 text-xs">
@@ -32,6 +36,7 @@
         </form>
         {% endfor %}
     </div>
+    {% endfor %}
 
     {# ── Hourly tick ── #}
     <h4 class="font-semibold text-slate-300 mb-2 border-b border-slate-700 pb-1">Hourly Tick</h4>

@@ -44,39 +44,39 @@
             {# Stat Bars #}
             <div class="space-y-1.5 mb-3">
                 <div>
-                    <div class="flex justify-between text-xs text-slate-500 mb-0.5">
+                    <div class="flex justify-between text-xs text-slate-400 mb-0.5">
                         <span>{{ stat_icon('Firepower', extra='mr-0.5', shade='400') }}Firepower</span>
                         <span>{{ udef.firepower }}</span>
                     </div>
                     <div class="w-full bg-slate-700 rounded-full h-1.5">
-                        <div class="bg-red-400 h-1.5 rounded-full" style="width: {{ [udef.firepower * 2, 100] | min }}%"></div>
+                        <div class="bg-red-400 h-1.5 rounded-full" style="width: {{ [udef.firepower / 20 * 100, 100] | min }}%"></div>
                     </div>
                 </div>
                 <div>
-                    <div class="flex justify-between text-xs text-slate-500 mb-0.5">
+                    <div class="flex justify-between text-xs text-slate-400 mb-0.5">
                         <span>{{ stat_icon('Armour', extra='mr-0.5', shade='400') }}Armour</span>
                         <span>{{ udef.armour }}</span>
                     </div>
                     <div class="w-full bg-slate-700 rounded-full h-1.5">
-                        <div class="bg-blue-400 h-1.5 rounded-full" style="width: {{ [udef.armour * 3, 100] | min }}%"></div>
+                        <div class="bg-blue-400 h-1.5 rounded-full" style="width: {{ [udef.armour / 20 * 100, 100] | min }}%"></div>
                     </div>
                 </div>
                 <div>
-                    <div class="flex justify-between text-xs text-slate-500 mb-0.5">
+                    <div class="flex justify-between text-xs text-slate-400 mb-0.5">
                         <span>{{ stat_icon('Maneuver', extra='mr-0.5', shade='400') }}Maneuver</span>
                         <span>{{ udef.maneuver }}</span>
                     </div>
                     <div class="w-full bg-slate-700 rounded-full h-1.5">
-                        <div class="bg-green-400 h-1.5 rounded-full" style="width: {{ [udef.maneuver * 10, 100] | min }}%"></div>
+                        <div class="bg-green-400 h-1.5 rounded-full" style="width: {{ [udef.maneuver / 20 * 100, 100] | min }}%"></div>
                     </div>
                 </div>
                 <div>
-                    <div class="flex justify-between text-xs text-slate-500 mb-0.5">
+                    <div class="flex justify-between text-xs text-slate-400 mb-0.5">
                         <span>{{ stat_icon('HP', extra='mr-0.5', shade='400') }}HP</span>
                         <span>{{ udef.max_hp }}</span>
                     </div>
                     <div class="w-full bg-slate-700 rounded-full h-1.5">
-                        <div class="bg-pink-400 h-1.5 rounded-full" style="width: {{ [udef.max_hp / 10, 100] | min }}%"></div>
+                        <div class="bg-pink-400 h-1.5 rounded-full" style="width: {{ [udef.max_hp / 300 * 100, 100] | min }}%"></div>
                     </div>
                 </div>
             </div>
@@ -102,7 +102,7 @@
                         {% for res, amount in udef.recruit_cost.items() %}
                         <div class="flex items-center gap-1.5 text-sm {{ amount | cost_class(nation | attr(res)) }}">
                             {{ res_icon(res) }}
-                            <span>{{ amount | format_resource }} {{ res | replace('_', ' ') | title }}</span>
+                            <span>{{ amount | format_resource }}</span>
                         </div>
                         {% endfor %}
                     </div>

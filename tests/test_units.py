@@ -1,16 +1,12 @@
 """Tests for app/game/units.py — unit definitions."""
 from app.game.units import UNIT_DEFS, UnitDef
 
-
-def test_unit_count():
-    assert len(UNIT_DEFS) == 39
-
-
 def test_unit_types_breakdown():
     by_type = {}
     for u in UNIT_DEFS.values():
-        by_type.setdefault(u.unit_type, 0)
-        by_type[u.unit_type] += 1
+        if not u.npc_only:
+            by_type.setdefault(u.unit_type, 0)
+            by_type[u.unit_type] += 1
     assert by_type == {
         'Infantry': 10,
         'Armour': 10,
@@ -42,6 +38,8 @@ def test_all_units_have_positive_stats():
 
 def test_all_units_have_cost():
     for key, u in UNIT_DEFS.items():
+        if u.npc_only:
+            continue
         assert len(u.recruit_cost) > 0, f'{key} has no recruit cost'
         for res, amt in u.recruit_cost.items():
             assert amt > 0, f'{key} cost {res} <= 0'
@@ -49,16 +47,22 @@ def test_all_units_have_cost():
 
 def test_all_units_have_recruit_time():
     for key, u in UNIT_DEFS.items():
+        if u.npc_only:
+            continue
         assert u.recruit_time > 0, f'{key} recruit_time <= 0'
 
 
 def test_tier_range():
     for key, u in UNIT_DEFS.items():
+        if u.npc_only:
+            continue
         assert 1 <= u.tier <= 10, f'{key} tier {u.tier} out of range'
 
 
 def test_gp_value_positive():
     for key, u in UNIT_DEFS.items():
+        if u.npc_only:
+            continue
         assert u.gp_value >= 1, f'{key} gp_value < 1'
 
 

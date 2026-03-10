@@ -22,6 +22,8 @@ class MissionDef:
     rewards: Dict[str, float]            # resource_key -> amount
     enemy_count: Tuple[int, int]         # (min, max) total units to spawn
     enemy_composition: Dict[str, int]    # unit_key -> percent (sum = 100)
+    enemy_name: str = 'Hostile Forces'   # faux-nation name shown in battle
+    enemy_division_name: str = 'Enemy Division'  # division name shown in battle
     tier_required: int = 1
     cooldown_hours: int = 24
     chapter_requires: Optional[str] = None   # mission key that must be completed first
@@ -68,6 +70,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 1000, 'ammunition': 20},
         enemy_count=(8, 12),
         enemy_composition={'infantry': 70, 'rpg_infantry': 25, 'm1a1_abrahms': 5},
+        enemy_name='Bihadj Terrorists',
+        enemy_division_name='Bihadj Cell',
     ),
 
     'foreign_affairs': _m(
@@ -82,6 +86,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 1500},
         enemy_count=(9, 11),
         enemy_composition={'secret_agent': 100},
+        enemy_name='Westberg Intelligence',
+        enemy_division_name='Secret Service Detail',
     ),
 
     'suppressing_khev_minosk': _m(
@@ -96,6 +102,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 1000, 'ammunition': 50},
         enemy_count=(8, 12),
         enemy_composition={'infantry': 80, 'rpg_infantry': 20},
+        enemy_name='Khev Minosk',
+        enemy_division_name='Khev Minosk Fighters',
     ),
 
     'riot_control': _m(
@@ -110,6 +118,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 3000},
         enemy_count=(10, 15),
         enemy_composition={'rioter': 100},
+        enemy_name='Civil Unrest',
+        enemy_division_name='Rioter Mob',
     ),
 
     'chapter_1': _m(
@@ -125,6 +135,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 2000},
         enemy_count=(8, 12),
         enemy_composition={'infantry': 50, 'mg_infantry': 30, 'm2_bradley': 20},
+        enemy_name='Unknown Force',
+        enemy_division_name='Recon Patrol',
         tier_required=6,
     ),
 
@@ -143,6 +155,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 2000},
         enemy_count=(8, 12),
         enemy_composition={'fsk': 40, 'infantry': 30, 'm2_bradley': 30},
+        enemy_name='Union of Nations',
+        enemy_division_name='UoN Exercise Force',
     ),
 
     'dul_kaddir_convoy': _m(
@@ -157,6 +171,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'metal': 500},
         enemy_count=(6, 10),
         enemy_composition={'volvo_repair_truck': 15, 'm1a1_abrahms': 45, 'm2_bradley': 40},
+        enemy_name='Dul Kaddir',
+        enemy_division_name='Dul Kaddir Convoy',
     ),
 
     'homeland_offense': _m(
@@ -171,6 +187,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 2000, 'food': 500},
         enemy_count=(8, 12),
         enemy_composition={'medic': 10, 'national_guard': 90},
+        enemy_name='Oldenburg',
+        enemy_division_name='Oldenburg Garrison',
     ),
 
     'rumble_in_the_jungle': _m(
@@ -186,6 +204,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 3000},
         enemy_count=(8, 12),
         enemy_composition={'navy_seals': 95, 'a10_thunderbolt': 5},
+        enemy_name='Amarino Defense Force',
+        enemy_division_name='Jungle Patrol',
     ),
 
     'supply_raid': _m(
@@ -199,6 +219,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'metal': 300, 'ammunition': 200, 'fuel': 200},
         enemy_count=(8, 12),
         enemy_composition={'rpg_infantry': 40, 'infantry': 30, 'm1a1_abrahms': 30},
+        enemy_name='Bihadj Outpost',
+        enemy_division_name='Bihadj Supply Guard',
     ),
 
     'norrland_wall': _m(
@@ -218,6 +240,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
             'fortified_bunker': 20,
             '2k22_tunguska': 10,
         },
+        enemy_name='Norrland',
+        enemy_division_name='Norrland Defense Force',
     ),
 
     'mortar_rain': _m(
@@ -232,6 +256,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'ammunition': 500},
         enemy_count=(8, 12),
         enemy_composition={'mortar_infantry': 90, 'medic': 10},
+        enemy_name='Alba Nera',
+        enemy_division_name='Alba Nera Artillery',
     ),
 
     'venland_airspace': _m(
@@ -246,6 +272,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'metal': 500, 'fuel': 500},
         enemy_count=(6, 10),
         enemy_composition={'f_35_lightning_ii': 80, 'a10_thunderbolt': 20},
+        enemy_name='Oldenburg',
+        enemy_division_name='Oldenburg Air Wing',
     ),
 
     'chapter_2': _m(
@@ -261,6 +289,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 3000},
         enemy_count=(8, 12),
         enemy_composition={'infantry': 70, 'navy_seals': 10, 'mq_9_reaper': 20},
+        enemy_name='Unknown Force',
+        enemy_division_name='Ambush Group',
         chapter_requires='chapter_1',
     ),
 
@@ -278,6 +308,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 8000},
         enemy_count=(10, 15),
         enemy_composition={'infantry': 50, 'mortar_infantry': 30, 'fsk': 20},
+        enemy_name='Tind Rebels',
+        enemy_division_name='Rebel Battalion',
     ),
 
     'temperate_terrorists': _m(
@@ -293,6 +325,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 8000, 'metal': 800},
         enemy_count=(10, 15),
         enemy_composition={'infantry': 45, 'rpg_infantry': 25, 'm1a1_abrahms': 30},
+        enemy_name='Khev Minosk',
+        enemy_division_name='Khev Minosk Raiders',
     ),
 
     'jungle_fever': _m(
@@ -308,6 +342,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 8000},
         enemy_count=(12, 18),
         enemy_composition={'black_horns': 100},
+        enemy_name='Followers of Black Horn',
+        enemy_division_name='Black Horn Warriors',
     ),
 
     'chapter_3': _m(
@@ -330,6 +366,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
             'concrete_bunker': 10,
             'combat_engineer': 5,
         },
+        enemy_name='Unknown Force',
+        enemy_division_name='Fortified Garrison',
         chapter_requires='chapter_2',
     ),
 
@@ -348,6 +386,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 15000},
         enemy_count=(12, 18),
         enemy_composition={'mobster': 80, 'francisco_ace_of_spades': 20},
+        enemy_name="Francesco's Syndicate",
+        enemy_division_name='Estate Guard',
     ),
 
     'overseas_investments': _m(
@@ -362,6 +402,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 15000, 'fuel': 1000},
         enemy_count=(12, 18),
         enemy_composition={'infantry': 40, 'rpg_infantry': 30, 'm1a1_abrahms': 30},
+        enemy_name='Dul Kaddir Government',
+        enemy_division_name='Government Forces',
     ),
 
     'the_desert_fox': _m(
@@ -376,6 +418,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'ammunition': 2000, 'money': 10000},
         enemy_count=(12, 18),
         enemy_composition={'infantry': 55, 'm1a1_abrahms': 25, 'desert_fox_bodyguard': 20},
+        enemy_name='Bihadj Organization',
+        enemy_division_name='Desert Fox Guard',
     ),
 
     'chapter_4': _m(
@@ -396,6 +440,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
             'a10_thunderbolt': 20,
             'mq_20_avenger': 20,
         },
+        enemy_name='Alba Nera',
+        enemy_division_name='Alba Nera Defense Force',
         chapter_requires='chapter_3',
     ),
 
@@ -413,6 +459,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 50000, 'whz': 5},
         enemy_count=(15, 20),
         enemy_composition={'sectoid': 70, 'sectopod': 30},
+        enemy_name='???',
+        enemy_division_name='Unknown Hostiles',
     ),
 
     'chapter_5': _m(
@@ -427,6 +475,8 @@ MISSION_DEFS: Dict[str, MissionDef] = {
         rewards={'money': 60000, 'metal': 5000},
         enemy_count=(10, 15),
         enemy_composition={'gearhound_prototype': 70, 'gearhound_warhead': 30},
+        enemy_name='Alba Nera',
+        enemy_division_name='Black Hounds of Alba',
         chapter_requires='chapter_4',
     ),
 }

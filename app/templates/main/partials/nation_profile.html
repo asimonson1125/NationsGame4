@@ -89,11 +89,11 @@
                 abundance: 0,
                 growthBlock: '',
                 fmt(n) {
-                    let a = Math.abs(n);
-                    if (a >= 1e9) return (a/1e9).toFixed(1) + 'b';
-                    if (a >= 1e6) return (a/1e6).toFixed(1) + 'm';
+                    let a = Math.round(Math.abs(n));
+                    if (a >= 1e9 || (a / 1e6).toFixed(1) >= 1000) return (a/1e9).toFixed(1) + 'b';
+                    if (a >= 1e6 || (a / 1e3).toFixed(1) >= 1000) return (a/1e6).toFixed(1) + 'm';
                     if (a >= 1e3) return (a/1e3).toFixed(1) + 'k';
-                    return a.toString();
+                    return a.toLocaleString();
                 },
                 fetchDelta() {
                     fetch('{{ url_for('main.population_delta') }}')

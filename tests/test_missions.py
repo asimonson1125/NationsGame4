@@ -24,7 +24,7 @@ def npc_nation(app):
     u.set_password('irrelevant')
     db.session.add(u)
     db.session.flush()
-    n = Nation(user_id=u.id, name='Insurgents')
+    n = Nation(user_id=u.id, name='NPC')
     db.session.add(n)
     db.session.commit()
     return n
@@ -135,6 +135,11 @@ class TestMissionDefs:
     def test_mission_keys_match_dict_keys(self):
         for key, mdef in MISSION_DEFS.items():
             assert mdef.key == key, f"Dict key '{key}' != MissionDef.key '{mdef.key}'"
+
+    def test_all_missions_have_enemy_names(self):
+        for key, mdef in MISSION_DEFS.items():
+            assert mdef.enemy_name, f"{key} missing enemy_name"
+            assert mdef.enemy_division_name, f"{key} missing enemy_division_name"
 
     def test_sector_missions_in_correct_location(self):
         assert MISSION_DEFS['thats_not_a_meteorite'].location == 'Westberg'
@@ -361,23 +366,21 @@ class TestMissionsTabRoute:
         assert offer.status == 'active'
         assert offer.mission_key == 'riot_control'
 
-    def test_stale_completed_offer_refreshed(self, app, auth_client, nation):
-        """A completed offer past its cooldown window should be replaced."""
-        old_key = 'riot_control'
+    def test_completed_offer_stays_until_collected(self, app, auth_client, nation):
+        """A completed offer stays as-is on page visit — refreshed only on collect."""
         offer = MissionOffer(
-            nation_id=nation.id, slot=1, mission_key=old_key,
+            nation_id=nation.id, slot=1, mission_key='riot_control',
             status='completed',
             completed_at=datetime.now(timezone.utc) - timedelta(hours=999),
         )
         db.session.add(offer)
         db.session.commit()
-        offer_id = offer.id
 
         auth_client.get('/military/missions')
 
         db.session.refresh(offer)
-        # Offer row may be updated in-place with new mission and status='available'
-        assert offer.status == 'available'
+        # completed offers wait for explicit collect/acknowledge
+        assert offer.status == 'completed'
 
     def test_completed_offer_within_cooldown_not_refreshed(self, app, auth_client, nation):
         """A recently completed offer should stay as-is during cooldown."""
@@ -626,7 +629,8 @@ class TestResolveMission:
         db.session.commit()
         return battle, offer
 
-    def test_win_distributes_rewards(self, app, nation, npc_nation):
+    def test_win_distributes_rewards(self, app, auth_client, nation, npc_nation):
+        """Rewards are granted on collect, not on resolve."""
         from app.game.combat import _resolve_mission
 
         battle, offer = self._make_battle_and_offer(nation, npc_nation, 'riot_control')
@@ -638,7 +642,12 @@ class TestResolveMission:
         _resolve_mission(battle, db.session)
         db.session.commit()
         db.session.refresh(nation)
+        # _resolve_mission only sets status — no rewards yet
+        assert nation.money == money_before
 
+        # Collect step grants the rewards
+        auth_client.post(f'/military/mission/{offer.id}/collect')
+        db.session.refresh(nation)
         assert nation.money == money_before + mdef.rewards['money']
 
     def test_win_sets_offer_completed(self, app, nation, npc_nation):
@@ -652,7 +661,8 @@ class TestResolveMission:
         assert offer.status == 'completed'
         assert offer.completed_at is not None
 
-    def test_win_creates_mission_record(self, app, nation, npc_nation):
+    def test_win_creates_mission_record(self, app, auth_client, nation, npc_nation):
+        """MissionRecord is created on collect, not on resolve."""
         from app.game.combat import _resolve_mission
 
         battle, offer = self._make_battle_and_offer(nation, npc_nation, 'riot_control')
@@ -660,13 +670,18 @@ class TestResolveMission:
         _resolve_mission(battle, db.session)
         db.session.commit()
 
+        # No record yet — only after collect
+        assert MissionRecord.query.filter_by(nation_id=nation.id, mission_key='riot_control').first() is None
+
+        auth_client.post(f'/military/mission/{offer.id}/collect')
         record = MissionRecord.query.filter_by(
             nation_id=nation.id, mission_key='riot_control'
         ).first()
         assert record is not None
         assert record.completed_at is not None
 
-    def test_win_sends_system_message(self, app, nation, npc_nation):
+    def test_win_sets_offer_completed_not_rewards(self, app, nation, npc_nation):
+        """_resolve_mission only marks the offer — no system message or rewards."""
         from app.game.combat import _resolve_mission
         from app.models import Message
 
@@ -675,11 +690,11 @@ class TestResolveMission:
         _resolve_mission(battle, db.session)
         db.session.commit()
 
-        msg = Message.query.filter_by(
-            recipient_id=nation.id, message_type='system'
-        ).first()
-        assert msg is not None
-        assert 'Riot Control' in msg.subject
+        db.session.refresh(offer)
+        assert offer.status == 'completed'
+        # No system message from _resolve_mission alone (messages come from _end_battle)
+        # No rewards until collect
+        assert MissionRecord.query.filter_by(nation_id=nation.id).count() == 0
 
     def test_loss_sets_offer_failed(self, app, nation, npc_nation):
         from app.game.combat import _resolve_mission
@@ -716,14 +731,15 @@ class TestResolveMission:
         ).first()
         assert record is None
 
-    def test_duplicate_win_does_not_create_duplicate_record(self, app, nation, npc_nation):
+    def test_duplicate_collect_does_not_create_duplicate_record(self, app, auth_client, nation, npc_nation):
         from app.game.combat import _resolve_mission
 
-        # First win
+        # First win + collect
         battle1, offer1 = self._make_battle_and_offer(nation, npc_nation, 'riot_control')
         battle1.winner = 'attacker'
         _resolve_mission(battle1, db.session)
         db.session.commit()
+        auth_client.post(f'/military/mission/{offer1.id}/collect')
 
         # Second win on same mission key
         offer2 = MissionOffer(nation_id=nation.id, slot=2, mission_key='riot_control',
@@ -751,18 +767,18 @@ class TestResolveMission:
         db.session.add(battle2)
         db.session.flush()
         offer2.battle_id = battle2.id
-        db.session.commit()
-
         _resolve_mission(battle2, db.session)
         db.session.commit()
+
+        auth_client.post(f'/military/mission/{offer2.id}/collect')
 
         count = MissionRecord.query.filter_by(
             nation_id=nation.id, mission_key='riot_control'
         ).count()
         assert count == 1  # unique constraint — no duplicate
 
-    def test_multi_resource_rewards_all_granted(self, app, nation, npc_nation):
-        """supply_raid rewards metal + ammunition + fuel — all should be granted."""
+    def test_multi_resource_rewards_all_granted(self, app, auth_client, nation, npc_nation):
+        """supply_raid rewards metal + ammunition + fuel — all granted on collect."""
         from app.game.combat import _resolve_mission
 
         battle, offer = self._make_battle_and_offer(nation, npc_nation, 'supply_raid')
@@ -773,6 +789,8 @@ class TestResolveMission:
 
         _resolve_mission(battle, db.session)
         db.session.commit()
+
+        auth_client.post(f'/military/mission/{offer.id}/collect')
         db.session.refresh(nation)
 
         for res, amount in mdef.rewards.items():

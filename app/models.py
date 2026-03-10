@@ -83,6 +83,9 @@ class Nation(db.Model):
     # Loot tokens (for equipment crates)
     loot_tokens = db.Column(db.Float, default=0.0)
 
+    # Mission skip counter (reset each hourly tick)
+    mission_skips_today = db.Column(db.Integer, default=0)
+
     natural_resources = db.relationship('NaturalResource', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
     factories = db.relationship('NationFactory', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
     divisions = db.relationship('Division', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
@@ -135,6 +138,7 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     notifications_enabled = db.Column(db.Boolean, default=True)
     vacation_mode = db.Column(db.Boolean, default=False)
+    vacation_disabled_at = db.Column(db.DateTime(timezone=True), nullable=True)
     nation = db.relationship('Nation', backref='user', uselist=False, lazy=True)
 
     def set_password(self, password):
@@ -268,6 +272,8 @@ class Battle(db.Model):
     defender_division_id = db.Column(db.Integer, nullable=True)
     attacker_division_name = db.Column(db.String(120), nullable=True)
     defender_division_name = db.Column(db.String(120), nullable=True)
+    attacker_nation_name = db.Column(db.String(120), nullable=True)
+    defender_nation_name = db.Column(db.String(120), nullable=True)
     status = db.Column(db.String(20), default='active')  # active|finished
     winner = db.Column(db.String(20), nullable=True)      # attacker|defender|null
     battle_type = db.Column(db.String(20), default='pvp')  # pvp|pve|pve_mission

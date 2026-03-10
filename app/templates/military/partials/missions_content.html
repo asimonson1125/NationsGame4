@@ -72,6 +72,7 @@
             </div>
             <div class="space-y-1.5">
                 {% for unit_key, pct in mdef.enemy_composition.items() %}
+                <hr>
                 {% set udef = unit_defs.get(unit_key) %}
                 <div class="flex items-center gap-3 text-xs">
                     {# Probability bar + label #}
@@ -90,14 +91,22 @@
                     {# Stat boxes (FP / ARM / MAN / HP) #}
                     {% if udef %}
                     <div class="flex gap-0.5 shrink-0">
-                        <div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-white bg-red-700"
-                             title="Firepower">{{ udef.firepower }}</div>
-                        <div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-white bg-blue-700"
-                             title="Armour">{{ udef.armour }}</div>
-                        <div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-white bg-orange-600"
-                             title="Maneuver">{{ udef.maneuver }}</div>
-                        <div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-white bg-green-700"
-                             title="HP">{{ udef.max_hp }}</div>
+                        <div class="w-8 rounded flex flex-col items-center" title="Firepower">
+                            <span class="text-[8px] uppercase text-red-400 leading-none mb-0.5">FP</span>
+                            <div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-white bg-red-700">{{ udef.firepower }}</div>
+                        </div>
+                        <div class="w-8 rounded flex flex-col items-center" title="Armour">
+                            <span class="text-[8px] uppercase text-blue-400 leading-none mb-0.5">ARM</span>
+                            <div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-white bg-blue-700">{{ udef.armour }}</div>
+                        </div>
+                        <div class="w-8 rounded flex flex-col items-center" title="Maneuver">
+                            <span class="text-[8px] uppercase text-orange-400 leading-none mb-0.5">MAN</span>
+                            <div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-white bg-orange-600">{{ udef.maneuver }}</div>
+                        </div>
+                        <div class="w-8 rounded flex flex-col items-center" title="HP">
+                            <span class="text-[8px] uppercase text-green-400 leading-none mb-0.5">HP</span>
+                            <div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-white bg-green-700">{{ udef.max_hp }}</div>
+                        </div>
                     </div>
                     {% endif %}
                 </div>
@@ -209,7 +218,7 @@
         <form hx-post="{{ url_for('military.collect_mission', offer_id=offer.id) }}"
               hx-swap="none">
             <button type="submit"
-                    class="w-full py-2 px-4 rounded-md bg-green-700 hover:bg-green-600 text-white font-semibold text-sm transition-colors">
+                    class="w-full py-2 px-4 rounded-md bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold text-sm transition-colors">
                 <i class="fas fa-gift mr-1.5"></i>Collect Rewards
             </button>
         </form>

@@ -15,7 +15,7 @@
                 <span class="truncate">{{ unit.custom_name or (udef.name if udef else unit.unit_key) }}</span>
                 <sub class="text-slate-500 shrink-0">{{ index }}</sub>
             </div>
-            {% if udef %}<div class="text-xs text-slate-400 truncate">{{ udef.name }}</div>{% endif %}
+            {% if udef %}<div class="text-xs text-slate-400 truncate">Lvl.{{unit.level}} {{ udef.name }}</div>{% endif %}
         </div>
     </div>
     <div class="flex items-center gap-1 ml-2 shrink-0">
@@ -76,7 +76,7 @@
         <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
             <div class="bg-blue-600 text-white px-4 py-3">
                 <div class="font-bold text-base">{{ battle.defender_division_name }}</div>
-                <div class="text-blue-100 text-xs mt-0.5">{{ battle.defender_nation.name }}</div>
+                <div class="text-blue-100 text-xs mt-0.5">{{ battle.defender_nation_name or battle.defender_nation.name }}</div>
             </div>
             {% set def_alive = defender_units | selectattr('hp', 'gt', 0) | list | length %}
             {% set def_total = defender_units | length %}
@@ -141,7 +141,7 @@
         <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
             <div class="bg-red-600 text-white px-4 py-3">
                 <div class="font-bold text-base">{{ battle.attacker_division_name }}</div>
-                <div class="text-red-100 text-xs mt-0.5">{{ battle.attacker_nation.name }}</div>
+                <div class="text-red-100 text-xs mt-0.5">{{ battle.attacker_nation_name or battle.attacker_nation.name }}</div>
             </div>
             {% set atk_alive = attacker_units | selectattr('hp', 'gt', 0) | list | length %}
             {% set atk_total = attacker_units | length %}

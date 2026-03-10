@@ -3,17 +3,6 @@ from flask_apscheduler import APScheduler
 scheduler = APScheduler()
 
 
-def increment_production_capacity():
-    from .models import NationFactory
-    from . import db
-    with scheduler.app.app_context():
-        NationFactory.query.filter(
-            NationFactory.count > 0,
-            NationFactory.production_capacity < 24
-        ).update({'production_capacity': NationFactory.production_capacity + 1})
-        db.session.commit()
-
-
 def process_recruitment_queue():
     """Runs every 60s. Completes recruitment entries whose timer has expired."""
     from .models import RecruitmentQueue, Unit, Nation
@@ -128,13 +117,33 @@ def tick_nation(nation, *, skip_military=False):
 
 
 def process_hourly_tick():
-    """Runs hourly. Single pass over all nations."""
-    from .models import Nation, User
+    """Runs hourly. Increments factory capacity then ticks all nations."""
+    from .models import Nation, NationFactory, User
     from . import db
     with scheduler.app.app_context():
         npc_user = User.query.filter_by(username='_system_npc').first()
         npc_nation_id = npc_user.nation.id if npc_user and npc_user.nation else None
 
+        vacation_nation_ids = (
+            db.session.query(Nation.id)
+            .join(User, User.id == Nation.user_id)
+            .filter(User.vacation_mode == True)
+            .subquery()
+        )
+        vacation_ids = set(
+            row[0] for row in
+            db.session.query(vacation_nation_ids.c.id).all()
+        )
+
+        # Factory capacity increment (bulk UPDATE, excludes vacation nations)
+        NationFactory.query.filter(
+            NationFactory.count > 0,
+            NationFactory.production_capacity < 24,
+            ~NationFactory.nation_id.in_(db.session.query(vacation_nation_ids.c.id))
+        ).update({'production_capacity': NationFactory.production_capacity + 1})
+        db.session.commit()
+
+        # Nation tick loop
         batch_size = 100
         last_id = 0
         while True:
@@ -142,6 +151,9 @@ def process_hourly_tick():
             if not nations:
                 break
             for nation in nations:
+                if nation.id in vacation_ids:
+                    last_id = nation.id
+                    continue
                 tick_nation(nation, skip_military=(nation.id == npc_nation_id))
                 last_id = nation.id
             db.session.commit()
@@ -189,6 +201,16 @@ def process_factory_queue():
             db.session.commit()
 
 
+def reset_daily_counters():
+    """Runs daily at midnight UTC. Resets per-nation daily counters."""
+    from .models import Nation
+    from . import db
+    with scheduler.app.app_context():
+        Nation.query.filter(Nation.mission_skips_today > 0).update(
+            {'mission_skips_today': 0})
+        db.session.commit()
+
+
 def cleanup_pve_battles():
     """Runs daily. Deletes PvE battles (and NPC divisions/units) older than 2 weeks."""
     from .models import Battle, CombatReport, Division, Unit
@@ -226,9 +248,7 @@ def register_tasks(app):
 
     scheduler.init_app(app)
 
-    # ── Hourly tasks (every hour at :00 UTC) ──
-    scheduler.add_job(id='incr_prod_cap', func=increment_production_capacity,
-                      trigger='cron', minute=0)
+    # ── Hourly tick (factory capacity + nation simulation) ──
     scheduler.add_job(id='hourly_tick', func=process_hourly_tick,
                       trigger='cron', minute=0)
 
@@ -241,6 +261,8 @@ def register_tasks(app):
                       trigger='interval', seconds=10)
 
     # ── Daily tasks (midnight UTC) ──
+    scheduler.add_job(id='reset_daily', func=reset_daily_counters,
+                      trigger='cron', hour=0, minute=0)
     scheduler.add_job(id='cleanup_pve', func=cleanup_pve_battles,
                       trigger='cron', hour=0, minute=0)
 

@@ -21,11 +21,19 @@
                 <td class="px-4 py-3">
                     <a href="{{ url_for('military.battle_view', battle_id=b.id) }}" class="text-amber-500 hover:text-amber-400 font-medium">#{{ b.id }}</a>
                 </td>
-                <td class="px-4 py-3"><a href="{{ url_for('main.nation_view', nation_id=b.attacker_nation_id) }}" class="text-amber-500 hover:text-amber-400">{{ b.attacker_nation.name }}</a></td>
-                <td class="px-4 py-3"><a href="{{ url_for('main.nation_view', nation_id=b.defender_nation_id) }}" class="text-amber-500 hover:text-amber-400">{{ b.defender_nation.name }}</a></td>
+                <td class="px-4 py-3"><a href="{{ url_for('main.nation_view', nation_id=b.attacker_nation_id) }}" class="text-amber-500 hover:text-amber-400">{{ b.attacker_nation_name or b.attacker_nation.name }}</a></td>
+                <td class="px-4 py-3">
+                    {% if b.battle_type in ('pve', 'pve_mission') %}
+                        <span class="text-slate-300">{{ b.defender_nation_name or b.defender_nation.name }}</span>
+                    {% else %}
+                        <a href="{{ url_for('main.nation_view', nation_id=b.defender_nation_id) }}" class="text-amber-500 hover:text-amber-400">{{ b.defender_nation_name or b.defender_nation.name }}</a>
+                    {% endif %}
+                </td>
                 <td class="px-4 py-3">
                     {% if b.battle_type == 'pve' %}
                         <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/20 text-emerald-400">PvE</span>
+                    {% elif b.battle_type == 'pve_mission' %}
+                        <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-500/20 text-purple-400">Mission</span>
                     {% else %}
                         <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-red-500/20 text-red-400">PvP</span>
                     {% endif %}
@@ -34,9 +42,13 @@
                     {% if b.status == 'active' %}
                         <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-400">Active</span>
                     {% elif b.winner == 'attacker' %}
-                        <span class="text-emerald-400 font-medium"><a href="{{ url_for('main.nation_view', nation_id=b.attacker_nation_id) }}" class="hover:underline">{{ b.attacker_nation.name }}</a> won</span>
+                        <span class="text-emerald-400 font-medium"><a href="{{ url_for('main.nation_view', nation_id=b.attacker_nation_id) }}" class="hover:underline">{{ b.attacker_nation_name or b.attacker_nation.name }}</a> won</span>
                     {% elif b.winner == 'defender' %}
-                        <span class="text-emerald-400 font-medium"><a href="{{ url_for('main.nation_view', nation_id=b.defender_nation_id) }}" class="hover:underline">{{ b.defender_nation.name }}</a> won</span>
+                        {% if b.battle_type in ('pve', 'pve_mission') %}
+                        <span class="text-emerald-400 font-medium">{{ b.defender_nation_name or b.defender_nation.name }} won</span>
+                        {% else %}
+                        <span class="text-emerald-400 font-medium"><a href="{{ url_for('main.nation_view', nation_id=b.defender_nation_id) }}" class="hover:underline">{{ b.defender_nation_name or b.defender_nation.name }}</a> won</span>
+                        {% endif %}
                     {% else %}
                         <span class="text-slate-500">Finished</span>
                     {% endif %}

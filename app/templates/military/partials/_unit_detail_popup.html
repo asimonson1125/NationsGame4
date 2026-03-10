@@ -25,7 +25,6 @@
                 <span class="text-xs text-slate-500">Tier {{ udef.tier }}</span>
                 {% endif %}
                 <span class="text-xs text-slate-400 font-medium">Lv.{{ unit.level }}</span>
-                <span class="text-xs text-slate-500">{{ unit.xp }} XP</span>
             </div>
         </div>
         <button onclick="closeUnitDetail()" class="text-slate-400 hover:text-slate-200 p-1 -mt-1 -mr-1">
@@ -38,26 +37,6 @@
 
         {# ── LEFT COLUMN: Stats & Abilities ─────────────────── #}
         <div>
-            {# HP Bar #}
-            {% set effective_max_hp = (unit.max_hp * hp_mult) | round | int %}
-            <div class="mb-5">
-                <div class="flex justify-between text-sm text-slate-400 mb-1">
-                    <span class="font-medium">{{ stat_icon('HP', extra='mr-1', shade='400') }}HP</span>
-                    <span>
-                        {{ unit.hp }} / {{ unit.max_hp }}
-                        {% if hp_bonus > 0 %}
-                        <span class="text-amber-400 font-medium">+ {{ hp_bonus }} = {{ effective_max_hp }}</span>
-                        {% endif %}
-                    </span>
-                </div>
-                <div class="w-full bg-slate-700 rounded-full h-3">
-                    {% set hp_pct = (unit.hp / effective_max_hp * 100) if effective_max_hp > 0 else 0 %}
-                    <div class="h-3 rounded-full transition-all
-                        {% if hp_pct > 60 %}bg-green-500{% elif hp_pct > 30 %}bg-yellow-500{% else %}bg-red-500{% endif %}"
-                         style="width: {{ hp_pct | round(1) }}%"></div>
-                </div>
-            </div>
-
             {# Stat Bars with Equipment Bonuses #}
             {% set stats = [
                 ('Firepower', 'firepower', unit.firepower, bonuses.firepower, 'red'),
@@ -65,6 +44,9 @@
                 ('Maneuver', 'maneuver', unit.maneuver, bonuses.maneuver, 'green'),
             ] %}
             {% set max_stat = 20 %}
+            {# Color maps using full class names (dynamic interpolation breaks pre-compiled CSS) #}
+            {% set bar_colors = {'red': '#991b1b', 'blue': '#1e40af', 'green': '#166534'} %}
+            {% set bar_fg = {'red': '#ef4444', 'blue': '#3b82f6', 'green': '#22c55e'} %}
             <div class="space-y-3 mb-6">
                 {% for label, key, base, bonus, color in stats %}
                 {% set total = base + bonus %}
@@ -85,14 +67,56 @@
                     </div>
                     <div class="w-full bg-slate-700 rounded-full h-3 relative overflow-hidden">
                         {% if bonus > 0 %}
-                        <div class="absolute top-0 left-0 h-3 rounded-full bg-{{ color }}-800 transition-all"
-                             style="width: {{ total_pct }}%"></div>
+                        <div class="absolute top-0 left-0 h-3 rounded-full transition-all"
+                             style="width: {{ total_pct }}%; background-color: {{ bar_colors[color] }}"></div>
                         {% endif %}
-                        <div class="absolute top-0 left-0 h-3 rounded-full bg-{{ color }}-500 transition-all"
-                             style="width: {{ base_pct }}%"></div>
+                        <div class="absolute top-0 left-0 h-3 rounded-full transition-all"
+                             style="width: {{ base_pct }}%; background-color: {{ bar_fg[color] }}"></div>
                     </div>
                 </div>
                 {% endfor %}
+                {# HP Bar #}
+            {% set effective_max_hp = (unit.max_hp * hp_mult) | round | int %}
+            <div class="mb-5">
+                <div class="flex justify-between text-sm text-slate-400 mb-1">
+                    <span class="font-medium">{{ stat_icon('HP', extra='mr-1', shade='400') }}HP</span>
+                    <span>
+                        {{ unit.hp }} / {{ unit.max_hp }}
+                        {% if hp_bonus > 0 %}
+                        <span class="text-amber-400 font-medium">+ {{ hp_bonus }} = {{ effective_max_hp }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="w-full bg-slate-700 rounded-full h-3">
+                    {% set hp_pct = (unit.hp / effective_max_hp * 100) if effective_max_hp > 0 else 0 %}
+                    <div class="h-3 rounded-full transition-all
+                        {% if hp_pct > 60 %}bg-green-500{% elif hp_pct > 30 %}bg-yellow-500{% else %}bg-red-500{% endif %}"
+                         style="width: {{ hp_pct | round(1) }}%"></div>
+                </div>
+            </div>
+
+            {# XP Bar #}
+            {% set xp_needed = xp_for_next_level(unit.level) %}
+            <div class="mb-5">
+                <div class="flex justify-between text-sm text-slate-400 mb-1">
+                    <span class="font-medium"><i class="fas fa-star text-amber-400 mr-1"></i>XP</span>
+                    {% if xp_needed %}
+                    <span>{{ unit.xp }} / {{ xp_needed }}</span>
+                    {% else %}
+                    <span class="text-amber-400 font-medium">MAX</span>
+                    {% endif %}
+                </div>
+                {% if xp_needed %}
+                {% set xp_pct = (unit.xp / xp_needed * 100) if xp_needed > 0 else 0 %}
+                <div class="w-full bg-slate-700 rounded-full h-3">
+                    <div class="h-3 rounded-full transition-all" style="width: {{ xp_pct | round(1) }}%; background-color: #fbbf24"></div>
+                </div>
+                {% else %}
+                <div class="w-full bg-slate-700 rounded-full h-3">
+                    <div class="h-3 rounded-full" style="width: 100%; background-color: #fbbf24"></div>
+                </div>
+                {% endif %}
+            </div>
             </div>
 
             {# ── Abilities ──────────────────────────────────── #}

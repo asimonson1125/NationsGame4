@@ -49,6 +49,8 @@ module.exports = {
     'text-blue-400',
     'text-purple-400',
     'text-amber-400',
+    'text-pink-400',
+    'text-pink-500',
   ],
   plugins: [],
 }

@@ -187,7 +187,7 @@
 
             <div x-show="tab === 'my_orders'" x-cloak>
                 <div id="my-orders"
-                     hx-get="{{ url_for('trade.my_orders', resource=selected_resource) }}"
+                     hx-get="{{ url_for('trade.my_orders') }}"
                      hx-trigger="load, refreshMyOrders from:body"
                      hx-target="#my-orders"
                      hx-swap="innerHTML">
@@ -197,7 +197,7 @@
 
             <div x-show="tab === 'recent_trades'" x-cloak>
                 <div id="recent-trades"
-                     hx-get="{{ url_for('trade.recent_trades', resource=selected_resource) }}"
+                     hx-get="{{ url_for('trade.recent_trades') }}"
                      hx-trigger="load, refreshRecentTrades from:body"
                      hx-target="#recent-trades"
                      hx-swap="innerHTML">
@@ -286,21 +286,21 @@ function tradePageData() {
 
         fmt(n) {
             if (n == null || isNaN(n)) return '0';
-            if (n >= 1e9) return (n / 1e9).toFixed(1) + 'b';
-            if (n >= 1e6) return (n / 1e6).toFixed(1) + 'm';
+            n = Math.round(n);
+            if (n >= 1e9 || (n / 1e6).toFixed(1) >= 1000) return (n / 1e9).toFixed(1) + 'b';
+            if (n >= 1e6 || (n / 1e3).toFixed(1) >= 1000) return (n / 1e6).toFixed(1) + 'm';
             if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
-            return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+            return n.toLocaleString();
         },
 
         onResourceChange() {
+            // Update order book hx-get so trigger-based refreshes use the current resource
+            var ob = document.getElementById('order-book');
+            ob.setAttribute('hx-get', '/trade/order-book?resource=' + this.resource);
+            htmx.process(ob);
+
             htmx.ajax('GET', '/trade/order-book?resource=' + this.resource, {
                 target: '#order-book', swap: 'innerHTML'
-            });
-            htmx.ajax('GET', '/trade/my-orders?resource=' + this.resource, {
-                target: '#my-orders', swap: 'innerHTML'
-            });
-            htmx.ajax('GET', '/trade/recent-trades?resource=' + this.resource, {
-                target: '#recent-trades', swap: 'innerHTML'
             });
             if (this.view === 'analytics') {
                 this.loadAnalytics();

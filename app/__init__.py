@@ -16,10 +16,11 @@ def format_resource(value):
     """Jinja2 filter: formats large numbers with tooltip showing exact value."""
     if value is None:
         return '0'
-    raw = f'{value:,.0f}'
-    if value >= 1_000_000_000:
+    value = round(value)
+    raw = f'{value:,}'
+    if value >= 1_000_000_000 or round(value / 1_000_000, 1) >= 1000:
         short = f'{value / 1_000_000_000:.1f}b'
-    elif value >= 1_000_000:
+    elif value >= 1_000_000 or round(value / 1_000, 1) >= 1000:
         short = f'{value / 1_000_000:.1f}m'
     elif value >= 1_000:
         short = f'{value / 1_000:.1f}k'
@@ -59,6 +60,9 @@ def create_app(config_name='default'):
     app.jinja_env.filters['cost_class'] = cost_class
 
     from .game.changelog import CHANGELOG
+    from .game.levels import xp_for_next_level
+
+    app.jinja_env.globals['xp_for_next_level'] = xp_for_next_level
 
     @app.context_processor
     def inject_globals():

@@ -422,6 +422,8 @@ def collect_factory(factory_key):
     nation = current_user.nation
     if not nation:
         return _error_response('No nation found.')
+    if current_user.vacation_mode:
+        return _error_response('Vacation mode is active. Disable it to collect.')
 
     fdef = FACTORY_DEFS.get(factory_key)
     if not fdef:

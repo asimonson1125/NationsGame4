@@ -127,6 +127,23 @@ def send_message():
     return resp
 
 
+@mail.route('/mail/delete-all-notifications', methods=['POST'])
+@login_required
+def delete_all_notifications():
+    nation = current_user.nation
+    count = Message.query.filter_by(
+        recipient_id=nation.id, message_type='system'
+    ).delete()
+    db.session.commit()
+
+    resp = current_app.response_class('', status=200)
+    resp.headers['HX-Trigger'] = json.dumps({
+        'showMessage': {'message': f'{count} notification(s) deleted.', 'type': 'success'},
+    })
+    resp.headers['HX-Redirect'] = '/mail?tab=notifications'
+    return resp
+
+
 @mail.route('/mail/delete/<int:message_id>', methods=['POST'])
 @login_required
 def delete_message(message_id):

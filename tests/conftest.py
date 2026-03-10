@@ -49,7 +49,11 @@ def setup_db(app):
         create_partitions()
         yield
         _db.session.remove()
-        _db.drop_all()
+        # Use CASCADE to handle circular FKs (alliances <-> nations)
+        with _db.engine.connect() as conn:
+            conn.execute(text("DROP SCHEMA public CASCADE"))
+            conn.execute(text("CREATE SCHEMA public"))
+            conn.commit()
 
 
 @pytest.fixture()

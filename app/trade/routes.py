@@ -4,7 +4,7 @@ from flask import render_template, request, current_app, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import func
 from .. import db
-from ..models import Nation, NaturalResource, TradeOrder, TradeExecution
+from ..models import Nation, NaturalResource, TradeOrder, TradeExecution, Message
 from ..helpers import error_response, success_response
 from ..game.constants import (
     TRADE_FEE_PERCENT, TRADEABLE_COMMODITIES, TRADEABLE_NATURAL_RESOURCES,
@@ -121,6 +121,33 @@ def _match_orders(new_order):
             fee=fee,
         )
         db.session.add(execution)
+
+        # Send system mail to buyer and seller
+        res_label = new_order.resource_key.replace('_', ' ').title()
+        seller_link = f'<a href="/nation/{seller.id}" class="text-amber-400 hover:text-amber-300">{seller.name}</a>'
+        buyer_link = f'<a href="/nation/{buyer.id}" class="text-amber-400 hover:text-amber-300">{buyer.name}</a>'
+        db.session.add(Message(
+            sender_id=None,
+            recipient_id=buyer.id,
+            subject=f'Trade Fulfilled \u2014 Bought {res_label}',
+            body=(
+                f'You bought {fill_qty:,} {res_label} '
+                f'at ${execution_price:,.2f}/ea from {seller_link}.\n'
+                f'Total cost: ${total_cost:,.2f}.'
+            ),
+            message_type='system',
+        ))
+        db.session.add(Message(
+            sender_id=None,
+            recipient_id=seller.id,
+            subject=f'Trade Fulfilled \u2014 Sold {res_label}',
+            body=(
+                f'You sold {fill_qty:,} {res_label} '
+                f'at ${execution_price:,.2f}/ea to {buyer_link}.\n'
+                f'Revenue: ${total_cost - fee:,.2f} (fee: ${fee:,.2f}).'
+            ),
+            message_type='system',
+        ))
 
         # Update fill quantities
         new_order.quantity_filled += fill_qty
@@ -311,14 +338,12 @@ def cancel_order(order_id):
     db.session.commit()
 
     # Return refreshed my-orders partial
-    resource = request.args.get('resource', order.resource_key)
     orders = TradeOrder.query.filter_by(nation_id=nation.id)\
         .order_by(TradeOrder.created_at.desc()).limit(50).all()
 
     html = render_template(
         'trade/partials/my_orders.html',
         orders=orders,
-        resource=resource,
     )
     resp = current_app.response_class(html, status=200, mimetype='text/html')
     resp.headers['HX-Trigger'] = json.dumps({
@@ -333,28 +358,22 @@ def cancel_order(order_id):
 @login_required
 def my_orders():
     nation = current_user.nation
-    resource = request.args.get('resource', '')
-    query = TradeOrder.query.filter_by(nation_id=nation.id)
-    if resource:
-        query = query.filter_by(resource_key=resource)
-    orders = query.order_by(TradeOrder.created_at.desc()).limit(50).all()
+    orders = TradeOrder.query.filter_by(nation_id=nation.id)\
+        .order_by(TradeOrder.created_at.desc()).limit(50).all()
     return render_template(
         'trade/partials/my_orders.html',
         orders=orders,
-        resource=resource,
     )
 
 
 @trade.route('/trade/recent-trades')
 @login_required
 def recent_trades():
-    resource = request.args.get('resource', 'food')
-    executions = TradeExecution.query.filter_by(resource_key=resource)\
+    executions = TradeExecution.query\
         .order_by(TradeExecution.executed_at.desc()).limit(20).all()
     return render_template(
         'trade/partials/recent_trades.html',
         executions=executions,
-        resource=resource,
     )
 
 

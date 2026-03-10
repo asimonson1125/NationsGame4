@@ -38,6 +38,31 @@
     {# ===== OVERVIEW TAB ===== #}
     <div x-show="tab === 'overview'" x-cloak:false>
 
+        {# Create Division Form #}
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6">
+            <form hx-post="{{ url_for('military.create_division') }}"
+                  hx-target="#division-content"
+                  hx-swap="innerHTML"
+                  class="flex items-center gap-3">
+                <input type="text" name="name" placeholder="New division name..."
+                       class="flex-1 bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
+                <button type="submit"
+                        class="bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
+                    <i class="fas fa-plus mr-1"></i>Create Division
+                </button>
+            </form>
+        </div>
+
+        {# Division Content #}
+        <div x-data="{ activeDiv: 'reserve' }">
+            <div id="division-content"
+                 hx-get="{{ url_for('military.division_list') }}"
+                 hx-trigger="refreshDivisionContent from:body"
+                 hx-swap="innerHTML">
+                {% include 'military/partials/division_content.html' %}
+            </div>
+        </div>
+
         {# Quick Stats #}
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 text-center">
@@ -83,31 +108,6 @@
                 <p>Upkeep is deducted from your stockpiles every hour. If you cannot afford the full upkeep, all units suffer <strong class="text-slate-200">attrition</strong> — losing 10% of their max HP per hour, down to a minimum of 20% HP.</p>
                 <p>Attrition-weakened units still fight at reduced effectiveness. Restore your resource supply to stop the decay.</p>
                 <p>If you don't have the resources it is recommended to demobilize units - demobilized units only consume their <span class="mx-1">{{ res_icon('money') }}</span> upkeep.</p>
-            </div>
-        </div>
-
-        {# Create Division Form #}
-        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6">
-            <form hx-post="{{ url_for('military.create_division') }}"
-                  hx-target="#division-content"
-                  hx-swap="innerHTML"
-                  class="flex items-center gap-3">
-                <input type="text" name="name" placeholder="New division name..."
-                       class="flex-1 bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
-                <button type="submit"
-                        class="bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                    <i class="fas fa-plus mr-1"></i>Create Division
-                </button>
-            </form>
-        </div>
-
-        {# Division Content #}
-        <div x-data="{ activeDiv: 'reserve' }">
-            <div id="division-content"
-                 hx-get="{{ url_for('military.division_list') }}"
-                 hx-trigger="refreshDivisionContent from:body"
-                 hx-swap="innerHTML">
-                {% include 'military/partials/division_content.html' %}
             </div>
         </div>
 

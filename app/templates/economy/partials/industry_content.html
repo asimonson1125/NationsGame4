@@ -61,8 +61,8 @@
                         get disabled() { return this.capacity === 0 },
                         fmt(n) {
                             n = Math.round(n);
-                            if (n >= 1e9) return (n/1e9).toFixed(1)+'b';
-                            if (n >= 1e6) return (n/1e6).toFixed(1)+'m';
+                            if (n >= 1e9 || (n/1e6).toFixed(1) >= 1000) return (n/1e9).toFixed(1)+'b';
+                            if (n >= 1e6 || (n/1e3).toFixed(1) >= 1000) return (n/1e6).toFixed(1)+'m';
                             if (n >= 1e3) return (n/1e3).toFixed(1)+'k';
                             return n.toLocaleString();
                         },
@@ -173,8 +173,8 @@
                     fmt(n) {
                         n = Math.round(n);
                         let raw = n.toLocaleString();
-                        if (n >= 1e9) return '<span class=\'rv\' data-raw=\''+raw+'\'>'+(n/1e9).toFixed(1)+'b</span>';
-                        if (n >= 1e6) return '<span class=\'rv\' data-raw=\''+raw+'\'>'+(n/1e6).toFixed(1)+'m</span>';
+                        if (n >= 1e9 || (n/1e6).toFixed(1) >= 1000) return '<span class=\'rv\' data-raw=\''+raw+'\'>'+(n/1e9).toFixed(1)+'b</span>';
+                        if (n >= 1e6 || (n/1e3).toFixed(1) >= 1000) return '<span class=\'rv\' data-raw=\''+raw+'\'>'+(n/1e6).toFixed(1)+'m</span>';
                         if (n >= 1e3) return '<span class=\'rv\' data-raw=\''+raw+'\'>'+(n/1e3).toFixed(1)+'k</span>';
                         return raw;
                     }

@@ -32,6 +32,15 @@
         </button>
     </div>
 
+    {# Delete all notifications button — only visible on notifications tab #}
+    <div x-show="tab === 'notifications'" x-cloak class="flex justify-end mb-3">
+        <button hx-post="{{ url_for('mail.delete_all_notifications') }}"
+                hx-confirm="Delete all notifications?"
+                class="inline-flex items-center gap-2 bg-red-600/80 hover:bg-red-500 text-white text-xs font-semibold px-3 py-1.5 rounded-md transition-colors">
+            <i class="fas fa-trash"></i> Delete All Notifications
+        </button>
+    </div>
+
     {# Message list container #}
     <div class="bg-slate-800 rounded-lg border border-slate-700">
         <div id="message-list"

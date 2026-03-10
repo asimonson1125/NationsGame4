@@ -98,11 +98,27 @@ def disband_division(div_id):
 @login_required
 def mobilize_division(div_id):
     nation = current_user.nation
+    if current_user.vacation_mode:
+        return _error_response('Vacation mode is active. Disable it to deploy.')
     div = Division.query.filter_by(id=div_id, nation_id=nation.id).first()
     if not div:
         return _error_response('Division not found.')
     if div.mobilization_state == 'mobilized':
         return _error_response('Division is already mobilized.')
+
+    # Consume 1 hour of upkeep for all units in this division
+    div_units = Unit.query.filter_by(division_id=div.id, nation_id=nation.id).filter(Unit.hp > 0).all()
+    upkeep_cost = {}
+    for unit in div_units:
+        udef = UNIT_DEFS.get(unit.unit_key)
+        if udef:
+            for res, rate in udef.upkeep.items():
+                upkeep_cost[res] = upkeep_cost.get(res, 0) + rate
+
+    if not _can_afford(nation, upkeep_cost):
+        return _error_response('Not enough resources for 1 hour of mobilization upkeep.')
+
+    _deduct_cost(nation, upkeep_cost)
     div.mobilization_state = 'mobilized'
     db.session.commit()
     return _division_list_response(nation, f'"{div.name}" mobilized.')
@@ -343,8 +359,12 @@ def equipment_picker(unit_id, slot):
     all_eq = Equipment.query.filter_by(
         nation_id=nation.id, equipment_type=eq_type
     ).all()
+    from ..game.levels import can_equip_rarity
+
     compatible = []
     for eq in all_eq:
+        if not can_equip_rarity(unit.level, eq.rarity):
+            continue
         available = eq.count - eq_counts.get(eq.id, 0)
         if equipped and eq.id == equipped.id:
             available += 1
@@ -540,8 +560,8 @@ def _get_battle_units(battle):
     if battle.status == 'finished' and battle.attacker_snapshot:
         return (_snapshot_to_units(battle.attacker_snapshot),
                 _snapshot_to_units(battle.defender_snapshot))
-    return (Unit.query.filter_by(division_id=battle.attacker_division_id, nation_id=battle.attacker_nation_id).order_by(Unit.id).all(),
-            Unit.query.filter_by(division_id=battle.defender_division_id, nation_id=battle.defender_nation_id).order_by(Unit.id).all())
+    return (Unit.query.filter_by(division_id=battle.attacker_division_id, nation_id=battle.attacker_nation_id).order_by(Unit.division_joined_at, Unit.id).all(),
+            Unit.query.filter_by(division_id=battle.defender_division_id, nation_id=battle.defender_nation_id).order_by(Unit.division_joined_at, Unit.id).all())
 
 
 @military.route('/military/battle/<int:battle_id>')
@@ -566,8 +586,27 @@ def battle_view(battle_id):
 
 # ── PEACEKEEPING ─────────────────────────────────────────────────────────
 
+# Random names for peacekeeping faux-nations and divisions
+_PK_FACTION_NAMES = [
+    'Local Insurgents', 'Separatist Movement', 'Rebel Coalition',
+    'Militia Front', 'Liberation Army', 'People\'s Resistance',
+    'Revolutionary Guard', 'Border Raiders', 'Provincial Militia',
+    'Partisan Brigade', 'Rogue Garrison', 'Dissident Forces',
+]
+_PK_DIVISION_NAMES = [
+    'Insurgent Cell', 'Rebel Detachment', 'Militia Squad',
+    'Guerrilla Unit', 'Raider Column', 'Partisan Group',
+    'Resistance Force', 'Hostile Patrol', 'Irregular Platoon',
+]
+
+
+def _random_peacekeeping_names():
+    """Return (faction_name, division_name) for a peacekeeping encounter."""
+    return random.choice(_PK_FACTION_NAMES), random.choice(_PK_DIVISION_NAMES)
+
+
 def _get_or_create_npc_nation():
-    """Get (or create) the system NPC nation used for peacekeeping opponents."""
+    """Get (or create) the system NPC nation used for PvE opponents."""
     npc_user = User.query.filter_by(username='_system_npc').first()
     if npc_user and npc_user.nation:
         return npc_user.nation
@@ -578,32 +617,39 @@ def _get_or_create_npc_nation():
         db.session.add(npc_user)
         db.session.flush()
 
-    npc_nation = Nation(user_id=npc_user.id, name='Insurgents')
+    npc_nation = Nation(user_id=npc_user.id, name='NPC')
     db.session.add(npc_nation)
     db.session.flush()
     return npc_nation
 
 
 def _generate_peacekeeping_opponent(player_division, npc_nation_id):
-    """Create a half-strength NPC division mirroring the player's units."""
+    """Create a half-strength NPC division of infantry units."""
     alive_units = Unit.query.filter_by(division_id=player_division.id, nation_id=player_division.nation_id).filter(Unit.hp > 0).all()
 
     total_strength = sum(u.effective_firepower + u.effective_armour + u.effective_maneuver for u in alive_units)
     target = total_strength / 2
 
-    npc_div = Division(nation_id=npc_nation_id, name='Insurgent Forces',
+    faction_name, div_name = _random_peacekeeping_names()
+    npc_div = Division(nation_id=npc_nation_id, name=div_name,
                        mobilization_state='mobilized')
+    npc_div._pk_faction_name = faction_name  # stash for the route to read
     db.session.add(npc_div)
     db.session.flush()
 
-    unit_keys = [u.unit_key for u in alive_units]
-    random.shuffle(unit_keys)
+    # Build pool of infantry-only unit keys from the player's division
+    infantry_keys = [u.unit_key for u in alive_units
+                     if UNIT_DEFS.get(u.unit_key) and UNIT_DEFS[u.unit_key].unit_type == 'Infantry']
+    if not infantry_keys:
+        infantry_keys = ['infantry']
+    random.shuffle(infantry_keys)
 
     current_strength = 0
     created = 0
-    for key in unit_keys:
-        if current_strength >= target and created >= 1:
-            break
+    idx = 0
+    while current_strength < target or created < 1:
+        key = infantry_keys[idx % len(infantry_keys)]
+        idx += 1
         udef = UNIT_DEFS.get(key)
         if not udef:
             continue
@@ -611,6 +657,9 @@ def _generate_peacekeeping_opponent(player_division, npc_nation_id):
         db.session.add(unit)
         current_strength += udef.firepower + udef.armour + udef.maneuver
         created += 1
+        # Safety cap: don't spawn more units than the player has × 2
+        if created >= len(alive_units) * 2:
+            break
 
     return npc_div
 
@@ -619,6 +668,8 @@ def _generate_peacekeeping_opponent(player_division, npc_nation_id):
 @login_required
 def deploy_peacekeeping(div_id):
     nation = current_user.nation
+    if current_user.vacation_mode:
+        return _error_response('Vacation mode is active. Disable it to deploy.')
     div = Division.query.filter_by(id=div_id, nation_id=nation.id).first()
     if not div:
         return _error_response('Division not found.')
@@ -641,6 +692,8 @@ def deploy_peacekeeping(div_id):
         defender_division_name=npc_div.name,
         attacker_nation_id=nation.id,
         defender_nation_id=npc_nation.id,
+        attacker_nation_name=nation.name,
+        defender_nation_name=getattr(npc_div, '_pk_faction_name', 'Local Insurgents'),
         battle_type='pve',
     )
     db.session.add(battle)
@@ -842,6 +895,8 @@ def missions():
 @login_required
 def deploy_mission(offer_id):
     nation = current_user.nation
+    if current_user.vacation_mode:
+        return _error_response('Vacation mode is active. Disable it to deploy.')
     offer = MissionOffer.query.filter_by(
         id=offer_id, nation_id=nation.id, status='available'
     ).first()
@@ -872,9 +927,11 @@ def deploy_mission(offer_id):
         attacker_division_id=div.id,
         defender_division_id=npc_div.id,
         attacker_division_name=div.name,
-        defender_division_name=f'{mdef.location} Forces',
+        defender_division_name=mdef.enemy_division_name,
         attacker_nation_id=nation.id,
         defender_nation_id=npc_nation.id,
+        attacker_nation_name=nation.name,
+        defender_nation_name=mdef.enemy_name,
         battle_type='pve_mission',
         mission_offer_id=offer.id,
     )
@@ -901,11 +958,17 @@ def deploy_mission(offer_id):
 @login_required
 def skip_mission(offer_id):
     nation = current_user.nation
+
+    if (nation.mission_skips_today or 0) >= 5:
+        return _error_response('You can only skip 5 missions per day tick.')
+
     offer = MissionOffer.query.filter_by(
         id=offer_id, nation_id=nation.id, status='available'
     ).first()
     if not offer:
         return _error_response('Mission not available or already active.')
+
+    nation.mission_skips_today = (nation.mission_skips_today or 0) + 1
 
     completed_keys = _get_completed_mission_keys(nation.id)
     other_offers = MissionOffer.query.filter(
@@ -1003,7 +1066,7 @@ def _generate_mission_opponent(mdef, npc_nation_id):
     """Create an NPC division populated according to the mission enemy composition."""
     npc_div = Division(
         nation_id=npc_nation_id,
-        name=f'{mdef.location} Forces',
+        name=mdef.enemy_division_name,
         mobilization_state='mobilized',
     )
     db.session.add(npc_div)

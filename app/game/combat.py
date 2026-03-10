@@ -443,8 +443,8 @@ def process_battle_round(battle, db_session):
     defender_continent = getattr(battle.defender_nation, 'continent', '') or ''
 
     # Query ALL units (including dead) to build stable indices, then filter alive
-    all_atk = Unit.query.filter_by(division_id=battle.attacker_division_id, nation_id=battle.attacker_nation_id).order_by(Unit.id).all()
-    all_def = Unit.query.filter_by(division_id=battle.defender_division_id, nation_id=battle.defender_nation_id).order_by(Unit.id).all()
+    all_atk = Unit.query.filter_by(division_id=battle.attacker_division_id, nation_id=battle.attacker_nation_id).order_by(Unit.division_joined_at, Unit.id).all()
+    all_def = Unit.query.filter_by(division_id=battle.defender_division_id, nation_id=battle.defender_nation_id).order_by(Unit.division_joined_at, Unit.id).all()
     attacker_units = [u for u in all_atk if u.hp > 0]
     defender_units = [u for u in all_def if u.hp > 0]
 
@@ -472,7 +472,7 @@ def process_battle_round(battle, db_session):
         battle.winner = 'defender'
         battle.finished_at = now
         _end_battle(battle, db_session)
-        msg = f"Battle over! Defender ({battle.defender_nation.name}) wins!"
+        msg = f"Battle over! Defender ({battle.defender_nation_name or battle.defender_nation.name}) wins!"
         reports.append(msg)
         db_session.add(CombatReport(battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id, message=msg, created_at=now))
         return reports
@@ -482,7 +482,7 @@ def process_battle_round(battle, db_session):
         battle.winner = 'attacker'
         battle.finished_at = now
         _end_battle(battle, db_session)
-        msg = f"Battle over! Attacker ({battle.attacker_nation.name}) wins!"
+        msg = f"Battle over! Attacker ({battle.attacker_nation_name or battle.attacker_nation.name}) wins!"
         reports.append(msg)
         db_session.add(CombatReport(battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id, message=msg, created_at=now))
         return reports
@@ -496,7 +496,7 @@ def process_battle_round(battle, db_session):
         battle.winner = 'attacker'
         battle.finished_at = now
         _end_battle(battle, db_session)
-        msg = f"Defender retreats! {battle.attacker_nation.name} wins!"
+        msg = f"Defender retreats! {battle.attacker_nation_name or battle.attacker_nation.name} wins!"
         reports.append(msg)
         db_session.add(CombatReport(battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id, message=msg, created_at=now))
         return reports
@@ -506,7 +506,7 @@ def process_battle_round(battle, db_session):
         battle.winner = 'defender'
         battle.finished_at = now
         _end_battle(battle, db_session)
-        msg = f"Attacker retreats! {battle.defender_nation.name} wins!"
+        msg = f"Attacker retreats! {battle.defender_nation_name or battle.defender_nation.name} wins!"
         reports.append(msg)
         db_session.add(CombatReport(battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id, message=msg, created_at=now))
         return reports
@@ -582,17 +582,14 @@ def process_battle_round(battle, db_session):
 
         if not remaining:
             winner = 'attacker' if init_side == 'attacker' else 'defender'
-            winner_nation = battle.attacker_nation if winner == 'attacker' else battle.defender_nation
+            winner_name = (battle.attacker_nation_name or battle.attacker_nation.name) if winner == 'attacker' else (battle.defender_nation_name or battle.defender_nation.name)
             battle.status = 'finished'
             battle.winner = winner
             battle.finished_at = now
             _end_battle(battle, db_session)
-            msg = f"Battle over! {winner_nation.name} wins!"
+            msg = f"Battle over! {winner_name} wins!"
             reports.append(msg)
             db_session.add(CombatReport(battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id, message=msg, created_at=now))
-
-    # XP for the initiative winner
-    init_unit.xp += 1
 
     return reports
 
@@ -703,7 +700,8 @@ def _destroyed_unit_names(units):
 
 
 def _battle_message(div_name, enemy_name, battle_id, is_victory,
-                    tokens=0, destroyed_names=None, mission_rewards=None):
+                    tokens=0, destroyed_names=None, mission_rewards=None,
+                    level_ups=None):
     """Build the HTML body for a battle result system message."""
     link = (f'<a href="/military/battle/{battle_id}" '
             f'class="text-amber-400 hover:text-amber-300 underline">'
@@ -720,6 +718,12 @@ def _battle_message(div_name, enemy_name, battle_id, is_victory,
             lines.append('Mission rewards ready to collect:')
             for res, amt in mission_rewards.items():
                 lines.append(f'  \u2022 {int(amt):,} {res.replace("_", " ")}')
+        if level_ups:
+            lines.append('')
+            lines.append('Level ups:')
+            for name, ups in level_ups.items():
+                for lvl, buff in ups:
+                    lines.append(f'  \u2022 {name} reached Lv.{lvl}! ({buff})')
     else:
         lines = [
             f'Your division "{div_name}" was defeated by {enemy_name}.',
@@ -736,7 +740,8 @@ def _battle_message(div_name, enemy_name, battle_id, is_victory,
     return '\n'.join(lines)
 
 
-def _send_battle_notifications(battle, atk_units, def_units, db_session):
+def _send_battle_notifications(battle, atk_units, def_units, db_session,
+                               level_ups=None):
     """Send system mail to battle participants and grant loot tokens to the winner."""
     from ..models import Message, Nation
 
@@ -747,11 +752,30 @@ def _send_battle_notifications(battle, atk_units, def_units, db_session):
     def_nation = db_session.get(Nation, battle.defender_nation_id)
     atk_div_name = battle.attacker_division_name or 'Your division'
     def_div_name = battle.defender_division_name or 'Enemy division'
+    atk_nation_display = battle.attacker_nation_name or atk_nation.name
+    def_nation_display = battle.defender_nation_name or def_nation.name
 
     atk_strength = _initial_strength(atk_units)
     def_strength = _initial_strength(def_units)
     atk_destroyed = _destroyed_unit_names(atk_units)
     def_destroyed = _destroyed_unit_names(def_units)
+
+    # Split level_ups by side for the correct notification
+    atk_level_ups = {}
+    def_level_ups = {}
+    if level_ups:
+        atk_ids = {u.id for u in atk_units}
+        for uid, ups in level_ups.items():
+            # Find the display name for this unit
+            unit = next((u for u in atk_units + def_units if u.id == uid), None)
+            if not unit:
+                continue
+            udef = UNIT_DEFS.get(unit.unit_key)
+            name = unit.custom_name or (udef.name if udef else unit.unit_key)
+            if uid in atk_ids:
+                atk_level_ups.setdefault(name, []).extend(ups)
+            else:
+                def_level_ups.setdefault(name, []).extend(ups)
 
     # Look up mission rewards for pve_mission battles
     mission_rewards = None
@@ -771,13 +795,14 @@ def _send_battle_notifications(battle, atk_units, def_units, db_session):
         tokens = math.ceil(def_strength / 25)
         atk_nation.loot_tokens = (atk_nation.loot_tokens or 0) + tokens
         subject = f'Victory \u2014 {mission_name}' if mission_name else f'Victory \u2014 {atk_div_name}'
-        body = _battle_message(atk_div_name, def_nation.name, battle.id,
+        body = _battle_message(atk_div_name, def_nation_display, battle.id,
                                is_victory=True, tokens=tokens,
                                destroyed_names=atk_destroyed,
-                               mission_rewards=mission_rewards)
+                               mission_rewards=mission_rewards,
+                               level_ups=atk_level_ups or None)
     else:
         subject = f'Defeat \u2014 {atk_div_name}'
-        body = _battle_message(atk_div_name, def_nation.name, battle.id,
+        body = _battle_message(atk_div_name, def_nation_display, battle.id,
                                is_victory=False,
                                destroyed_names=atk_destroyed)
 
@@ -795,12 +820,13 @@ def _send_battle_notifications(battle, atk_units, def_units, db_session):
             tokens = math.ceil(atk_strength / 5)
             def_nation.loot_tokens = (def_nation.loot_tokens or 0) + tokens
             subject = f'Victory \u2014 {def_div_name}'
-            body = _battle_message(def_div_name, atk_nation.name, battle.id,
+            body = _battle_message(def_div_name, atk_nation_display, battle.id,
                                    is_victory=True, tokens=tokens,
-                                   destroyed_names=def_destroyed)
+                                   destroyed_names=def_destroyed,
+                                   level_ups=def_level_ups or None)
         else:
             subject = f'Defeat \u2014 {def_div_name}'
-            body = _battle_message(def_div_name, atk_nation.name, battle.id,
+            body = _battle_message(def_div_name, atk_nation_display, battle.id,
                                    is_victory=False,
                                    destroyed_names=def_destroyed)
 
@@ -816,15 +842,37 @@ def _send_battle_notifications(battle, atk_units, def_units, db_session):
 def _end_battle(battle, db_session):
     """Clean up after battle ends — snapshot unit state, disband destroyed."""
     from ..models import Division, Unit, Nation
+    from .levels import process_xp_gain
 
-    # Snapshot both sides' units before anything changes
-    atk_units = Unit.query.filter_by(division_id=battle.attacker_division_id, nation_id=battle.attacker_nation_id).order_by(Unit.id).all()
-    def_units = Unit.query.filter_by(division_id=battle.defender_division_id, nation_id=battle.defender_nation_id).order_by(Unit.id).all()
+    # Query both sides' units
+    atk_units = Unit.query.filter_by(division_id=battle.attacker_division_id, nation_id=battle.attacker_nation_id).order_by(Unit.division_joined_at, Unit.id).all()
+    def_units = Unit.query.filter_by(division_id=battle.defender_division_id, nation_id=battle.defender_nation_id).order_by(Unit.division_joined_at, Unit.id).all()
+
+    # Snapshot BEFORE XP/level-ups so the battle detail shows the state
+    # units were actually in during the fight
     battle.attacker_snapshot = json.dumps(_snapshot_units(atk_units))
     battle.defender_snapshot = json.dumps(_snapshot_units(def_units))
 
+    # Award XP to surviving winners (after snapshot)
+    level_ups = {}  # {unit_id: [(level, buff_desc), ...]}
+    winner_side = battle.winner  # 'attacker' or 'defender'
+    if winner_side == 'attacker':
+        winners = [u for u in atk_units if u.hp > 0]
+        losers = def_units
+    else:
+        winners = [u for u in def_units if u.hp > 0]
+        losers = atk_units
+
+    xp_per_unit = _initial_strength(losers) // 10
+    if xp_per_unit > 0:
+        for unit in winners:
+            ups = process_xp_gain(unit, xp_per_unit)
+            if ups:
+                level_ups[unit.id] = ups
+
     # Send notifications and grant loot tokens (before units are deleted)
-    _send_battle_notifications(battle, atk_units, def_units, db_session)
+    _send_battle_notifications(battle, atk_units, def_units, db_session,
+                               level_ups=level_ups or None)
 
     # Resolve mission rewards before NPC cleanup
     if battle.battle_type == 'pve_mission' and battle.mission_offer_id:

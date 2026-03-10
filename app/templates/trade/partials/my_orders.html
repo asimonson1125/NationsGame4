@@ -1,3 +1,4 @@
+{% from 'shared/_macros.html' import res_icon %}
 <div class="p-4">
     {% if orders %}
     <table class="w-full text-sm">
@@ -15,7 +16,12 @@
         <tbody>
             {% for order in orders %}
             <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
-                <td class="py-2 text-slate-300">{{ order.resource_key.replace('_', ' ').title() }}</td>
+                <td class="py-2 text-slate-300">
+                    <span class="inline-flex items-center gap-1">
+                        {{ res_icon(order.resource_key, 'w-4 h-4') }}
+                        {{ order.resource_key.replace('_', ' ').title() }}
+                    </span>
+                </td>
                 <td class="py-2">
                     <span class="px-2 py-0.5 rounded text-xs font-semibold
                         {{ 'bg-emerald-500/20 text-emerald-400' if order.order_type == 'buy' else 'bg-red-500/20 text-red-400' }}">
@@ -36,7 +42,7 @@
                 </td>
                 <td class="py-2 text-right">
                     {% if order.status == 'open' %}
-                    <button hx-post="{{ url_for('trade.cancel_order', order_id=order.id) }}?resource={{ resource }}"
+                    <button hx-post="{{ url_for('trade.cancel_order', order_id=order.id) }}"
                             hx-target="#my-orders"
                             hx-swap="innerHTML"
                             class="text-xs text-red-400 hover:text-red-300 font-medium">

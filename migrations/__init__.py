@@ -10,6 +10,10 @@ from sqlalchemy import text
 MIGRATIONS = [
     'add_growth_mode',
     'add_alliance_columns',
+    'add_missions',
+    'add_mission_skips',
+    'add_battle_nation_names',
+    'add_vacation_cooldown',
 ]
 
 

@@ -246,6 +246,12 @@ def equip_item():
     if eq.equipment_type not in compatible_slots:
         return _error_response(f'{eq.equipment_type} is not compatible with {udef.unit_type} units.')
 
+    # Level requirement for rarity tiers
+    from ..game.levels import can_equip_rarity, RARITY_LEVEL_REQ
+    if not can_equip_rarity(unit.level, eq.rarity):
+        req = RARITY_LEVEL_REQ.get(eq.rarity, 1)
+        return _error_response(f'{eq.rarity} equipment requires unit Lv.{req}+')
+
     # Determine which slot this goes into
     slot_cat = get_slot_category(eq.equipment_type, udef.unit_type)
 

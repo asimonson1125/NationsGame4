@@ -30,11 +30,42 @@
             </span>
         </div>
 
-        {# Row 2: HP bar #}
+        {# Stat bars + level #}
+        {% set max_stat = 20 %}
+        <div class="space-y-1 mb-1.5">
+            <div>
+                <div class="flex justify-between text-[11px] text-slate-400 mb-0.5">
+                    <span>{{ stat_icon('Firepower', extra='mr-0.5', shade='400') }}FP</span>
+                    <span>{{ unit.effective_firepower }}</span>
+                </div>
+                <div class="w-full bg-slate-600 rounded-full h-1.5">
+                    <div class="bg-red-400 h-1.5 rounded-full" style="width: {{ [unit.effective_firepower / max_stat * 100, 100] | min }}%"></div>
+                </div>
+            </div>
+            <div>
+                <div class="flex justify-between text-[11px] text-slate-400 mb-0.5">
+                    <span>{{ stat_icon('Armour', extra='mr-0.5', shade='400') }}ARM</span>
+                    <span>{{ unit.effective_armour }}</span>
+                </div>
+                <div class="w-full bg-slate-600 rounded-full h-1.5">
+                    <div class="bg-blue-400 h-1.5 rounded-full" style="width: {{ [unit.effective_armour / max_stat * 100, 100] | min }}%"></div>
+                </div>
+            </div>
+            <div>
+                <div class="flex justify-between text-[11px] text-slate-400 mb-0.5">
+                    <span>{{ stat_icon('Maneuver', extra='mr-0.5', shade='400') }}MAN</span>
+                    <span>{{ unit.effective_maneuver }}</span>
+                </div>
+                <div class="w-full bg-slate-600 rounded-full h-1.5">
+                    <div class="bg-green-400 h-1.5 rounded-full" style="width: {{ [unit.effective_maneuver / max_stat * 100, 100] | min }}%"></div>
+                </div>
+            </div>
+        </div>
+        {# HP bar #}
         {% set hp_pct = (unit.hp / unit.effective_max_hp * 100) if unit.effective_max_hp > 0 else 0 %}
         <div class="mb-1.5">
             <div class="flex justify-between text-[11px] text-slate-400 mb-0.5">
-                <span>HP</span>
+                <span>{{ stat_icon('HP', extra='mr-0.5', shade='400') }}HP</span>
                 <span>{{ unit.hp }}/{{ unit.effective_max_hp }}</span>
             </div>
             <div class="w-full bg-slate-600 rounded-full h-1.5">
@@ -43,23 +74,32 @@
                      style="width: {{ hp_pct | round(1) }}%"></div>
             </div>
         </div>
-
-        {# Row 3: Compact stat chips + level #}
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-1">
-                <span class="w-6 h-5 rounded text-[10px] font-bold flex items-center justify-center text-white bg-red-500/80">{{ unit.effective_firepower }}</span>
-                <span class="w-6 h-5 rounded text-[10px] font-bold flex items-center justify-center text-white bg-blue-500/80">{{ unit.effective_armour }}</span>
-                <span class="w-6 h-5 rounded text-[10px] font-bold flex items-center justify-center text-white bg-orange-500/80">{{ unit.effective_maneuver }}</span>
-            </div>
-            <div class="flex items-center gap-2 text-[11px] text-slate-400">
-                <span>Lv.{{ unit.level }}</span>
-                {% set eq_count = (1 if unit.weapon_id else 0) + (1 if unit.accessory_id else 0) + (1 if unit.armour_eq_id else 0) %}
-                {% if eq_count > 0 %}
-                <span class="text-amber-400" title="{{ eq_count }} equipment equipped">
-                    <i class="fas fa-toolbox text-[9px]"></i> {{ eq_count }}/3
-                </span>
+        {# XP bar #}
+        {% set xp_needed = xp_for_next_level(unit.level) %}
+        <div class="mb-1.5">
+            <div class="flex justify-between text-[11px] text-slate-400 mb-0.5">
+                <span>XP</span>
+                {% if xp_needed %}
+                <span>{{ unit.xp }}/{{ xp_needed }}</span>
+                {% else %}
+                <span class="text-amber-400 font-medium">MAX</span>
                 {% endif %}
             </div>
+            {% if xp_needed %}
+            {% set xp_pct = (unit.xp / xp_needed * 100) if xp_needed > 0 else 0 %}
+            <div class="w-full bg-slate-600 rounded-full h-1.5">
+                <div class="h-1.5 rounded-full transition-all" style="background-color: #fbbf24; width: {{ xp_pct | round(1) }}%"></div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="flex items-center justify-end gap-2 text-[11px] text-slate-400">
+            <span>Lv.{{ unit.level }}</span>
+            {% set eq_count = (1 if unit.weapon_id else 0) + (1 if unit.accessory_id else 0) + (1 if unit.armour_eq_id else 0) %}
+            {% if eq_count > 0 %}
+            <span class="text-amber-400" title="{{ eq_count }} equipment equipped">
+                <i class="fas fa-toolbox text-[9px]"></i> {{ eq_count }}/3
+            </span>
+            {% endif %}
         </div>
     </div>
 

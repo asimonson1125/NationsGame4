@@ -9,6 +9,19 @@
 <div class="p-10 text-center text-slate-500">No nation found for your account. Please contact support.</div>
 {% else %}
 
+{# ===== VACATION BANNER ===== #}
+{% if current_user.vacation_mode %}
+<div class="mx-auto max-w-4xl mt-4 px-5">
+    <div class="bg-amber-500/10 border border-amber-500/40 rounded-lg px-5 py-3 flex items-center gap-3">
+        <i class="fas fa-umbrella-beach text-amber-400 text-lg"></i>
+        <div>
+            <span class="text-amber-300 font-semibold">Vacation Mode Active</span>
+            <span class="text-slate-400 text-sm ml-2">Your nation is frozen — no ticks, collection, or deployments until you disable it in settings below.</span>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {# ===== NATION PROFILE ===== #}
 {% include 'main/partials/nation_profile.html' %}
 
@@ -53,13 +66,18 @@
                     <label class="flex items-center gap-2 text-sm font-medium text-slate-300 cursor-pointer">
                         <input type="checkbox" name="vacation_mode"
                                class="w-4 h-4 cursor-pointer rounded"
-                               {% if current_user.vacation_mode %}checked{% endif %}>
+                               {% if current_user.vacation_mode %}checked{% endif %}
+                               {% if vac_cooldown_remaining %}disabled{% endif %}>
                         Vacation Mode
                     </label>
-                    <p class="text-xs text-slate-400 mt-1 ml-6">Pauses and protects your nation until next login.</p>
+                    <p class="text-xs text-slate-400 mt-1 ml-6">Freezes your nation — no ticks, collection, or deployments. 48-hour cooldown after disabling.</p>
+                    {% if vac_cooldown_remaining %}
+                    <p class="text-xs text-amber-400 mt-1 ml-6">Cooldown active — can re-enable in {{ vac_cooldown_remaining[0] }}h {{ vac_cooldown_remaining[1] }}m.</p>
+                    {% endif %}
                 </div>
                 <button type="submit"
-                        class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md transition-colors font-semibold text-sm shrink-0">
+                        class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md transition-colors font-semibold text-sm shrink-0"
+                        {% if vac_cooldown_remaining %}disabled{% endif %}>
                     Save
                 </button>
             </form>

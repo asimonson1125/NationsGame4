@@ -1,9 +1,9 @@
 import json
 from flask import render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_user, logout_user, login_required, current_user
-from datetime import date
+from datetime import date, datetime, timezone, timedelta
 from .. import db
-from ..models import User, Nation
+from ..models import User, Nation, Unit, Division
 from ..game.constants import CONTINENTS
 from ..game.discovery import LAND_WEIGHTS, _weighted_distribute
 from ..game.population import compute_population_gp
@@ -86,6 +86,17 @@ def register():
             db.session.flush()
             from ..helpers import grant_factories
             grant_factories(nation, [('farm', 5), ('windmill', 5), ('quarry', 3)], production_capacity=6)
+
+            # Seed 6 infantry — 4 in "Division 1", 2 in reserve
+            div = Division(nation_id=nation.id, name='Division 1')
+            db.session.add(div)
+            db.session.flush()
+            for i in range(6):
+                unit = Unit.create_from_def(nation.id, 'infantry',
+                                            division_id=div.id if i < 4 else None)
+                db.session.add(unit)
+            nation.military_gp = (nation.military_gp or 0) + 6  # 1 GP per infantry
+
             nation.land_gp = (nation.total_land or 0) // 10
             nation.population_gp = compute_population_gp(nation.population)
             db.session.commit()
@@ -135,7 +146,27 @@ def update_notifications():
 @auth.route('/toggle-vacation', methods=['POST'])
 @login_required
 def toggle_vacation():
-    current_user.vacation_mode = 'vacation_mode' in request.form
+    wants_on = 'vacation_mode' in request.form
+    now = datetime.now(timezone.utc)
+
+    if wants_on and not current_user.vacation_mode:
+        # Enforce 48h cooldown after last disable
+        if current_user.vacation_disabled_at:
+            cooldown_end = current_user.vacation_disabled_at + timedelta(hours=48)
+            if now < cooldown_end:
+                remaining = cooldown_end - now
+                hours = int(remaining.total_seconds() // 3600)
+                mins = int((remaining.total_seconds() % 3600) // 60)
+                resp = current_app.response_class(status=204)
+                resp.headers['HX-Trigger'] = json.dumps(
+                    {'showMessage': {'message': f'Vacation cooldown active. Try again in {hours}h {mins}m.', 'type': 'error'}}
+                )
+                return resp
+        current_user.vacation_mode = True
+    elif not wants_on and current_user.vacation_mode:
+        current_user.vacation_mode = False
+        current_user.vacation_disabled_at = now
+
     db.session.commit()
     resp = current_app.response_class(status=204)
     resp.headers['HX-Trigger'] = json.dumps(

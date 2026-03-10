@@ -1,5 +1,6 @@
 import json
 from functools import wraps
+from datetime import datetime, timezone, timedelta
 from flask import render_template, url_for, request, current_app, abort, jsonify, make_response
 from flask_login import login_required, current_user
 from .. import db, cache
@@ -114,7 +115,17 @@ def changelog_page():
 def home():
     nation = current_user.nation
     summary = _nation_summary(nation) if nation else {}
+
+    # Vacation cooldown: hours + minutes remaining (None if not on cooldown)
+    vac_cooldown_remaining = None
+    if not current_user.vacation_mode and current_user.vacation_disabled_at:
+        cooldown_end = current_user.vacation_disabled_at + timedelta(hours=48)
+        remaining = (cooldown_end - datetime.now(timezone.utc)).total_seconds()
+        if remaining > 0:
+            vac_cooldown_remaining = (int(remaining // 3600), int((remaining % 3600) // 60))
+
     return render_template('main/home.html', nation=nation, is_owner=True,
+                           vac_cooldown_remaining=vac_cooldown_remaining,
                            **summary)
 
 
@@ -398,11 +409,28 @@ def admin_search_nations():
     return jsonify([{'id': n.id, 'name': n.name} for n in nations])
 
 
+_ADMIN_RESOURCE_GROUPS = [
+    ('Commodities', [
+        'money', 'food', 'power', 'building_materials', 'consumer_goods',
+        'metal', 'ammunition', 'fuel', 'uranium', 'whz', 'loot_tokens'
+    ]),
+    ('Land', [
+        'total_land', 'cleared_land', 'urban_areas', 'used_land',
+        'forest', 'grassland', 'jungle', 'desert', 'mountain',
+        'tundra', 'river', 'lake',
+    ]),
+    ('Other', [
+        'population', 'growth_rate', 'tier',
+        'population_gp', 'land_gp', 'factory_gp', 'building_gp', 'military_gp',
+    ]),
+]
+
+
 def _admin_panel_context(nation):
     """Build template context for the admin panel partial."""
     queue = RecruitmentQueue.query.filter_by(nation_id=nation.id).order_by(RecruitmentQueue.completes_at).all()
     res_values = {r: getattr(nation, r, 0) or 0 for r in ADMIN_RESOURCES}
-    return dict(target=nation, queue=queue, resources=sorted(ADMIN_RESOURCES), res_values=res_values)
+    return dict(target=nation, queue=queue, resource_groups=_ADMIN_RESOURCE_GROUPS, res_values=res_values)
 
 
 @main.route('/admin/nation/<int:nation_id>')
