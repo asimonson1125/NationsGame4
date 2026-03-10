@@ -55,7 +55,7 @@ PostgreSQL is required for all environments. Schema is initialized via `python3 
 
 Resource key aliases used in definitions: `_M=money`, `_P=power`, `_F=food`, `_BM=building_materials`, `_CG=consumer_goods`, `_ME=metal`, `_AM=ammunition`, `_FU=fuel`, `_UR=uranium`, `_WH=whz`.
 
-**Starter factories** seeded on registration: 2 farms, 1 windmill, 1 quarry (in `auth/routes.py`).
+**Starter factories** seeded on registration (in `auth/routes.py`).
 
 **Natural resource inputs** (coal, iron, uranium as raw ore, etc.) are on `NationFactory` definitions but the `NaturalResource` collection system isn't wired — `getattr(nation, 'coal', 0)` returns 0, so affected factories will always fail the input check until that system is built.
 

@@ -5,7 +5,9 @@ from flask_login import login_required, current_user
 from .. import db, cache
 from ..models import Nation, NationFactory, NaturalResource, Alliance, Division, Unit, RecruitmentQueue
 from ..helpers import error_response as _error_response, compute_total_upkeep
-from ..game.population import get_population_effects, estimate_pop_delta, FOOD_PER_CITIZEN
+from ..game.population import (get_population_effects, estimate_pop_delta, FOOD_PER_CITIZEN,
+                                food_abundance_multiplier, get_food_days,
+                                FOOD_STOCKPILE_MIN_DAYS, FOOD_STOCKPILE_MAX_DAYS)
 from ..game.factories import FACTORY_DEFS
 from ..game.units import UNIT_DEFS
 from . import main
@@ -49,6 +51,48 @@ ADMIN_RESOURCES = {
     'population_gp', 'land_gp', 'factory_gp', 'building_gp', 'military_gp',
     'population', 'tier', 'growth_rate', 'loot_tokens',
 }
+
+
+@main.route('/robots.txt')
+@cache.cached(timeout=86400)
+def robots_txt():
+    """Serve robots.txt for search engine crawlers."""
+    lines = [
+        'User-agent: *',
+        'Allow: /',
+        'Disallow: /home',
+        'Disallow: /admin/',
+        'Disallow: /gp-breakdown',
+        'Disallow: /resource-footer',
+        'Disallow: /population-delta',
+        'Disallow: /leaderboard/',
+        f'Sitemap: {url_for("main.sitemap_xml", _external=True)}',
+    ]
+    resp = current_app.response_class('\n'.join(lines) + '\n', mimetype='text/plain')
+    return resp
+
+
+@main.route('/sitemap.xml')
+@cache.cached(timeout=3600)
+def sitemap_xml():
+    """Serve sitemap.xml for search engine discovery."""
+    pages = [
+        (url_for('main.index', _external=True), '1.0', 'weekly'),
+        (url_for('main.changelog_page', _external=True), '0.5', 'weekly'),
+        (url_for('auth.login', _external=True), '0.3', 'monthly'),
+        (url_for('auth.register', _external=True), '0.6', 'monthly'),
+    ]
+    xml_parts = ['<?xml version="1.0" encoding="UTF-8"?>']
+    xml_parts.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
+    for loc, priority, changefreq in pages:
+        xml_parts.append('  <url>')
+        xml_parts.append(f'    <loc>{loc}</loc>')
+        xml_parts.append(f'    <priority>{priority}</priority>')
+        xml_parts.append(f'    <changefreq>{changefreq}</changefreq>')
+        xml_parts.append('  </url>')
+    xml_parts.append('</urlset>')
+    resp = current_app.response_class('\n'.join(xml_parts), mimetype='application/xml')
+    return resp
 
 
 @main.route('/')
@@ -99,13 +143,33 @@ def gp_breakdown():
     return render_template('main/partials/gp_breakdown.html', nation=nation)
 
 
+def _pop_delta_payload(nation):
+    """Build population delta JSON payload for a nation."""
+    delta = estimate_pop_delta(nation)
+    food_days = round(get_food_days(nation.population, nation.food), 1)
+    abundance = round(food_abundance_multiplier(nation.population, nation.food) * 100)
+    # Determine growth blockers
+    cleared = nation.cleared_land or 0
+    urban = nation.urban_areas or 0
+    pop = nation.population or 0
+    from ..game.population import LAND_PER_POPULATION
+    max_capacity = (urban + cleared) * LAND_PER_POPULATION
+    if cleared <= 0 and urban <= 0:
+        growth_block = 'no_land'
+    elif pop >= max_capacity:
+        growth_block = 'land_full'
+    else:
+        growth_block = ''
+    return dict(delta=delta, food_days=food_days, abundance=abundance, growth_block=growth_block)
+
+
 @main.route('/population-delta')
 @login_required
 def population_delta():
     nation = current_user.nation
     if not nation:
-        return jsonify(delta=0)
-    return jsonify(delta=estimate_pop_delta(nation))
+        return jsonify(delta=0, food_days=0, abundance=0, growth_block='')
+    return jsonify(**_pop_delta_payload(nation))
 
 
 @cache.memoize(timeout=60)
@@ -224,10 +288,13 @@ def update_growth_rate():
         return _error_response('Invalid growth rate.')
     if rate < 0 or rate > 100:
         return _error_response('Growth rate must be between 0 and 100.')
+    mode = request.form.get('growth_mode', '').strip()
+    if mode not in ('off', 'auto', 'manual'):
+        mode = 'manual' if rate > 0 else 'off'
     nation.growth_rate = rate
+    nation.growth_mode = mode
     db.session.commit()
-    delta = estimate_pop_delta(nation)
-    resp = current_app.make_response(json.dumps({'delta': delta}))
+    resp = current_app.make_response(json.dumps(_pop_delta_payload(nation)))
     resp.headers['Content-Type'] = 'application/json'
     resp.headers['HX-Trigger'] = json.dumps(
         {'showMessage': {'message': f'Growth rate set to {rate}%.', 'type': 'success'},
@@ -269,14 +336,23 @@ def leaderboard_table():
 @login_required
 def leaderboard_alliance_table():
     from sqlalchemy import func
+    from sqlalchemy.orm import joinedload
     results = (db.session.query(
         Alliance,
         func.count(Nation.id).label('member_count'),
-        func.sum(Nation.total_gp).label('total_gp')
+        func.sum(Nation.total_gp).label('total_gp'),
+        func.sum(Nation.population_gp).label('pop_gp'),
+        func.sum(Nation.land_gp).label('land_gp'),
+        func.sum(Nation.factory_gp).label('factory_gp'),
+        func.sum(Nation.military_gp).label('military_gp'),
     ).join(Nation, Nation.alliance_id == Alliance.id)
      .group_by(Alliance.id)
      .order_by(func.sum(Nation.total_gp).desc())
      .limit(50).all())
+    # Eagerly load founder for display
+    alliance_ids = [r[0].id for r in results]
+    if alliance_ids:
+        Alliance.query.options(joinedload(Alliance.founder)).filter(Alliance.id.in_(alliance_ids)).all()
     return render_template('main/partials/leaderboard_alliance_table.html',
                            results=results, current_nation=current_user.nation)
 
@@ -428,48 +504,18 @@ def admin_apply_tick(nation_id):
     if not nation:
         return _error_response('Nation not found.')
 
-    from ..game.population import (get_population_effects, process_growth,
-                                   process_starvation, compute_tier, compute_population_gp)
-    from ..helpers import compute_total_upkeep
-    from ..models import NationFactory, Unit
+    from ..models import NationFactory
+    from ..tasks import tick_nation
 
-    # 1. Population effects (tax income + resource consumption)
-    effects = get_population_effects(nation.population)
-    for res, amount in effects.items():
-        new_val = nation.get_resource(res) + amount
-        setattr(nation, res, max(0, new_val))
+    # 1. Population + military tick
+    grown, starved = tick_nation(nation)
 
-    # 2. Population growth
-    grown = process_growth(nation)
-
-    # 3. Starvation
-    starved = process_starvation(nation)
-
-    # 4. Tier + population GP
-    nation.tier = compute_tier(nation.population)
-    nation.population_gp = compute_population_gp(nation.population)
-
-    # 5. Factory production capacity (+1, cap 24)
+    # 2. Factory production capacity (+1, cap 24)
     NationFactory.query.filter(
         NationFactory.nation_id == nation.id,
         NationFactory.count > 0,
         NationFactory.production_capacity < 24,
     ).update({'production_capacity': NationFactory.production_capacity + 1})
-
-    # 6. Military upkeep
-    units = Unit.query.filter_by(nation_id=nation.id).filter(Unit.hp > 0).all()
-    if units:
-        total_upkeep = compute_total_upkeep(nation.id)
-        can_pay = all(nation.get_resource(r) >= a for r, a in total_upkeep.items())
-        if can_pay:
-            for res, amount in total_upkeep.items():
-                nation.add_resource(res, -amount)
-        else:
-            for unit in units:
-                attrition = max(1, unit.max_hp // 10)
-                floor = unit.max_hp // 5
-                if unit.hp > floor:
-                    unit.hp = max(floor, unit.hp - attrition)
 
     db.session.commit()
 

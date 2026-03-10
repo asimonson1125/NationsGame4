@@ -2,6 +2,7 @@
 {% from 'macros.html' import nation_autocomplete_input %}
 
 {% block title %}{{ nation.name if nation else 'Home' }}{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
 
 {% block content %}
 {% if not nation %}

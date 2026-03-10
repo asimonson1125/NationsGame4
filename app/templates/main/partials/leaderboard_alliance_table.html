@@ -4,12 +4,17 @@
             <tr class="bg-slate-700/50 text-left text-slate-400">
                 <th class="px-4 py-3 w-16">Rank</th>
                 <th class="px-4 py-3">Alliance</th>
+                <th class="px-4 py-3">Founder</th>
                 <th class="px-4 py-3 text-right">Members</th>
+                <th class="px-4 py-3 text-right">Pop GP</th>
+                <th class="px-4 py-3 text-right">Land GP</th>
+                <th class="px-4 py-3 text-right">Factory GP</th>
+                <th class="px-4 py-3 text-right">Military GP</th>
                 <th class="px-4 py-3 text-right">Total GP</th>
             </tr>
         </thead>
         <tbody>
-            {% for alliance, member_count, total_gp in results %}
+            {% for alliance, member_count, total_gp, pop_gp, land_gp, factory_gp, military_gp in results %}
             <tr class="border-t border-slate-700 {% if current_nation and current_nation.alliance_id == alliance.id %}bg-amber-500/10{% elif loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %} hover:bg-slate-700/50 transition-colors">
                 <td class="px-4 py-3">
                     {% if loop.index == 1 %}
@@ -26,14 +31,30 @@
                     {% endif %}
                 </td>
                 <td class="px-4 py-3">
-                    <span class="text-amber-400 font-medium">{{ alliance.name }}</span>
+                    <div class="flex items-center">
+                        {% if alliance.flag_url %}
+                        <img src="{{ alliance.flag_url }}" alt="Flag" class="w-8 h-auto mr-2 rounded-sm" onerror="this.style.display='none'">
+                        {% endif %}
+                        <a href="{{ url_for('alliance.alliance_view', id=alliance.id) }}" class="text-amber-400 hover:text-amber-300 font-medium">{{ alliance.name }}</a>
+                    </div>
+                </td>
+                <td class="px-4 py-3">
+                    {% if alliance.founder %}
+                    <a href="{{ url_for('main.nation_view', nation_id=alliance.founder.id) }}" class="text-amber-500 hover:text-amber-400 text-xs">{{ alliance.founder.name }}</a>
+                    {% else %}
+                    <span class="text-slate-500">—</span>
+                    {% endif %}
                 </td>
                 <td class="px-4 py-3 text-right text-slate-300">{{ member_count }}</td>
+                <td class="px-4 py-3 text-right text-slate-400">{{ '{:,}'.format((pop_gp or 0) | int) }}</td>
+                <td class="px-4 py-3 text-right text-slate-400">{{ '{:,}'.format((land_gp or 0) | int) }}</td>
+                <td class="px-4 py-3 text-right text-slate-400">{{ '{:,}'.format((factory_gp or 0) | int) }}</td>
+                <td class="px-4 py-3 text-right text-slate-400">{{ '{:,}'.format((military_gp or 0) | int) }}</td>
                 <td class="px-4 py-3 text-right font-semibold text-amber-400">{{ '{:,}'.format((total_gp or 0) | int) }}</td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="4" class="px-4 py-8 text-center text-slate-500">No alliances found.</td>
+                <td colspan="9" class="px-4 py-8 text-center text-slate-500">No alliances found.</td>
             </tr>
             {% endfor %}
         </tbody>

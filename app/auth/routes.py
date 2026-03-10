@@ -85,7 +85,7 @@ def register():
             db.session.add(nation)
             db.session.flush()
             from ..helpers import grant_factories
-            grant_factories(nation, [('farm', 2), ('windmill', 1), ('quarry', 1)], production_capacity=6)
+            grant_factories(nation, [('farm', 5), ('windmill', 5), ('quarry', 3)], production_capacity=6)
             nation.land_gp = (nation.total_land or 0) // 10
             nation.population_gp = compute_population_gp(nation.population)
             db.session.commit()

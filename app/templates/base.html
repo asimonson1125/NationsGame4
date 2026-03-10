@@ -4,6 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="theme-color" content="#1c2332">
+    <meta name="description" content="{% block meta_description %}Build your nation from the ground up. Expand borders, develop industry, raise armies, and trade on the global market in this multiplayer strategy game.{% endblock %}">
+    <meta name="robots" content="{% block meta_robots %}index, follow{% endblock %}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Nations Simulator">
+    <meta property="og:title" content="{% block og_title %}{{ self.title() }} - Nations Simulator{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Build your nation from the ground up. Expand borders, develop industry, raise armies, and trade on the global market.{% endblock %}">
+    <meta property="og:image" content="{{ url_for('static', filename='images/logo.svg', _external=True) }}">
+    {% block og_url %}<meta property="og:url" content="{{ request.url }}">{% endblock %}
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ self.og_title() }}">
+    <meta name="twitter:description" content="{{ self.og_description() }}">
+    <meta name="twitter:image" content="{{ url_for('static', filename='images/logo.svg', _external=True) }}">
+    {% block canonical %}<link rel="canonical" href="{{ request.url }}">{% endblock %}
     <title>{% block title %}Nations{% endblock %} - Nations Simulator</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,7 +36,7 @@
 
     {# Left: Brand #}
     <a href="{{ url_for('main.index') }}" class="flex items-center gap-2 mr-6 shrink-0">
-        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="NG4" class="w-8 h-8">
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Nations Simulator" class="w-8 h-8">
         <span class="text-lg font-bold text-amber-500 tracking-tight">NATIONS</span>
     </a>
 
@@ -63,6 +77,7 @@
         {{ nav_link(url_for('economy.land'), 'fas fa-map', 'Land & Resources', 'economy.land') }}
 
         {{ nav_link(url_for('trade.trade_page'), 'fas fa-exchange-alt', 'Trade', 'trade.trade_page') }}
+        {{ nav_link(url_for('alliance.my_alliance'), 'fas fa-users', 'Alliance', 'alliance.my_alliance') }}
 
         {# Mail with unread badge #}
         <a href="{{ url_for('mail.inbox') }}"
@@ -83,7 +98,7 @@
         {% endcall %}
 
         {# Leaderboards dropdown #}
-        {{ nav_link(url_for('main.leaderboard', tab='national'),  'fas fa-medal', 'National', 'main.leaderboard') }}
+        {{ nav_link(url_for('main.leaderboard', tab='national'),  'fas fa-medal', 'Leaderboards', 'main.leaderboard') }}
         {% endif %}
     </div>
 
@@ -117,6 +132,7 @@
         <a href="{{ url_for('economy.industry') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-industry w-5"></i> Industry</a>
         <a href="{{ url_for('economy.land') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-map w-5"></i> Land</a>
         <a href="{{ url_for('trade.trade_page') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-exchange-alt w-5"></i> Trade</a>
+        <a href="{{ url_for('alliance.my_alliance') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-users w-5"></i> Alliance</a>
         <a href="{{ url_for('mail.inbox') }}" class="relative block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md">
             <i class="fas fa-envelope w-5"></i> Mail
             {% if unread_mail_count > 0 %}
@@ -166,9 +182,9 @@
 </div>
 
 {# ===== MAIN CONTENT ===== #}
-<div class="pb-14 min-h-screen">
+<main class="pb-14 min-h-screen">
     {% block content %}{% endblock %}
-</div>
+</main>
 
 {# ===== RESOURCE FOOTER ===== #}
 {% if current_user.is_authenticated %}

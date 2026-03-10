@@ -1,7 +1,8 @@
 """Tests for background tasks — recruitment processing, upkeep deduction."""
 from datetime import datetime, timezone, timedelta
 from app import db
-from app.models import Nation, Unit, RecruitmentQueue
+from app.models import Nation, Unit, Division, RecruitmentQueue
+from app.helpers import compute_total_upkeep
 from app.game.units import UNIT_DEFS
 
 
@@ -102,18 +103,10 @@ class TestRecruitmentProcessing:
 
 class TestUpkeepDeduction:
     def _deduct_upkeep(self, nation):
-        """Run upkeep logic inline for a single nation."""
-        units = Unit.query.filter_by(nation_id=nation.id).filter(Unit.hp > 0).all()
-        if not units:
+        """Run upkeep logic inline for a single nation (mirrors deduct_military_upkeep)."""
+        total_upkeep = compute_total_upkeep(nation.id)
+        if not total_upkeep:
             return
-
-        total_upkeep = {}
-        for unit in units:
-            udef = UNIT_DEFS.get(unit.unit_key)
-            if not udef:
-                continue
-            for res, rate in udef.upkeep.items():
-                total_upkeep[res] = total_upkeep.get(res, 0) + rate
 
         can_afford = True
         for res, amount in total_upkeep.items():
@@ -126,25 +119,31 @@ class TestUpkeepDeduction:
                 current = getattr(nation, res, 0) or 0
                 setattr(nation, res, current - amount)
         else:
+            units = Unit.query.filter_by(nation_id=nation.id).filter(Unit.hp > 0).all()
             for unit in units:
                 attrition = max(1, unit.max_hp // 10)
                 unit.hp = max(0, unit.hp - attrition)
 
         db.session.commit()
 
-    def test_upkeep_deducted(self, app, nation):
+    def test_upkeep_deducted_demobilized(self, app, nation):
+        """Unassigned units are demobilized — only money upkeep is charged."""
         unit = Unit(nation_id=nation.id, unit_key='infantry',
                     firepower=3, armour=1, maneuver=2, hp=50, max_hp=50)
         db.session.add(unit)
         db.session.commit()
 
+        udef = UNIT_DEFS['infantry']
+        non_money = {r for r in udef.upkeep if r != 'money'}
+        before = {r: getattr(nation, r) for r in non_money}
         money_before = nation.money
-        food_before = nation.food
+
         self._deduct_upkeep(nation)
         db.session.refresh(nation)
-        # Infantry upkeep: money=1, food=1
-        assert nation.money == money_before - 1
-        assert nation.food == food_before - 1
+
+        assert nation.money == money_before - udef.upkeep['money']
+        for r in non_money:
+            assert getattr(nation, r) == before[r], f"{r} should not be deducted when demobilized"
 
     def test_upkeep_multiple_units(self, app, nation):
         for _ in range(5):
@@ -186,6 +185,52 @@ class TestUpkeepDeduction:
         self._deduct_upkeep(nation)
         db.session.refresh(unit)
         assert unit.hp == 0
+
+    def test_mobilized_full_upkeep(self, app, nation):
+        """Units in a mobilized division pay full upkeep (all resources)."""
+        div = Division(nation_id=nation.id, name='Alpha',
+                       mobilization_state='mobilized')
+        db.session.add(div)
+        db.session.flush()
+
+        unit = Unit(nation_id=nation.id, unit_key='infantry',
+                    division_id=div.id,
+                    firepower=3, armour=1, maneuver=2, hp=50, max_hp=50)
+        db.session.add(unit)
+        db.session.commit()
+
+        money_before = nation.money
+        food_before = nation.food
+        self._deduct_upkeep(nation)
+        db.session.refresh(nation)
+        # Infantry upkeep: money=1, food=1 — mobilized pays both
+        assert nation.money == money_before - 1
+        assert nation.food == food_before - 1
+
+    def test_demobilized_division_money_only(self, app, nation):
+        """Units in a demobilized division only pay money upkeep."""
+        div = Division(nation_id=nation.id, name='Bravo',
+                       mobilization_state='demobilized')
+        db.session.add(div)
+        db.session.flush()
+
+        unit = Unit(nation_id=nation.id, unit_key='infantry',
+                    division_id=div.id,
+                    firepower=3, armour=1, maneuver=2, hp=50, max_hp=50)
+        db.session.add(unit)
+        db.session.commit()
+
+        udef = UNIT_DEFS['infantry']
+        non_money = {r for r in udef.upkeep if r != 'money'}
+        before = {r: getattr(nation, r) for r in non_money}
+        money_before = nation.money
+
+        self._deduct_upkeep(nation)
+        db.session.refresh(nation)
+
+        assert nation.money == money_before - udef.upkeep['money']
+        for r in non_money:
+            assert getattr(nation, r) == before[r], f"{r} should not be deducted when demobilized"
 
     def test_dead_units_not_charged(self, app, nation):
         unit = Unit(nation_id=nation.id, unit_key='infantry',

@@ -38,7 +38,7 @@
                 </td>
                 <td class="px-4 py-3">
                     {% if nation.alliance %}
-                        <span class="text-amber-500">{{ nation.alliance.name }}</span>
+                        <a href="{{ url_for('alliance.alliance_view', id=nation.alliance.id) }}" class="text-amber-500 hover:text-amber-400">{{ nation.alliance.name }}</a>
                     {% else %}
                         <span class="text-slate-500 italic">Unallied</span>
                     {% endif %}

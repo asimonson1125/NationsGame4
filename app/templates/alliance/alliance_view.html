@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% block title %}{{ alliance.name }}{% endblock %}
+
+{% block content %}
+{# ===== ALLIANCE HEADER BANNER ===== #}
+<div class="relative bg-cover bg-center"
+     style="background-image: url('{{ url_for('static', filename='images/alliance.png') }}'); padding: 100px 20px;">
+    <div class="absolute inset-0 bg-slate-950/60"></div>
+    <div class="relative max-w-5xl mx-auto flex items-center text-white"
+         style="text-shadow: 1px 1px 4px rgba(0,0,0,.7)">
+
+        {# Left: flag + alliance name #}
+        <div class="flex-1 flex flex-col items-center pr-4"
+             {% if is_founder %}x-data="{ flagModal: false }"{% endif %}>
+            {% if is_founder %}
+            <div @click="flagModal = true" class="relative cursor-pointer mb-4 group">
+                {% if alliance.flag_url %}
+                <img src="{{ alliance.flag_url }}" alt="{{ alliance.name }} Flag"
+                     class="w-48 h-28 object-cover border-2 border-white/50 group-hover:border-amber-400 transition-colors duration-200">
+                {% else %}
+                <div class="w-48 h-28 bg-white/20 border-2 border-white/50 group-hover:border-amber-400 flex items-center justify-center text-white/60 group-hover:text-amber-300 text-sm transition-colors duration-200">
+                    Click to set flag
+                </div>
+                {% endif %}
+                <div class="absolute -bottom-1.5 -right-1.5 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg">
+                    <i class="fas fa-pencil text-[10px] text-slate-900"></i>
+                </div>
+            </div>
+            {% else %}
+                {% if alliance.flag_url %}
+                <img src="{{ alliance.flag_url }}" alt="{{ alliance.name }} Flag"
+                     class="w-48 h-28 object-cover border-2 border-white/50 mb-4">
+                {% else %}
+                <div class="w-48 h-28 bg-white/20 border-2 border-white/50 mb-4 flex items-center justify-center text-white/60 text-sm">
+                    No Flag Set
+                </div>
+                {% endif %}
+            {% endif %}
+            <h1 class="text-3xl font-bold text-center">{{ alliance.name }}</h1>
+
+            {% if is_founder %}
+            {# Flag URL modal #}
+            <div x-show="flagModal" x-cloak
+                 class="fixed inset-0 z-50 flex items-center justify-center p-4" style="text-shadow: none;"
+                 @keydown.escape.window="flagModal = false">
+                <div class="absolute inset-0 bg-black/60" @click="flagModal = false"></div>
+                <div class="relative bg-slate-800 border border-slate-700 rounded-lg shadow-2xl w-full max-w-sm p-5"
+                     @click.stop>
+                    <h3 class="text-lg font-semibold text-slate-100 mb-4">Update Alliance Flag</h3>
+                    <form hx-post="{{ url_for('alliance.update_flag') }}" hx-swap="none"
+                          @htmx:after-request="if ($event.detail.successful) { flagModal = false; location.reload(); }"
+                          class="space-y-3">
+                        <input type="text" name="new_flag"
+                               value="{{ alliance.flag_url or '' }}"
+                               placeholder="https://... (any image link)"
+                               class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm">
+                        <div class="flex justify-end gap-2">
+                            <button type="button" @click="flagModal = false"
+                                    class="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">Cancel</button>
+                            <button type="submit"
+                                    class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md transition-colors font-semibold text-sm">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {# Right: stats #}
+        <div class="flex-1 pl-5 border-l-2 border-white/50 flex flex-col justify-center gap-4">
+            <div class="text-center">
+                <div class="text-sm opacity-80 mb-0.5">Founder</div>
+                <div class="text-2xl font-bold">
+                    {% if alliance.founder %}
+                    <a href="{{ url_for('main.nation_view', nation_id=alliance.founder.id) }}"
+                       class="hover:text-amber-300 transition-colors">{{ alliance.founder.name }}</a>
+                    {% else %}
+                    Unknown
+                    {% endif %}
+                </div>
+            </div>
+            <div class="text-center">
+                <div class="text-sm opacity-80 mb-0.5">Members</div>
+                <div class="text-2xl font-bold">{{ members | length }}</div>
+            </div>
+            <div class="text-center">
+                <div class="text-sm opacity-80 mb-0.5">Total GP</div>
+                <div class="text-2xl font-bold text-amber-400">{{ '{:,}'.format(total_gp | int) }}</div>
+            </div>
+            {% if alliance.created_at %}
+            <div class="text-center">
+                <div class="text-sm opacity-80 mb-0.5">Founded</div>
+                <div class="text-2xl font-bold">{{ alliance.created_at.strftime('%b %d, %Y') }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# ===== ALLIANCE INFO ===== #}
+<div class="p-5 space-y-5">
+
+    {# Description #}
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-5 max-w-4xl mx-auto"
+         x-data="{ editingDesc: false }">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold text-slate-100">About {{ alliance.name }}</h2>
+            {% if is_founder %}
+            <button @click="editingDesc = !editingDesc"
+                    class="text-slate-400 hover:text-amber-400 transition-colors">
+                <i class="fas fa-pencil text-xs"></i>
+            </button>
+            {% endif %}
+        </div>
+
+        {# View mode #}
+        <div x-show="!editingDesc">
+            {% if alliance.description %}
+            <p class="text-slate-300 whitespace-pre-line">{{ alliance.description }}</p>
+            {% else %}
+            <p class="text-slate-500 italic">No description set.</p>
+            {% endif %}
+        </div>
+
+        {% if is_founder %}
+        {# Edit mode #}
+        <div x-show="editingDesc" x-cloak>
+            <form hx-post="{{ url_for('alliance.update_description') }}" hx-swap="none"
+                  @htmx:after-request="if ($event.detail.successful) { location.reload(); }">
+                <textarea name="new_description" rows="4" maxlength="5000"
+                          class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm">{{ alliance.description or '' }}</textarea>
+                <div class="flex justify-end gap-2 mt-2">
+                    <button type="button" @click="editingDesc = false"
+                            class="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">Cancel</button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md transition-colors font-semibold text-sm">Save</button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    {# Member Table #}
+    <div class="max-w-4xl mx-auto">
+        <h2 class="text-lg font-semibold text-slate-100 mb-3">Members</h2>
+        {% include 'alliance/partials/member_table.html' %}
+    </div>
+
+    {# Actions #}
+    {% if is_member %}
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-5 flex flex-wrap gap-3">
+            {% if is_founder %}
+            <button hx-post="{{ url_for('alliance.disband_alliance') }}" hx-swap="none"
+                    hx-confirm="Are you sure you want to disband this alliance? All members will be removed."
+                    class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-md transition-colors font-semibold text-sm">
+                <i class="fas fa-trash mr-1"></i> Disband Alliance
+            </button>
+            {% else %}
+            <button hx-post="{{ url_for('alliance.leave_alliance') }}" hx-swap="none"
+                    hx-confirm="Are you sure you want to leave this alliance?"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-md transition-colors font-semibold text-sm">
+                <i class="fas fa-sign-out-alt mr-1"></i> Leave Alliance
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

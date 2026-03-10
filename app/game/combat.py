@@ -795,7 +795,7 @@ def _send_battle_notifications(battle, atk_units, def_units, db_session):
 
 
 def _end_battle(battle, db_session):
-    """Clean up after battle ends — snapshot unit state, disband destroyed, heal survivors."""
+    """Clean up after battle ends — snapshot unit state, disband destroyed."""
     from ..models import Division, Unit, Nation
 
     # Snapshot both sides' units before anything changes
@@ -810,7 +810,7 @@ def _end_battle(battle, db_session):
     # For PvE, the NPC defender division is disposable — delete it entirely
     is_pve = battle.battle_type == 'pve'
 
-    # Destroy destroyed units (reduce military GP, destroy equipment) and heal survivors
+    # Destroy destroyed units (reduce military GP, destroy equipment)
     for unit in atk_units:
         if unit.hp <= 0:
             nation = db_session.get(Nation, unit.nation_id)
@@ -819,8 +819,6 @@ def _end_battle(battle, db_session):
                 nation.military_gp = max(0, (nation.military_gp or 0) - udef.gp_value)
             _destroy_unit_equipment(unit, db_session)
             db_session.delete(unit)
-        else:
-            unit.hp = unit.effective_max_hp
 
     if is_pve:
         # Delete all NPC units and the NPC division — no FK constraint on division IDs
@@ -838,8 +836,6 @@ def _end_battle(battle, db_session):
                     nation.military_gp = max(0, (nation.military_gp or 0) - udef.gp_value)
                 _destroy_unit_equipment(unit, db_session)
                 db_session.delete(unit)
-            else:
-                unit.hp = unit.effective_max_hp
         def_div = db_session.get(Division, (battle.defender_division_id, battle.defender_nation_id))
         if def_div:
             def_div.in_combat = False

@@ -80,6 +80,24 @@ else:
 
 ---
 
+## Migrations
+
+Schema migrations live in the `migrations/` directory. Each migration is a Python module with a `migrate(app)` function. A `_migrations_applied` tracking table ensures each migration runs exactly once.
+
+**Docker:** Migrations run automatically on every container start via `docker-entrypoint.sh` — no manual steps needed.
+
+**Local development:**
+```bash
+python3 -c "from run import app; from migrations import run_all; run_all(app)"
+```
+
+**Adding a new migration:**
+1. Create `migrations/<name>.py` with a `migrate(app)` function.
+2. Append `'<name>'` to the `MIGRATIONS` list in `migrations/__init__.py`.
+3. The migration will run automatically on next deploy (Docker) or manual invocation (local).
+
+---
+
 ### Option A: Docker Compose (recommended)
 
 **Standalone** (includes Nginx):
@@ -171,6 +189,9 @@ app/
     images/
       icons/        # resource, land, and unit type icons
       continents/   # continent background images
+migrations/
+  __init__.py      # migration runner and MIGRATIONS list
+  add_growth_mode.py  # adds growth_mode column to nations
 nginx/
   nginx.conf       # production reverse proxy config
 config.py          # dev/prod/test Flask config
@@ -215,7 +236,7 @@ TIER_THRESHOLDS = [
 
 # Growth constants
 GROWTH_MULTIPLIER = 0.05       # base hourly growth factor
-FOOD_PER_CITIZEN = 0.1          # food cost per new citizen
+FOOD_PER_CITIZEN = 0.025          # food cost per new citizen
 LAND_PER_POPULATION = 1000      # 1 tile per 1,000 new pop
 STARVATION_RATE = 0.01          # 1% population loss per hour when starving
 ```
@@ -279,4 +300,4 @@ Jobs are registered in `app/tasks.py` and guarded with `WERKZEUG_RUN_MAIN` to pr
 
 ## Starter State (on Registration)
 
-New nations receive: 2 farms, 1 windmill, 5 quarry, and 500 tiles of land distributed by continent weights.
+New nations receive: farms, windmills, quarries, and 500 tiles of land distributed by continent weights.

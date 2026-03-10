@@ -14,4 +14,13 @@ with app.app_context():
     print('Database and partitions ready.')
 "
 
+# Run any pending migrations
+echo "Running migrations..."
+python3 -c "
+from app import create_app
+app = create_app('production')
+from migrations import run_all
+run_all(app)
+"
+
 exec "$@"

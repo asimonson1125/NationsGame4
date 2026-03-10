@@ -7,6 +7,9 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'connect_args': {'options': '-c timezone=utc'}
+    }
     SCHEDULER_API_ENABLED = False
     CACHE_DEFAULT_TIMEOUT = 300
 

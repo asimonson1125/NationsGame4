@@ -6,6 +6,17 @@ Add newest entries at the TOP of the list.
 
 CHANGELOG = [
     {
+        'version': '0.1.1-alpha',
+        'title': 'NG4 Alpha — Phase 1',
+        'date': '2026-03-08',
+        'body': (
+            'Welcome to NG4. This is an early alpha.  Basic economics '
+            'and military are complete.  Starvation and unit attrition '
+            'has been implemented (units now heal 10% max HP per tick once '
+            'upkeep is restored)'
+        ),
+    },
+    {
         'version': '0.1.0-alpha',
         'title': 'NG4 Alpha — Phase 1',
         'date': '2026-03-08',

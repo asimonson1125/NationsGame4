@@ -231,11 +231,11 @@
                     <p class="text-xs text-slate-400 mb-3">
                         <i class="far fa-clock mr-1"></i>Build Time:
                         {% if fdef.build_time < 60 %}
-                            {{ fdef.build_time }}m each
+                            {{ fdef.build_time }}m
                         {% elif fdef.build_time < 1440 %}
-                            {{ fdef.build_time // 60 }}h{{ ' %dm' % (fdef.build_time % 60) if fdef.build_time % 60 else '' }} each
+                            {{ fdef.build_time // 60 }}h{{ ' %dm' % (fdef.build_time % 60) if fdef.build_time % 60 else '' }}
                         {% else %}
-                            {{ fdef.build_time // 1440 }}d{{ ' %dh' % ((fdef.build_time % 1440) // 60) if (fdef.build_time % 1440) // 60 else '' }} each
+                            {{ fdef.build_time // 1440 }}d{{ ' %dh' % ((fdef.build_time % 1440) // 60) if (fdef.build_time % 1440) // 60 else '' }}
                         {% endif %}
                     </p>
 

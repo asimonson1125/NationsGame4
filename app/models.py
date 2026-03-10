@@ -11,7 +11,13 @@ class Alliance(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False, unique=True)
-    members = db.relationship('Nation', backref='alliance', lazy=True)
+    flag_url = db.Column(db.String(500), default='')
+    description = db.Column(db.Text, default='')
+    founder_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    members = db.relationship('Nation', backref='alliance', lazy=True, foreign_keys='Nation.alliance_id')
+    founder = db.relationship('Nation', foreign_keys=[founder_id])
 
 
 class Nation(db.Model):
@@ -29,6 +35,7 @@ class Nation(db.Model):
     description = db.Column(db.Text, default='')
     continent = db.Column(db.String(100), default='', index=True)
     growth_rate = db.Column(db.Integer, default=50)  # 0-100 percent
+    growth_mode = db.Column(db.String(10), default='auto')  # off|auto|manual
     alliance_id = db.Column(db.Integer, db.ForeignKey('alliances.id'), nullable=True, index=True)
     last_expanded_at = db.Column(db.DateTime, nullable=True)
     last_colonized_at = db.Column(db.DateTime, nullable=True)

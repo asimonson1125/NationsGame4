@@ -83,6 +83,9 @@
             </div>
             <div class="text-center" x-data="{
                 delta: 0,
+                foodDays: 0,
+                abundance: 0,
+                growthBlock: '',
                 fmt(n) {
                     let a = Math.abs(n);
                     if (a >= 1e9) return (a/1e9).toFixed(1) + 'b';
@@ -92,11 +95,16 @@
                 },
                 fetchDelta() {
                     fetch('{{ url_for('main.population_delta') }}')
-                        .then(r => r.json()).then(d => this.delta = d.delta);
+                        .then(r => r.json()).then(d => {
+                            this.delta = d.delta;
+                            this.foodDays = d.food_days;
+                            this.abundance = d.abundance;
+                            this.growthBlock = d.growth_block || '';
+                        });
                 },
                 {% if is_owner|default(false) %}
                 open: false,
-                mode: {{ nation.growth_rate or 0 }} === 50 ? 'auto' : ({{ nation.growth_rate or 0 }} > 0 ? 'manual' : 'off'),
+                mode: '{{ nation.growth_mode or "auto" }}',
                 committedRate: {{ nation.growth_rate or 0 }},
                 manualRate: {{ nation.growth_rate or 0 }},
                 setAuto() {
@@ -111,7 +119,7 @@
                         method: 'POST',
                         headers: {'Content-Type': 'application/x-www-form-urlencoded',
                                   'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content},
-                        body: 'growth_rate=' + rate,
+                        body: 'growth_rate=' + rate + '&growth_mode=' + this.mode,
                     }).then(r => {
                         const triggers = r.headers.get('HX-Trigger');
                         if (triggers) {
@@ -119,14 +127,19 @@
                                 document.body.dispatchEvent(new CustomEvent(evt, {detail}));
                         }
                         return r.json();
-                    }).then(d => this.delta = d.delta);
+                    }).then(d => {
+                        this.delta = d.delta;
+                        this.foodDays = d.food_days;
+                        this.abundance = d.abundance;
+                        this.growthBlock = d.growth_block || '';
+                    });
                 },
                 saveManual() {
                     let r = Math.max(0, Math.min(100, parseInt(this.manualRate) || 0));
                     this.manualRate = r;
                     this.committedRate = r;
                     this.mode = r === 0 ? 'off' : 'manual';
-                    this.save(r);
+                    this.save(r);  // mode is set above, sent with request
                     this.open = false;
                 },
                 {% endif %}
@@ -148,7 +161,56 @@
                             <i class="fas fa-caret-down"></i><span x-text="fmt(delta) + '/hr'"></span>
                         </span>
                     </template>
+                    {% if is_owner|default(false) %}
+                    <template x-if="delta === 0 && committedRate > 0">
+                        <span class="text-slate-400 text-sm font-semibold flex items-center gap-0.5">
+                            <i class="fas fa-pause text-[10px]"></i><span>0/hr</span>
+                        </span>
+                    </template>
+                    {% else %}
+                    <template x-if="delta === 0 && {{ nation.growth_rate or 0 }} > 0">
+                        <span class="text-slate-400 text-sm font-semibold flex items-center gap-0.5">
+                            <i class="fas fa-pause text-[10px]"></i><span>0/hr</span>
+                        </span>
+                    </template>
+                    {% endif %}
                 </div>
+                {% if is_owner|default(false) %}
+                <div class="flex flex-col items-center gap-1 mt-1">
+                    {# Land blockers — shown for any active growth mode #}
+                    <template x-if="mode !== 'off' && growthBlock === 'no_land'">
+                        <span class="text-xs font-medium text-red-400 flex items-center gap-1">
+                            <i class="fas fa-map text-[10px]"></i>
+                            No cleared or urban land — growth halted
+                        </span>
+                    </template>
+                    <template x-if="mode !== 'off' && growthBlock === 'land_full'">
+                        <span class="text-xs font-medium text-amber-400 flex items-center gap-1">
+                            <i class="fas fa-map text-[10px]"></i>
+                            Land at capacity — expand or clear land to grow
+                        </span>
+                    </template>
+                    {# Food abundance — only applies in auto mode #}
+                    <template x-if="mode === 'auto' && growthBlock === '' && foodDays < 3">
+                        <span class="text-xs font-medium text-red-400 flex items-center gap-1">
+                            <i class="fas fa-utensils text-[10px]"></i>
+                            <span x-text="foodDays + ' days of food remaining — growth halted'"></span>
+                        </span>
+                    </template>
+                    <template x-if="mode === 'auto' && growthBlock === '' && foodDays >= 3 && foodDays < 30">
+                        <span class="text-xs font-medium text-amber-400 flex items-center gap-1">
+                            <i class="fas fa-utensils text-[10px]"></i>
+                            <span x-text="foodDays + ' days of food remaining — ' + abundance + '% growth capacity'"></span>
+                        </span>
+                    </template>
+                    <template x-if="mode === 'auto' && growthBlock === '' && foodDays >= 30">
+                        <span class="text-xs font-medium text-emerald-400 flex items-center gap-1">
+                            <i class="fas fa-utensils text-[10px]"></i>
+                            <span x-text="foodDays + ' days of food remaining — full growth'"></span>
+                        </span>
+                    </template>
+                </div>
+                {% endif %}
                 {% if is_owner|default(false) %}
                 <div class="mt-2">
                     <button @click="open = !open"
@@ -159,13 +221,13 @@
                                     ? 'bg-emerald-600/80 text-emerald-100 hover:bg-emerald-500/80'
                                     : 'bg-amber-600/80 text-amber-100 hover:bg-amber-500/80'">
                         <i class="fas fa-users text-[10px]"></i>
-                        <span x-text="mode === 'off' ? 'Growth: Off' : mode === 'auto' ? 'Growth: Auto (50%)' : 'Growth: ' + committedRate + '%'"></span>
+                        <span x-text="mode === 'off' ? 'Growth: Off' : mode === 'auto' ? 'Growth: Automatic' : 'Growth: ' + committedRate + '%'"></span>
                         <i class="fas fa-caret-down text-[10px]"></i>
                     </button>
                     <div x-show="open" @click.outside="open = false" x-cloak
                          class="absolute z-30 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl overflow-hidden"
                          style="text-shadow: none;">
-                        <button @click="save(0); mode = 'off'; open = false"
+                        <button @click="mode = 'off'; save(0); open = false"
                                 class="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-700 transition-colors"
                                 :class="mode === 'off' ? 'text-white bg-slate-700/50' : 'text-slate-300'">
                             <i class="fas fa-pause w-4 text-center mr-2 text-slate-500"></i>Off
@@ -173,7 +235,7 @@
                         <button @click="setAuto()"
                                 class="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-700 transition-colors"
                                 :class="mode === 'auto' ? 'text-emerald-400 bg-slate-700/50' : 'text-slate-300'">
-                            <i class="fas fa-bolt w-4 text-center mr-2 text-emerald-500"></i>Automatic (50%)
+                            <i class="fas fa-bolt w-4 text-center mr-2 text-emerald-500"></i>Automatic
                         </button>
                         <div class="border-t border-slate-700">
                             <div class="px-4 py-2.5 flex items-center gap-2"
@@ -254,7 +316,7 @@
 
         {# --- alliance blurb --- #}
         {% if nation.alliance %}
-            {% set alliance_blurb = 'The ' ~ (dem ~ ' ' if dem else '') ~ 'people are members of <a href=\"#\" class=\"text-amber-500 hover:text-amber-400\">' ~ nation.alliance.name ~ '</a>.' %}
+            {% set alliance_blurb = 'The ' ~ (dem ~ ' ' if dem else '') ~ 'people are members of <a href=\"' ~ url_for('alliance.alliance_view', id=nation.alliance.id) ~ '\" class=\"text-amber-500 hover:text-amber-400\">' ~ nation.alliance.name ~ '</a>.' %}
         {% else %}
             {% set alliance_blurb = 'The ' ~ (dem ~ ' ' if dem else '') ~ 'people are unallied.' %}
         {% endif %}

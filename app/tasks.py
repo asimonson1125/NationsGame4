@@ -51,96 +51,125 @@ def process_combat_rounds():
             db.session.commit()
 
 
-def process_population_tick():
-    """Runs hourly. Applies population tax/consumption, growth, starvation, and tier update."""
-    from .models import Nation
+def tick_nation(nation, *, skip_military=False):
+    """Apply one hourly tick to a single nation.
+
+    1. Population resource effects (tax income, power/CG consumption)
+    2. Food priority — population eats first; scaled starvation on deficit
+    3. Population growth (only when food is sufficient)
+    4. Tier update
+    5. Military upkeep — deducted from post-population resources
+    6. Attrition (can't afford) or healing (non-combat, upkeep met)
+
+    Returns (grown, starved) citizen counts.
+    """
+    from .models import Unit
     from .game.population import (get_population_effects, process_growth,
-                                  process_starvation, compute_tier, compute_population_gp)
+                                  process_starvation, compute_tier,
+                                  compute_population_gp)
+    from .helpers import compute_total_upkeep
+    from . import db
+
+    effects = get_population_effects(nation.population)
+
+    # 1. Non-food resource effects
+    for res, amount in effects.items():
+        if res == 'food':
+            continue
+        new_val = nation.get_resource(res) + amount
+        setattr(nation, res, max(0, new_val))
+
+    # 2. Food priority: population eats first
+    food_needed = abs(effects.get('food', 0))
+    food_available = nation.food or 0
+    grown = 0
+    starved = 0
+
+    if food_needed > 0 and food_available < food_needed:
+        deficit_fraction = (food_needed - food_available) / food_needed
+        nation.food = 0
+        starved = process_starvation(nation, deficit_fraction)
+    else:
+        nation.food = max(0, food_available - food_needed)
+        grown = process_growth(nation)
+
+    # 3. Tier update
+    nation.tier = compute_tier(nation.population)
+    nation.population_gp = compute_population_gp(nation.population)
+
+    if skip_military:
+        return grown, starved
+
+    # 4. Military upkeep
+    total_upkeep = compute_total_upkeep(nation.id)
+    if not total_upkeep:
+        _heal_non_combat_units(nation.id, db)
+        return grown, starved
+
+    can_afford = all(
+        nation.get_resource(res) >= amount
+        for res, amount in total_upkeep.items()
+    )
+
+    if can_afford:
+        for res, amount in total_upkeep.items():
+            nation.add_resource(res, -amount)
+        _heal_non_combat_units(nation.id, db)
+    else:
+        units = Unit.query.filter_by(nation_id=nation.id).filter(Unit.hp > 0).all()
+        for unit in units:
+            eff_max = unit.effective_max_hp
+            attrition = max(1, eff_max // 10)
+            floor = eff_max // 5
+            if unit.hp > floor:
+                unit.hp = max(floor, unit.hp - attrition)
+
+    return grown, starved
+
+
+def process_hourly_tick():
+    """Runs hourly. Single pass over all nations."""
+    from .models import Nation, User
     from . import db
     with scheduler.app.app_context():
-        # Batch processing to avoid loading all nations into memory at once
+        npc_user = User.query.filter_by(username='_system_npc').first()
+        npc_nation_id = npc_user.nation.id if npc_user and npc_user.nation else None
+
         batch_size = 100
         last_id = 0
         while True:
             nations = Nation.query.filter(Nation.id > last_id).order_by(Nation.id).limit(batch_size).all()
             if not nations:
                 break
-            
             for nation in nations:
-                # 1. Apply existing resource effects (tax income, consumption)
-                effects = get_population_effects(nation.population)
-                for res, amount in effects.items():
-                    new_val = nation.get_resource(res) + amount
-                    setattr(nation, res, max(0, new_val))
-
-                # 2. Population growth (consumes food + cleared land)
-                process_growth(nation)
-
-                # 3. Starvation (population loss when food == 0)
-                process_starvation(nation)
-
-                # 4. Tier auto-update based on new population
-                nation.tier = compute_tier(nation.population)
-                nation.population_gp = compute_population_gp(nation.population)
-                
+                tick_nation(nation, skip_military=(nation.id == npc_nation_id))
                 last_id = nation.id
-
             db.session.commit()
 
 
-def deduct_military_upkeep():
-    """Runs hourly. Deducts upkeep for all units. Units lose HP if nation can't afford."""
-    from .models import Nation, Unit, User
-    from .helpers import compute_total_upkeep
-    from . import db
-    with scheduler.app.app_context():
-        # Exclude the system NPC nation — its divisions are disposable PvE opponents
-        npc_user = User.query.filter_by(username='_system_npc').first()
-        npc_nation_id = npc_user.nation.id if npc_user and npc_user.nation else None
-        
-        # Batch processing
-        batch_size = 100
-        last_id = 0
-        while True:
-            query = Nation.query.filter(Nation.id > last_id)
-            if npc_nation_id:
-                query = query.filter(Nation.id != npc_nation_id)
-            
-            nations = query.order_by(Nation.id).limit(batch_size).all()
-            if not nations:
-                break
+def _heal_non_combat_units(nation_id, db):
+    """Restore full effective HP to damaged units not currently in combat.
 
-            for nation in nations:
-                # Optimized compute_total_upkeep uses GROUP BY now
-                total_upkeep = compute_total_upkeep(nation.id)
-                if not total_upkeep:
-                    last_id = nation.id
-                    continue
+    Uses effective_max_hp (includes equipment buffs) so must load via Python.
+    """
+    from .models import Unit, Division
 
-                # Check if nation can afford
-                can_afford = True
-                for res, amount in total_upkeep.items():
-                    if nation.get_resource(res) < amount:
-                        can_afford = False
-                        break
-
-                if can_afford:
-                    for res, amount in total_upkeep.items():
-                        nation.add_resource(res, -amount)
-                else:
-                    # Attrition: each unit loses 10% max HP
-                    # We still have to query all units here for attrition, 
-                    # but only for nations that can't afford upkeep.
-                    units = Unit.query.filter_by(nation_id=nation.id).filter(Unit.hp > 0).all()
-                    for unit in units:
-                        attrition = max(1, unit.max_hp // 10)
-                        floor = unit.max_hp // 5  # 20% of max HP
-                        if unit.hp > floor:
-                            unit.hp = max(floor, unit.hp - attrition)
-                
-                last_id = nation.id
-
-            db.session.commit()
+    healable = (
+        Unit.query
+        .outerjoin(Division, db.and_(
+            Division.id == Unit.division_id,
+            Division.nation_id == Unit.nation_id,
+        ))
+        .filter(
+            Unit.nation_id == nation_id,
+            Unit.hp > 0,
+            Unit.hp < Unit.max_hp,
+            db.or_(Unit.division_id.is_(None), Division.in_combat == False),
+        )
+        .all()
+    )
+    for unit in healable:
+        unit.hp = unit.effective_max_hp
 
 
 def process_factory_queue():
@@ -200,9 +229,7 @@ def register_tasks(app):
     # ── Hourly tasks (every hour at :00 UTC) ──
     scheduler.add_job(id='incr_prod_cap', func=increment_production_capacity,
                       trigger='cron', minute=0)
-    scheduler.add_job(id='population_tick', func=process_population_tick,
-                      trigger='cron', minute=0)
-    scheduler.add_job(id='military_upkeep', func=deduct_military_upkeep,
+    scheduler.add_job(id='hourly_tick', func=process_hourly_tick,
                       trigger='cron', minute=0)
 
     # ── Frequent tasks (keep as interval) ──

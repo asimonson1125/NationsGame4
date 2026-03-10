@@ -1,51 +1,32 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - Nations Simulator</title>
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
-                    colors: {
-                        slate: {
-                            50:'#f4f5f7',100:'#e7e9ed',200:'#ced1d8',300:'#adb2bc',
-                            400:'#8a919f',500:'#6b7486',600:'#545d70',700:'#404a5c',
-                            800:'#2f3848',900:'#252d3c',950:'#1c2332',
-                        },
-                    }
-                }
-            }
-        }
-    </script>
-    <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>[x-cloak] { display: none !important; }</style>
-</head>
-<body class="bg-slate-950 min-h-screen flex items-center justify-center py-10 font-sans">
+{% extends 'base.html' %}
+
+{% block title %}Register{% endblock %}
+{% block meta_description %}Create your free Nations Simulator account. Choose a continent, name your nation, and start building your empire.{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
+
+{% block head %}
+<style>[x-cloak] { display: none !important; }</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-[calc(100vh-3.5rem)] flex items-center justify-center py-10">
     <div class="w-full max-w-5xl mx-4" x-data="{ step: 1, continent: '', nationName: '', demonym: '', username: '', email: '', password: '', confirmPassword: '' }">
 
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% for category, message in messages %}
         <div class="mb-4 p-3 rounded text-sm max-w-md mx-auto
                     {% if category == 'error' %}bg-red-500/10 text-red-400 border border-red-500/30
-                    {% else %}bg-sky-500/10 text-sky-400 border border-sky-500/30{% endif %}">
+                    {% else %}bg-sky-500/10 text-sky-400 border border-sky-500/30{% endif %}"
+             role="alert">
             {{ message }}
         </div>
         {% endfor %}
         {% endwith %}
 
         {# ===== STEP INDICATOR ===== #}
-        <div class="flex items-center justify-center gap-2 mb-8 text-xs text-slate-400">
+        <div class="flex items-center justify-center gap-2 mb-8 text-xs text-slate-400" aria-label="Registration progress">
             <span :class="step >= 1 ? 'text-amber-500 font-semibold' : ''">Account</span>
-            <i class="fas fa-chevron-right text-[8px]"></i>
+            <i class="fas fa-chevron-right text-[8px]" aria-hidden="true"></i>
             <span :class="step >= 2 ? 'text-amber-500 font-semibold' : ''">Your Nation</span>
         </div>
 
@@ -53,32 +34,32 @@
         <div x-show="step === 1" x-cloak:false class="max-w-md mx-auto">
             <div class="bg-slate-800 rounded-xl border border-slate-700 p-8 border-t-4 border-t-amber-500">
                 <div class="text-center mb-6">
-                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Nations" class="w-10 h-10 mx-auto mb-2">
+                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Nations Simulator logo" class="w-10 h-10 mx-auto mb-2">
                     <h1 class="text-2xl font-bold text-slate-100 mb-1">Create Your Account</h1>
                     <p class="text-slate-400 text-sm">Your login credentials</p>
                 </div>
 
                 <div class="flex flex-col gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">Username</label>
-                        <input type="text" x-model="username" autocomplete="username"
+                        <label for="reg-username" class="block text-sm font-medium text-slate-300 mb-1">Username</label>
+                        <input id="reg-username" type="text" x-model="username" autocomplete="username"
                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">Email</label>
-                        <input type="email" x-model="email" autocomplete="email"
+                        <label for="reg-email" class="block text-sm font-medium text-slate-300 mb-1">Email</label>
+                        <input id="reg-email" type="email" x-model="email" autocomplete="email"
                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm">
                         <p class="text-xs text-slate-500 mt-1">Kept private, never shown publicly</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">Password</label>
-                        <input type="password" x-model="password" autocomplete="new-password"
+                        <label for="reg-password" class="block text-sm font-medium text-slate-300 mb-1">Password</label>
+                        <input id="reg-password" type="password" x-model="password" autocomplete="new-password"
                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm">
                         <p class="text-xs text-slate-500 mt-1">Minimum 8 characters</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">Confirm Password</label>
-                        <input type="password" x-model="confirmPassword" autocomplete="new-password"
+                        <label for="reg-confirm" class="block text-sm font-medium text-slate-300 mb-1">Confirm Password</label>
+                        <input id="reg-confirm" type="password" x-model="confirmPassword" autocomplete="new-password"
                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm">
                     </div>
                     <button @click="
@@ -101,7 +82,7 @@
         {# ===== STEP 2: Nation Details ===== #}
         <div x-show="step === 2" x-cloak class="max-w-5xl mx-auto">
             <button @click="step = 1" class="text-slate-400 hover:text-slate-200 text-sm mb-4 flex items-center gap-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 Back
             </button>
 
@@ -114,14 +95,14 @@
             <div class="max-w-md mx-auto mb-6 flex flex-col gap-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">Nation Name</label>
-                        <input type="text" x-model="nationName"
+                        <label for="nation-name" class="block text-sm font-medium text-slate-300 mb-1">Nation Name</label>
+                        <input id="nation-name" type="text" x-model="nationName"
                                placeholder="e.g. Appalachia"
                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">Demonym</label>
-                        <input type="text" x-model="demonym"
+                        <label for="demonym" class="block text-sm font-medium text-slate-300 mb-1">Demonym</label>
+                        <input id="demonym" type="text" x-model="demonym"
                                placeholder="e.g. Appalachian"
                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm">
                         <p class="text-xs text-slate-500 mt-1">What your people are called</p>
@@ -130,15 +111,17 @@
             </div>
 
             {# Continent picker #}
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-slate-300 mb-3 text-center">Choose a Homeland</label>
+            <fieldset class="mb-6">
+                <legend class="block text-sm font-medium text-slate-300 mb-3 text-center">Choose a Homeland</legend>
                 <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
 
                     <div @click="continent = 'Westberg'"
                          :class="continent === 'Westberg' ? 'ring-2 ring-amber-500 bg-slate-700' : 'bg-slate-800 hover:bg-slate-750'"
-                         class="rounded-lg p-4 cursor-pointer transition-all border border-slate-700 flex flex-col">
+                         class="rounded-lg p-4 cursor-pointer transition-all border border-slate-700 flex flex-col"
+                         role="radio" :aria-checked="continent === 'Westberg'" tabindex="0"
+                         @keydown.enter="continent = 'Westberg'" @keydown.space.prevent="continent = 'Westberg'">
                         <div class="flex items-center gap-2 mb-2">
-                            <span class="text-xl">🌲</span>
+                            <span class="text-xl" aria-hidden="true">🌲</span>
                             <h3 class="font-bold text-slate-100">Westberg</h3>
                         </div>
                         <p class="text-slate-400 text-xs mb-2">Temperate forests and grasslands with rich minerals.</p>
@@ -153,9 +136,11 @@
 
                     <div @click="continent = 'Amarino'"
                          :class="continent === 'Amarino' ? 'ring-2 ring-amber-500 bg-slate-700' : 'bg-slate-800 hover:bg-slate-750'"
-                         class="rounded-lg p-4 cursor-pointer transition-all border border-slate-700 flex flex-col">
+                         class="rounded-lg p-4 cursor-pointer transition-all border border-slate-700 flex flex-col"
+                         role="radio" :aria-checked="continent === 'Amarino'" tabindex="0"
+                         @keydown.enter="continent = 'Amarino'" @keydown.space.prevent="continent = 'Amarino'">
                         <div class="flex items-center gap-2 mb-2">
-                            <span class="text-xl">🌴</span>
+                            <span class="text-xl" aria-hidden="true">🌴</span>
                             <h3 class="font-bold text-slate-100">Amarino</h3>
                         </div>
                         <p class="text-slate-400 text-xs mb-2">Dense jungles teeming with exotic resources.</p>
@@ -170,9 +155,11 @@
 
                     <div @click="continent = 'San Sebastian'"
                          :class="continent === 'San Sebastian' ? 'ring-2 ring-amber-500 bg-slate-700' : 'bg-slate-800 hover:bg-slate-750'"
-                         class="rounded-lg p-4 cursor-pointer transition-all border border-slate-700 flex flex-col">
+                         class="rounded-lg p-4 cursor-pointer transition-all border border-slate-700 flex flex-col"
+                         role="radio" :aria-checked="continent === 'San Sebastian'" tabindex="0"
+                         @keydown.enter="continent = 'San Sebastian'" @keydown.space.prevent="continent = 'San Sebastian'">
                         <div class="flex items-center gap-2 mb-2">
-                            <span class="text-xl">🏛️</span>
+                            <span class="text-xl" aria-hidden="true">🏛️</span>
                             <h3 class="font-bold text-slate-100">San Sebastian</h3>
                         </div>
                         <p class="text-slate-400 text-xs mb-2">Mediterranean landscapes with diverse terrain.</p>
@@ -187,9 +174,11 @@
 
                     <div @click="continent = 'Tind'"
                          :class="continent === 'Tind' ? 'ring-2 ring-amber-500 bg-slate-700' : 'bg-slate-800 hover:bg-slate-750'"
-                         class="rounded-lg p-4 cursor-pointer transition-all border border-slate-700 flex flex-col">
+                         class="rounded-lg p-4 cursor-pointer transition-all border border-slate-700 flex flex-col"
+                         role="radio" :aria-checked="continent === 'Tind'" tabindex="0"
+                         @keydown.enter="continent = 'Tind'" @keydown.space.prevent="continent = 'Tind'">
                         <div class="flex items-center gap-2 mb-2">
-                            <span class="text-xl">🏔️</span>
+                            <span class="text-xl" aria-hidden="true">🏔️</span>
                             <h3 class="font-bold text-slate-100">Tind</h3>
                         </div>
                         <p class="text-slate-400 text-xs mb-2">Rugged mountains and tundra with mineral wealth.</p>
@@ -204,9 +193,11 @@
 
                     <div @click="continent = 'Zaheria'"
                          :class="continent === 'Zaheria' ? 'ring-2 ring-amber-500 bg-slate-700' : 'bg-slate-800 hover:bg-slate-750'"
-                         class="rounded-lg p-4 cursor-pointer transition-all border border-slate-700 flex flex-col">
+                         class="rounded-lg p-4 cursor-pointer transition-all border border-slate-700 flex flex-col"
+                         role="radio" :aria-checked="continent === 'Zaheria'" tabindex="0"
+                         @keydown.enter="continent = 'Zaheria'" @keydown.space.prevent="continent = 'Zaheria'">
                         <div class="flex items-center gap-2 mb-2">
-                            <span class="text-xl">🏜️</span>
+                            <span class="text-xl" aria-hidden="true">🏜️</span>
                             <h3 class="font-bold text-slate-100">Zaheria</h3>
                         </div>
                         <p class="text-slate-400 text-xs mb-2">Vast desert with oil, uranium, and precious metals.</p>
@@ -220,7 +211,7 @@
                     </div>
 
                 </div>
-            </div>
+            </fieldset>
 
             {# Live preview — shows as soon as there's any input #}
             <template x-if="nationName.trim() || demonym.trim() || continent">
@@ -256,25 +247,25 @@
         </div>
 
     </div>
+</div>
 
-    {# Alert modal for validation errors #}
-    <div x-data="{ open: false, message: '' }"
-         @show-alert.window="message = $event.detail.msg; open = true"
-         @keydown.escape.window="open = false">
-        <template x-if="open">
-            <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div class="absolute inset-0 bg-black/60" @click="open = false"></div>
-                <div class="relative bg-slate-800 border border-slate-700 rounded-lg shadow-2xl w-full max-w-sm p-5" @click.stop>
-                    <p class="text-sm text-slate-200 mb-5 leading-relaxed" x-text="message"></p>
-                    <div class="flex justify-end">
-                        <button @click="open = false"
-                                class="px-4 py-2 text-sm rounded bg-amber-600 hover:bg-amber-500 text-white font-semibold transition-colors">
-                            OK
-                        </button>
-                    </div>
+{# Alert modal for validation errors #}
+<div x-data="{ open: false, message: '' }"
+     @show-alert.window="message = $event.detail.msg; open = true"
+     @keydown.escape.window="open = false">
+    <template x-if="open">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black/60" @click="open = false"></div>
+            <div class="relative bg-slate-800 border border-slate-700 rounded-lg shadow-2xl w-full max-w-sm p-5" @click.stop>
+                <p class="text-sm text-slate-200 mb-5 leading-relaxed" x-text="message"></p>
+                <div class="flex justify-end">
+                    <button @click="open = false"
+                            class="px-4 py-2 text-sm rounded bg-amber-600 hover:bg-amber-500 text-white font-semibold transition-colors">
+                        OK
+                    </button>
                 </div>
             </div>
-        </template>
-    </div>
-</body>
-</html>
+        </div>
+    </template>
+</div>
+{% endblock %}

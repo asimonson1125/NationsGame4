@@ -82,6 +82,9 @@ def create_app(config_name='default'):
     from .trade import trade as trade_blueprint
     app.register_blueprint(trade_blueprint)
 
+    from .alliance import alliance as alliance_blueprint
+    app.register_blueprint(alliance_blueprint)
+
     from .mail import mail as mail_blueprint
     app.register_blueprint(mail_blueprint)
 

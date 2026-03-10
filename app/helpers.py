@@ -108,24 +108,48 @@ def grant_factories(nation, factories, production_capacity=0):
 # ── Military helpers ─────────────────────────────────────────────────────
 
 def compute_total_upkeep(nation_id):
-    """Sum hourly upkeep across all alive units for a nation."""
-    from .models import Unit
+    """Sum hourly upkeep across all alive units for a nation.
+
+    Demobilized units (in a demobilized division or unassigned) only pay
+    their money upkeep — all other resource costs are waived.
+    """
+    from .models import Unit, Division
     from .game.units import UNIT_DEFS
     from . import db
-    from sqlalchemy import func
+    from sqlalchemy import func, case
 
     upkeep = {}
-    # Optimization: Group units by key in DB to avoid loading thousands of objects
-    groups = db.session.query(Unit.unit_key, func.count(Unit.id)).filter_by(
-        nation_id=nation_id
-    ).filter(Unit.hp > 0).group_by(Unit.unit_key).all()
 
-    for unit_key, count in groups:
+    # Label each unit as mobilized or not based on its division's state.
+    # Units without a division are treated as demobilized.
+    is_mobilized = case(
+        (Division.mobilization_state.in_(['mobilized', 'mobilizing']), True),
+        else_=False,
+    )
+
+    groups = (
+        db.session.query(Unit.unit_key, is_mobilized, func.count(Unit.id))
+        .outerjoin(Division, db.and_(
+            Division.id == Unit.division_id,
+            Division.nation_id == Unit.nation_id,
+        ))
+        .filter(Unit.nation_id == nation_id, Unit.hp > 0)
+        .group_by(Unit.unit_key, is_mobilized)
+        .all()
+    )
+
+    for unit_key, mobilized, count in groups:
         udef = UNIT_DEFS.get(unit_key)
         if not udef:
             continue
-        for res, rate in udef.upkeep.items():
-            upkeep[res] = upkeep.get(res, 0) + (rate * count)
+        if mobilized:
+            for res, rate in udef.upkeep.items():
+                upkeep[res] = upkeep.get(res, 0) + (rate * count)
+        else:
+            # Demobilized: money upkeep only
+            money_rate = udef.upkeep.get('money', 0)
+            if money_rate:
+                upkeep['money'] = upkeep.get('money', 0) + (money_rate * count)
     return upkeep
 
 

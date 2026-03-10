@@ -23,9 +23,11 @@ TIER_THRESHOLDS = [
 
 # Growth constants
 GROWTH_MULTIPLIER = 0.05       # base hourly growth factor
-FOOD_PER_CITIZEN = 0.1          # food cost per new citizen
+FOOD_PER_CITIZEN = 0.025          # food cost per new citizen
 LAND_PER_POPULATION = 1000      # 1 tile per 1,000 new pop
 STARVATION_RATE = 0.01          # 1% population loss per hour when starving
+FOOD_STOCKPILE_MIN_DAYS = 3    # no growth below this many days of food
+FOOD_STOCKPILE_MAX_DAYS = 30   # max growth at or above this many days of food
 
 
 def get_population_effects(population):
@@ -54,6 +56,45 @@ def compute_population_gp(population):
     return max(0, (population or 0) // 10000)
 
 
+def food_abundance_multiplier(population, food_stockpile):
+    """Return 0.0–1.0 multiplier based on how many days of food are stockpiled.
+
+    Below FOOD_STOCKPILE_MIN_DAYS of consumption → 0 (no growth).
+    Linear ramp from MIN to MAX days → 0.0 to 1.0.
+    At or above FOOD_STOCKPILE_MAX_DAYS → 1.0 (full growth).
+    """
+    pop = population or 0
+    food = food_stockpile or 0
+    if pop <= 0:
+        return 1.0  # no consumption, no constraint
+
+    hourly_consumption = pop * abs(POPULATION_RATES['food'])
+    daily_consumption = hourly_consumption * 24
+    if daily_consumption <= 0:
+        return 1.0
+
+    days_of_food = food / daily_consumption
+
+    if days_of_food < FOOD_STOCKPILE_MIN_DAYS:
+        return 0.0
+    if days_of_food >= FOOD_STOCKPILE_MAX_DAYS:
+        return 1.0
+
+    return (days_of_food - FOOD_STOCKPILE_MIN_DAYS) / (FOOD_STOCKPILE_MAX_DAYS - FOOD_STOCKPILE_MIN_DAYS)
+
+
+def get_food_days(population, food_stockpile):
+    """Return how many days of food the nation has stockpiled."""
+    pop = population or 0
+    food = food_stockpile or 0
+    if pop <= 0:
+        return 999.0
+    daily_consumption = pop * abs(POPULATION_RATES['food']) * 24
+    if daily_consumption <= 0:
+        return 999.0
+    return food / daily_consumption
+
+
 def _cap_growth(pop, new_pop, food, cleared, urban):
     """Apply food and land caps to a desired growth amount. Returns capped int."""
     # Cap by total land capacity
@@ -73,7 +114,7 @@ def _cap_growth(pop, new_pop, food, cleared, urban):
 def estimate_pop_delta(nation, rate_override=None):
     """Estimate net hourly population change without modifying the nation.
 
-    Accounts for food limits, land capacity, and starvation.
+    Accounts for food limits, land capacity, and scaled starvation.
     Optional rate_override lets the caller preview a different growth rate.
     """
     pop = nation.population or 0
@@ -82,9 +123,13 @@ def estimate_pop_delta(nation, rate_override=None):
     cleared = nation.cleared_land or 0
     urban = nation.urban_areas or 0
 
-    # Starvation takes precedence when food is 0
-    if food <= 0:
-        return -max(1, int(pop * STARVATION_RATE))
+    # Calculate hourly food consumption for population
+    food_needed = pop * abs(POPULATION_RATES['food'])
+
+    # Starvation when food can't cover population consumption
+    if food_needed > 0 and food < food_needed:
+        deficit_fraction = (food_needed - food) / food_needed
+        return -max(1, int(pop * STARVATION_RATE * deficit_fraction))
 
     if rate <= 0:
         return 0
@@ -92,8 +137,20 @@ def estimate_pop_delta(nation, rate_override=None):
     if cleared <= 0 and urban <= 0:
         return 0
 
-    new_pop = pop * (rate / 100) * GROWTH_MULTIPLIER
-    return _cap_growth(pop, new_pop, food, cleared, urban)
+    # In auto mode, food abundance IS the effective rate (0–100%).
+    # In manual mode, the user's rate is used directly.
+    mode = getattr(nation, 'growth_mode', 'auto') or 'auto'
+    if mode == 'auto':
+        effective_rate = food_abundance_multiplier(pop, food) * 100
+        if effective_rate <= 0:
+            return 0
+    else:
+        effective_rate = rate
+
+    # Food remaining after population consumption is available for growth
+    remaining_food = food - food_needed
+    new_pop = pop * (effective_rate / 100) * GROWTH_MULTIPLIER
+    return _cap_growth(pop, new_pop, remaining_food, cleared, urban)
 
 
 def process_growth(nation):
@@ -117,9 +174,19 @@ def process_growth(nation):
     if cleared <= 0 and urban <= 0:
         return 0
 
-    # Calculate desired new population, capped by food and land capacity
+    # In auto mode, food abundance IS the effective rate (0–100%).
+    # In manual mode, the user's rate is used directly.
     food_available = nation.food or 0
-    new_pop = pop * (rate / 100) * GROWTH_MULTIPLIER
+    mode = getattr(nation, 'growth_mode', 'auto') or 'auto'
+    if mode == 'auto':
+        effective_rate = food_abundance_multiplier(pop, food_available) * 100
+        if effective_rate <= 0:
+            return 0
+    else:
+        effective_rate = rate
+
+    # Calculate desired new population, capped by food and land capacity
+    new_pop = pop * (effective_rate / 100) * GROWTH_MULTIPLIER
     new_pop_int = _cap_growth(pop, new_pop, food_available, cleared, urban)
     if new_pop_int < 1:
         return 0
@@ -144,20 +211,23 @@ def process_growth(nation):
     return new_pop_int
 
 
-def process_starvation(nation):
-    """If food is 0, population decreases by 1% per hour.
+def process_starvation(nation, deficit_fraction=1.0):
+    """Apply population starvation scaled by food deficit.
+
+    deficit_fraction: 0.0 = no deficit, 1.0 = total starvation (no food at all).
+    For example, if population needs 25 food but only 23 are available,
+    deficit_fraction = 2/25 = 0.08, so starvation = 0.08 * base rate.
 
     Returns the number of citizens lost (0 if no starvation).
     """
-    food = nation.food or 0
-    if food > 0:
+    if deficit_fraction <= 0:
         return 0
 
     pop = nation.population or 0
     if pop <= 0:
         return 0
 
-    loss = int(pop * STARVATION_RATE)
+    loss = int(pop * STARVATION_RATE * deficit_fraction)
     loss = max(1, loss)  # lose at least 1
     nation.population = max(0, pop - loss)
     return loss

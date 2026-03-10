@@ -1,6 +1,10 @@
 {% extends layout %}
 
-{% block title %}Nations Simulator{% endblock %}
+{% block title %}Nations{% endblock %}
+
+{% block meta_description %}Nations Simulator — a free multiplayer strategy game. Build your nation, expand borders across five continents, develop industry, raise armies, and trade on a player-driven global market.{% endblock %}
+{% block og_title %}Nations Simulator — Build, Expand, Conquer{% endblock %}
+{% block og_description %}A free multiplayer nation-building strategy game. Expand borders, develop industry, raise armies, and trade on the global market.{% endblock %}
 
 {% block head %}
 <style>
@@ -21,6 +25,22 @@
         100% { transform: translateX(var(--shift)); }
     }
 </style>
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Nations Simulator",
+    "description": "A free multiplayer nation-building strategy game. Expand borders, develop industry, raise armies, and trade on a player-driven global market.",
+    "applicationCategory": "Game",
+    "genre": "Strategy",
+    "operatingSystem": "Any",
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+    }
+}
+</script>
 {% endblock %}
 
 {% block content %}
@@ -60,7 +80,7 @@
 <div class="relative overflow-hidden">
     <div class="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-transparent"></div>
     <div class="relative max-w-5xl mx-auto px-6 pt-20 pb-16 text-center">
-        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Nations" class="w-20 h-20 mx-auto mb-6">
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Nations Simulator logo" class="w-20 h-20 mx-auto mb-6">
         <h1 class="text-4xl sm:text-5xl font-bold mb-4">Nations Simulator</h1>
         <p class="text-lg text-slate-300 max-w-2xl mx-auto mb-8">
             Build your nation from the ground up. Expand your borders, develop industry,
@@ -90,7 +110,7 @@
             <div class="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
                 <i class="fas fa-map text-emerald-400 text-lg"></i>
             </div>
-            <h3 class="font-semibold text-slate-100 mb-2">Explore &amp; Expand</h3>
+            <h2 class="text-base font-semibold text-slate-100 mb-2">Explore &amp; Expand</h3>
             <p class="text-sm text-slate-400">
                 Claim territory across five continents &mdash; from the frozen peaks of Tind
                 to the deserts of Zaheria. Each region offers unique terrain and natural resources.
@@ -101,7 +121,7 @@
             <div class="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center mb-4">
                 <i class="fas fa-industry text-amber-400 text-lg"></i>
             </div>
-            <h3 class="font-semibold text-slate-100 mb-2">Build Your Economy</h3>
+            <h2 class="text-base font-semibold text-slate-100 mb-2">Build Your Economy</h3>
             <p class="text-sm text-slate-400">
                 Construct over 60 types of factories. Manage supply chains from raw materials
                 to advanced goods. Balance inputs, outputs, and production capacity.
@@ -112,7 +132,7 @@
             <div class="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center mb-4">
                 <i class="fas fa-shield-alt text-red-400 text-lg"></i>
             </div>
-            <h3 class="font-semibold text-slate-100 mb-2">Military &amp; Combat</h3>
+            <h2 class="text-base font-semibold text-slate-100 mb-2">Military &amp; Combat</h3>
             <p class="text-sm text-slate-400">
                 Recruit units, organise divisions, and equip them with randomised loot-crate gear.
                 Battle other players or fight PvE encounters for rewards.
@@ -123,7 +143,7 @@
             <div class="w-10 h-10 bg-sky-500/10 rounded-lg flex items-center justify-center mb-4">
                 <i class="fas fa-exchange-alt text-sky-400 text-lg"></i>
             </div>
-            <h3 class="font-semibold text-slate-100 mb-2">Global Market</h3>
+            <h2 class="text-base font-semibold text-slate-100 mb-2">Global Market</h3>
             <p class="text-sm text-slate-400">
                 Trade commodities and natural resources on a player-driven market.
                 Set buy and sell orders, track price history, and profit from the spread.
@@ -134,7 +154,7 @@
             <div class="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mb-4">
                 <i class="fas fa-users text-purple-400 text-lg"></i>
             </div>
-            <h3 class="font-semibold text-slate-100 mb-2">Alliances</h3>
+            <h2 class="text-base font-semibold text-slate-100 mb-2">Alliances</h3>
             <p class="text-sm text-slate-400">
                 Join forces with other nations. Form alliances for mutual defence,
                 coordinate strategy, and climb the leaderboards together.
@@ -145,7 +165,7 @@
             <div class="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center mb-4">
                 <i class="fas fa-trophy text-amber-400 text-lg"></i>
             </div>
-            <h3 class="font-semibold text-slate-100 mb-2">Compete &amp; Rise</h3>
+            <h2 class="text-base font-semibold text-slate-100 mb-2">Compete &amp; Rise</h3>
             <p class="text-sm text-slate-400">
                 Earn Greatness Points from population, land, factories, buildings, and military.
                 Compete on global and continental leaderboards.
@@ -162,8 +182,8 @@
         <p class="text-slate-400">Nations Simulator is fully mobile-friendly &mdash; manage your nation on the go.</p>
     </div>
     <div class="flex flex-wrap justify-center gap-6">
-        <img src="{{ url_for('static', filename='IMG_0403.png') }}" alt="Mobile screenshot" class="w-48 sm:w-56 rounded-2xl border border-slate-700 shadow-xl object-contain">
-        <img src="{{ url_for('static', filename='IMG_0404.png') }}" alt="Mobile screenshot" class="w-48 sm:w-56 rounded-2xl border border-slate-700 shadow-xl object-contain">
+        <img src="{{ url_for('static', filename='IMG_0403.png') }}" alt="Nations Simulator mobile gameplay — nation management on a phone screen" class="w-48 sm:w-56 rounded-2xl border border-slate-700 shadow-xl object-contain">
+        <img src="{{ url_for('static', filename='IMG_0404.png') }}" alt="Nations Simulator mobile gameplay — industry and resource view on a phone screen" class="w-48 sm:w-56 rounded-2xl border border-slate-700 shadow-xl object-contain">
     </div>
 </div>
 

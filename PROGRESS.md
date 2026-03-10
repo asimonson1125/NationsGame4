@@ -28,7 +28,7 @@ Reference: `../MODERNIZATION_STRATEGY.md`
 - [x] Factory definitions (`app/game/factories.py`) — 9 factory types (Farm, Windmill, Quarry, Consumer Factory, Foundry, Munitions Plant, Oil Refinery, Nuclear Plant, WHZ Lab)
 - [x] Industry page (`/industry`) — production capacity progress bar, hours input, collect route with Alpine.js filter by output type
 - [x] Flask-APScheduler background task — increments all factory `production_capacity` by 1/hour (capped at 24)
-- [x] Starter factories seeded on registration (2 farms, 1 windmills, 1 quarries)
+- [x] Starter factories seeded on registration 
 - [x] Industry page two-tab layout — Collect tab (existing) + Build tab (Alpine.js reactive cost preview, tier gate, HTMX OOB swap)
 - [x] `FactoryDef` extended with `build_cost`, `land_required`, `gp_value`; all 9 factories populated from NG3 data
 - [x] `POST /industry/build` route — validates tier/land/resources, deducts costs, upserts `NationFactory`, updates `factory_gp`, returns partial (reopens Build tab)
