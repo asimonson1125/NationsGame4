@@ -18,7 +18,11 @@ def format_resource(value):
         return '0'
     value = round(value)
     raw = f'{value:,}'
-    if value >= 1_000_000_000 or round(value / 1_000_000, 1) >= 1000:
+    if value >= 1_000_000_000_000_000 or round(value / 1_000_000_000_000, 1) >= 1000:
+        short = f'{value / 1_000_000_000_000_000:.1f}q'
+    elif value >= 1_000_000_000_000 or round(value / 1_000_000_000, 1) >= 1000:
+        short = f'{value / 1_000_000_000_000:.1f}t'
+    elif value >= 1_000_000_000 or round(value / 1_000_000, 1) >= 1000:
         short = f'{value / 1_000_000_000:.1f}b'
     elif value >= 1_000_000 or round(value / 1_000, 1) >= 1000:
         short = f'{value / 1_000_000:.1f}m'

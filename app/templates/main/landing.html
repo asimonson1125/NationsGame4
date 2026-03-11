@@ -102,6 +102,103 @@
     </div>
 </div>
 
+{# ===== FEATURE SHOWCASES ===== #}
+<div class="max-w-5xl mx-auto px-6 pt-8 pb-4 space-y-24">
+
+    {# --- Nation Profile --- #}
+    <div class="flex flex-col lg:flex-row gap-10 lg:gap-16 items-center">
+        <div class="lg:w-2/5 flex-shrink-0">
+            <span class="text-xs font-semibold uppercase tracking-widest text-amber-500">Your Identity</span>
+            <h2 class="text-2xl font-bold mt-2 mb-3">Your Nation, Your Story</h2>
+            <p class="text-slate-400 leading-relaxed mb-4">
+                Choose a continent, design your flag, and write your nation's history.
+                Every resource, every tile of land, and every Greatness Point is yours to earn.
+            </p>
+            <ul class="space-y-2 text-sm text-slate-300">
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>Custom flag &amp; description</li>
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>Real-time population growth</li>
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>Alliance membership &amp; diplomacy</li>
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>Greatness Points track your progress</li>
+            </ul>
+        </div>
+        <div class="flex-1 min-w-0">
+            <img src="{{ url_for('static', filename='sample_nationpage.png') }}"
+                 alt="Nations Simulator nation page"
+                 class="rounded-xl border border-slate-700 shadow-2xl w-full">
+        </div>
+    </div>
+
+    {# --- Battle --- #}
+    <div class="flex flex-col lg:flex-row-reverse gap-10 lg:gap-16 items-center">
+        <div class="lg:w-2/5 flex-shrink-0">
+            <span class="text-xs font-semibold uppercase tracking-widest text-red-400">Military</span>
+            <h2 class="text-2xl font-bold mt-2 mb-3">Command the Battlefield</h2>
+            <p class="text-slate-400 leading-relaxed mb-4">
+                Organize your divisions, kit them out with equipment, and send them into battle.
+                A detailed turn-by-turn combat log shows every strike, retreat, and decisive victory.
+            </p>
+            <ul class="space-y-2 text-sm text-slate-300">
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>PvP and PvE battles</li>
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>Division-level unit management</li>
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>Full combat report logs</li>
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>Loot rewards for victors</li>
+            </ul>
+        </div>
+        <div class="flex-1 min-w-0">
+            <img src="{{ url_for('static', filename='sample_battle.png') }}"
+                 alt="Nations Simulator battle results"
+                 class="rounded-xl border border-slate-700 shadow-2xl w-full">
+        </div>
+    </div>
+
+    {# --- Industry --- #}
+    <div class="flex flex-col lg:flex-row gap-10 lg:gap-16 items-center">
+        <div class="lg:w-2/5 flex-shrink-0">
+            <span class="text-xs font-semibold uppercase tracking-widest text-amber-500">Economy</span>
+            <h2 class="text-2xl font-bold mt-2 mb-3">Build Your Industrial Empire</h2>
+            <p class="text-slate-400 leading-relaxed mb-4">
+                Construct over 60 factory types — farms, windmills, refineries, arms factories, and more.
+                Production capacity fills over time; collect when ready and reinvest the profits.
+            </p>
+            <ul class="space-y-2 text-sm text-slate-300">
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>60+ factory types across 10 tiers</li>
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>Capacity-based production timing</li>
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>Input/output supply chains</li>
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>Filter &amp; manage your whole industry at a glance</li>
+            </ul>
+        </div>
+        <div class="flex-1 min-w-0">
+            <img src="{{ url_for('static', filename='sample_industry.png') }}"
+                 alt="Nations Simulator industry page"
+                 class="rounded-xl border border-slate-700 shadow-2xl w-full">
+        </div>
+    </div>
+
+    {# --- Leaderboard --- #}
+    <div class="flex flex-col lg:flex-row-reverse gap-10 lg:gap-16 items-center">
+        <div class="lg:w-2/5 flex-shrink-0">
+            <span class="text-xs font-semibold uppercase tracking-widest text-purple-400">Competition</span>
+            <h2 class="text-2xl font-bold mt-2 mb-3">Rise to the Top</h2>
+            <p class="text-slate-400 leading-relaxed mb-4">
+                Compete for supremacy across global and continental leaderboards.
+                Rankings cover national power, military strength, and alliance dominance — can you hold #1?
+            </p>
+            <ul class="space-y-2 text-sm text-slate-300">
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>Global &amp; per-continent rankings</li>
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>National, military &amp; alliance boards</li>
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>Alliance coordination for collective rank</li>
+                <li><i class="fas fa-check text-emerald-400 mr-2"></i>Five unique continents to dominate</li>
+            </ul>
+        </div>
+        <div class="flex-1 min-w-0">
+            <img src="{{ url_for('static', filename='sample_leaderboard.png') }}"
+                 alt="Nations Simulator leaderboards"
+                 class="rounded-xl border border-slate-700 shadow-2xl w-full">
+        </div>
+    </div>
+
+</div>
+
 {# ===== FEATURES GRID ===== #}
 <div class="max-w-5xl mx-auto px-6 pb-20">
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -176,14 +273,32 @@
 </div>
 
 {# ===== MOBILE SHOWCASE ===== #}
-<div class="max-w-5xl mx-auto px-6 pb-20">
-    <div class="text-center mb-10">
-        <h2 class="text-2xl font-bold mb-2">Play Anywhere</h2>
-        <p class="text-slate-400">Nations Simulator is fully mobile-friendly &mdash; manage your nation on the go.</p>
-    </div>
-    <div class="flex flex-wrap justify-center gap-6">
-        <img src="{{ url_for('static', filename='IMG_0403.png') }}" alt="Nations Simulator mobile gameplay — nation management on a phone screen" class="w-48 sm:w-56 rounded-2xl border border-slate-700 shadow-xl object-contain">
-        <img src="{{ url_for('static', filename='IMG_0404.png') }}" alt="Nations Simulator mobile gameplay — industry and resource view on a phone screen" class="w-48 sm:w-56 rounded-2xl border border-slate-700 shadow-xl object-contain">
+<div class="max-w-5xl mx-auto px-6 pb-20 mt-16">
+    <div class="bg-slate-800/50 border border-slate-700 rounded-2xl px-8 py-12">
+        <div class="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+            <div class="lg:w-1/2">
+                <span class="text-xs font-semibold uppercase tracking-widest text-sky-400">Mobile-Ready</span>
+                <h2 class="text-2xl font-bold mt-2 mb-3">Play Anywhere, Anytime</h2>
+                <p class="text-slate-400 leading-relaxed mb-4">
+                    Nations Simulator is fully responsive. Monitor your nation's resources,
+                    collect from factories, and review battle results straight from your phone —
+                    no app download required.
+                </p>
+                <ul class="space-y-2 text-sm text-slate-300">
+                    <li><i class="fas fa-check text-emerald-400 mr-2"></i>Full browser-based — no install needed</li>
+                    <li><i class="fas fa-check text-emerald-400 mr-2"></i>Optimised layouts for small screens</li>
+                    <li><i class="fas fa-check text-emerald-400 mr-2"></i>Manage industry &amp; battles on the go</li>
+                </ul>
+            </div>
+            <div class="flex justify-center gap-6 lg:w-1/2">
+                <img src="{{ url_for('static', filename='sample_mobilenationpage.png') }}"
+                     alt="Nations Simulator mobile nation page"
+                     class="w-36 sm:w-44 rounded-2xl border border-slate-700 shadow-xl object-contain">
+                <img src="{{ url_for('static', filename='sample_mobilebattle.png') }}"
+                     alt="Nations Simulator mobile battle view"
+                     class="w-36 sm:w-44 rounded-2xl border border-slate-700 shadow-xl object-contain">
+            </div>
+        </div>
     </div>
 </div>
 

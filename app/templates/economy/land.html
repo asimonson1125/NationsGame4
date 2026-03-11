@@ -133,14 +133,7 @@
                     selectedType: '', 
                     convertAmount: 1, 
                     nationMoney: {{ nation.money or 0 }},
-                    fmt(n) {
-                        if (n == null || isNaN(n)) return '0';
-                        n = Math.round(n);
-                        if (n >= 1e9 || (n / 1e6).toFixed(1) >= 1000) return (n / 1e9).toFixed(1) + 'b';
-                        if (n >= 1e6 || (n / 1e3).toFixed(1) >= 1000) return (n / 1e6).toFixed(1) + 'm';
-                        if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
-                        return n.toLocaleString();
-                    }
+                    fmt: window.fmt
                  }"
                  @htmx:after-request="if(event.detail.successful && event.detail.target.id !== 'expansion-results') { nationMoney -= (convertAmount * 100); }">
                 <h2 class="text-lg font-semibold text-slate-100 mb-3 flex items-center gap-2">

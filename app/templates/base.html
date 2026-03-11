@@ -163,7 +163,7 @@
             </div>
         </div>
 
-        <a href="{{ url_for('main.leaderboard', tab='national') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-medal w-5"></i> Leaaderboards</a>
+        <a href="{{ url_for('main.leaderboard', tab='national') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-medal w-5"></i> Leaderboards</a>
 
         <div class="border-t border-slate-700 my-2"></div>
         <div class="flex items-center gap-4 px-3 py-2 text-xs text-slate-500">
@@ -376,6 +376,31 @@
     // endpoint: URL returning [{id, name}, ...] JSON
     // minLen:   minimum query length before fetching
     // onSelect: optional callback(nation) called after a result is picked
+    // Shared number formatter — returns abbreviated plain text (e.g. 1.5k, 2.3m).
+    // Handles null/NaN and negatives safely.
+    function fmt(n) {
+        if (n == null || isNaN(n)) return '0';
+        n = Math.round(Math.abs(n));
+        if (n >= 1e15 || (n / 1e12).toFixed(1) >= 1000) return (n / 1e15).toFixed(1) + 'q';
+        if (n >= 1e12 || (n / 1e9).toFixed(1) >= 1000) return (n / 1e12).toFixed(1) + 't';
+        if (n >= 1e9 || (n / 1e6).toFixed(1) >= 1000) return (n / 1e9).toFixed(1) + 'b';
+        if (n >= 1e6 || (n / 1e3).toFixed(1) >= 1000) return (n / 1e6).toFixed(1) + 'm';
+        if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+        return n.toLocaleString();
+    }
+    // HTML variant — wraps abbreviated values in <span class="rv"> for raw-value tooltips.
+    function fmtHtml(n) {
+        if (n == null || isNaN(n)) return '0';
+        n = Math.round(Math.abs(n));
+        let raw = n.toLocaleString();
+        if (n >= 1e15 || (n / 1e12).toFixed(1) >= 1000) return '<span class="rv" data-raw="' + raw + '">' + (n / 1e15).toFixed(1) + 'q</span>';
+        if (n >= 1e12 || (n / 1e9).toFixed(1) >= 1000) return '<span class="rv" data-raw="' + raw + '">' + (n / 1e12).toFixed(1) + 't</span>';
+        if (n >= 1e9 || (n / 1e6).toFixed(1) >= 1000) return '<span class="rv" data-raw="' + raw + '">' + (n / 1e9).toFixed(1) + 'b</span>';
+        if (n >= 1e6 || (n / 1e3).toFixed(1) >= 1000) return '<span class="rv" data-raw="' + raw + '">' + (n / 1e6).toFixed(1) + 'm</span>';
+        if (n >= 1e3) return '<span class="rv" data-raw="' + raw + '">' + (n / 1e3).toFixed(1) + 'k</span>';
+        return raw;
+    }
+
     function nationAutocomplete(endpoint, minLen, onSelect) {
         return {
             query: '',

@@ -88,13 +88,7 @@
                 foodDays: 0,
                 abundance: 0,
                 growthBlock: '',
-                fmt(n) {
-                    let a = Math.round(Math.abs(n));
-                    if (a >= 1e9 || (a / 1e6).toFixed(1) >= 1000) return (a/1e9).toFixed(1) + 'b';
-                    if (a >= 1e6 || (a / 1e3).toFixed(1) >= 1000) return (a/1e6).toFixed(1) + 'm';
-                    if (a >= 1e3) return (a/1e3).toFixed(1) + 'k';
-                    return a.toLocaleString();
-                },
+                fmt: window.fmt,
                 fetchDelta() {
                     fetch('{{ url_for('main.population_delta') }}')
                         .then(r => r.json()).then(d => {
@@ -405,7 +399,7 @@
         </div>
         {% set land_types = [
             ('cleared_land',  'Cleared Land',  'cleared_land_icon.png', ''),
-            ('urban_areas',   'Urban Areas',   'urban_areas_icon.png',  'Urban areas are created automatically for population growth'),
+            ('urban_areas',   'Urban Areas',   'urban_areas_icon.png',  'Urban areas are created automatically from cleared land for population growth'),
             ('used_land',     'Used Land',     'used_land_icon.png',    ''),
             ('forest',        'Forest',        'forest_icon.png',       ''),
             ('grassland',     'Grassland',     'grassland_icon.png',    ''),

@@ -59,13 +59,7 @@
                         get cap() { return Math.min(this.maxCollect, this.capacity) },
                         get barPct() { return (this.capacity / 24 * 100).toFixed(1) },
                         get disabled() { return this.capacity === 0 },
-                        fmt(n) {
-                            n = Math.round(n);
-                            if (n >= 1e9 || (n/1e6).toFixed(1) >= 1000) return (n/1e9).toFixed(1)+'b';
-                            if (n >= 1e6 || (n/1e3).toFixed(1) >= 1000) return (n/1e6).toFixed(1)+'m';
-                            if (n >= 1e3) return (n/1e3).toFixed(1)+'k';
-                            return n.toLocaleString();
-                        },
+                        fmt: window.fmt,
                         onCollect(evt) {
                             if (evt.detail.factoryKey !== '{{ key }}') return;
                             this.capacity = evt.detail.newCapacity;
@@ -170,14 +164,7 @@
             {% set entries = queue_map.get(key, []) %}
             <div x-data="{
                     qty: 1,
-                    fmt(n) {
-                        n = Math.round(n);
-                        let raw = n.toLocaleString();
-                        if (n >= 1e9 || (n/1e6).toFixed(1) >= 1000) return '<span class=\'rv\' data-raw=\''+raw+'\'>'+(n/1e9).toFixed(1)+'b</span>';
-                        if (n >= 1e6 || (n/1e3).toFixed(1) >= 1000) return '<span class=\'rv\' data-raw=\''+raw+'\'>'+(n/1e6).toFixed(1)+'m</span>';
-                        if (n >= 1e3) return '<span class=\'rv\' data-raw=\''+raw+'\'>'+(n/1e3).toFixed(1)+'k</span>';
-                        return raw;
-                    }
+                    fmt: window.fmtHtml
                  }"
                  class="bg-slate-800 rounded-lg border border-slate-700 p-5">
                 <form hx-post="{{ url_for('economy.build_factory') }}"
