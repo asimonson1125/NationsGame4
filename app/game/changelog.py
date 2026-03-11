@@ -16,7 +16,7 @@ CHANGELOG = [
     },
     {
         'version': '0.2.0-alpha',
-        'title': 'NG4 Alpha — Phase 1',
+        'title': 'NG4 Alpha — Phase 4.5',
         'date': '2026-03-10',
         'body': (
             'Welcome to NG4. This is an early alpha.  Missions '
@@ -25,7 +25,7 @@ CHANGELOG = [
     },
     {
         'version': '0.1.2-alpha',
-        'title': 'NG4 Alpha — Phase 1',
+        'title': 'NG4 Alpha — Phase 4',
         'date': '2026-03-10',
         'body': (
             'Welcome to NG4. This is an early alpha.  New additions '
@@ -34,7 +34,7 @@ CHANGELOG = [
     },
     {
         'version': '0.1.1-alpha',
-        'title': 'NG4 Alpha — Phase 1',
+        'title': 'NG4 Alpha — Phase 3',
         'date': '2026-03-09',
         'body': (
             'Welcome to NG4. This is an early alpha.  Basic economics '

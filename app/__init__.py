@@ -1,3 +1,5 @@
+import os
+import hashlib
 from flask import Flask, request, make_response, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
@@ -62,6 +64,20 @@ def create_app(config_name='default'):
 
     app.jinja_env.filters['format_resource'] = format_resource
     app.jinja_env.filters['cost_class'] = cost_class
+
+    _hash_cache = {}
+
+    def static_url(filename):
+        if filename not in _hash_cache:
+            path = os.path.join(app.static_folder, filename)
+            try:
+                h = hashlib.md5(str(os.path.getmtime(path)).encode()).hexdigest()[:8]
+            except OSError:
+                h = '0'
+            _hash_cache[filename] = h
+        return url_for('static', filename=filename, v=_hash_cache[filename])
+
+    app.jinja_env.globals['static_url'] = static_url
 
     from .game.changelog import CHANGELOG
     from .game.levels import xp_for_next_level
