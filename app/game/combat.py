@@ -5,6 +5,7 @@ import random
 from datetime import datetime, timezone
 from .units import UNIT_DEFS
 from .equipment import EQUIPMENT_SLOTS
+from .combat_logs import get_battle_log
 
 
 # ── Ability parsers ───────────────────────────────────────────────────────
@@ -555,17 +556,21 @@ def process_battle_round(battle, db_session):
     calc_details['target'] = target_name
     details_json = json.dumps(calc_details)
 
-    if hit_type == 'miss':
-        msg = f"{init_name} attacks {target_name} but misses!"
-    elif hit_type == 'critical':
-        msg = (f"Critical hit! {init_name} strikes {target_name} for {dmg} damage! "
-               f"({target_name} HP: {target.hp}/{target.effective_max_hp})")
-    elif hit_type == 'graze':
-        msg = (f"{init_name} grazes {target_name} for {dmg} damage. "
-               f"({target_name} HP: {target.hp}/{target.effective_max_hp})")
-    else:
-        msg = (f"{init_name} strikes {target_name} for {dmg} damage! "
-               f"({target_name} HP: {target.hp}/{target.effective_max_hp})")
+    init_udef = UNIT_DEFS.get(init_unit.unit_key)
+    target_udef = UNIT_DEFS.get(target.unit_key)
+    init_type = init_udef.unit_type if init_udef else 'Any'
+    target_type = target_udef.unit_type if target_udef else 'Any'
+
+    msg = get_battle_log(
+        attacker_name=init_name,
+        attacker_type=init_type,
+        target_name=target_name,
+        target_type=target_type,
+        hit_type=hit_type,
+        damage=dmg,
+        target_hp=target.hp,
+        target_max_hp=target.effective_max_hp
+    )
 
     if target.hp <= 0:
         msg += f" — {target_name} has been destroyed!"

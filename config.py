@@ -1,8 +1,11 @@
 import os
 from dotenv import load_dotenv
+from app.game.changelog import CHANGELOG
 
 # Load .env file if it exists
 load_dotenv()
+
+_version = CHANGELOG[0]['version'].replace('.', '_').replace('-', '_') if CHANGELOG else '0'
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -12,6 +15,7 @@ class Config:
     }
     SCHEDULER_API_ENABLED = False
     CACHE_DEFAULT_TIMEOUT = 300
+    CACHE_KEY_PREFIX = f'ng4_{_version}_'
 
 class DevelopmentConfig(Config):
     DEBUG = True

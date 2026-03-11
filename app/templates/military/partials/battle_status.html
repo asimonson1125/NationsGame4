@@ -109,15 +109,15 @@
                         <div class="flex-1 min-w-0">
                             <div class="text-xs text-slate-500 mb-1">{{ report.created_at.strftime('%b %d, %Y %H:%M:%S') }}</div>
                             {% if is_final %}
-                            <div class="text-sm font-bold text-amber-400">{{ report.message }}</div>
+                            <div class="text-sm font-bold text-amber-400">{{ report.message | safe }}</div>
                             {% elif 'has been destroyed!' in report.message %}
                             {% set parts = report.message.split(' — ') %}
                             <div class="text-sm leading-relaxed">
-                                <span class="text-slate-300">{{ parts[0] }}</span>
+                                <span class="text-slate-300">{{ parts[0] | safe }}</span>
                                 <span class="text-red-500 font-bold"> — {{ parts[1] }}</span>
                             </div>
                             {% else %}
-                            <div class="text-sm text-slate-300 leading-relaxed">{{ report.message }}</div>
+                            <div class="text-sm text-slate-300 leading-relaxed">{{ report.message | safe }}</div>
                             {% endif %}
                         </div>
                         {% if report.details %}
