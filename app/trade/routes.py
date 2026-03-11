@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from flask import render_template, request, current_app, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 from .. import db
 from ..models import Nation, NaturalResource, TradeOrder, TradeExecution, Message
 from ..helpers import error_response, success_response
@@ -167,6 +168,18 @@ def _match_orders(new_order):
 def trade_page():
     nation = current_user.nation
     resource = request.args.get('resource', 'food')
+
+    # Build balances dictionary for all tradeable items
+    balances = {'money': nation.get_resource('money')}
+    for c in TRADEABLE_COMMODITIES:
+        balances[c] = nation.get_resource(c)
+    
+    # Get all natural resources for this nation in one query
+    nrs = NaturalResource.query.filter_by(nation_id=nation.id).all()
+    nr_map = {nr.resource_key: nr.amount for nr in nrs}
+    for nr_key in TRADEABLE_NATURAL_RESOURCES:
+        balances[nr_key] = nr_map.get(nr_key, 0)
+
     return render_template(
         'trade/trade.html',
         nation=nation,
@@ -174,6 +187,7 @@ def trade_page():
         natural_resources=TRADEABLE_NATURAL_RESOURCES,
         selected_resource=resource,
         fee_pct=TRADE_FEE_PERCENT,
+        balances=balances,
     )
 
 
@@ -182,34 +196,26 @@ def trade_page():
 def order_book():
     resource = request.args.get('resource', 'food')
 
-    # Aggregate buy side: top 10 price levels descending
-    buy_depth = db.session.query(
-        TradeOrder.price_per_unit,
-        func.sum(TradeOrder.quantity - TradeOrder.quantity_filled).label('total_qty')
-    ).filter(
+    # Get top 10 buy orders (highest price first)
+    buy_orders = TradeOrder.query.filter(
         TradeOrder.resource_key == resource,
         TradeOrder.order_type == 'buy',
         TradeOrder.status == 'open',
-    ).group_by(TradeOrder.price_per_unit)\
-     .order_by(TradeOrder.price_per_unit.desc())\
+    ).order_by(TradeOrder.price_per_unit.desc(), TradeOrder.created_at.asc())\
      .limit(10).all()
 
-    # Aggregate sell side: top 10 price levels ascending
-    sell_depth = db.session.query(
-        TradeOrder.price_per_unit,
-        func.sum(TradeOrder.quantity - TradeOrder.quantity_filled).label('total_qty')
-    ).filter(
+    # Get top 10 sell orders (lowest price first)
+    sell_orders = TradeOrder.query.filter(
         TradeOrder.resource_key == resource,
         TradeOrder.order_type == 'sell',
         TradeOrder.status == 'open',
-    ).group_by(TradeOrder.price_per_unit)\
-     .order_by(TradeOrder.price_per_unit.asc())\
+    ).order_by(TradeOrder.price_per_unit.asc(), TradeOrder.created_at.asc())\
      .limit(10).all()
 
     return render_template(
         'trade/partials/order_book.html',
-        buy_depth=buy_depth,
-        sell_depth=sell_depth,
+        buy_orders=buy_orders,
+        sell_orders=sell_orders,
         resource=resource,
     )
 
@@ -275,32 +281,24 @@ def place_order():
         msg = f'{order_type.title()} order placed for {quantity:,} {resource.replace("_", " ")} @ {price:,.2f}/ea.'
 
     # Return refreshed order book
-    buy_depth = db.session.query(
-        TradeOrder.price_per_unit,
-        func.sum(TradeOrder.quantity - TradeOrder.quantity_filled).label('total_qty')
-    ).filter(
+    buy_orders = TradeOrder.query.filter(
         TradeOrder.resource_key == resource,
         TradeOrder.order_type == 'buy',
         TradeOrder.status == 'open',
-    ).group_by(TradeOrder.price_per_unit)\
-     .order_by(TradeOrder.price_per_unit.desc())\
+    ).order_by(TradeOrder.price_per_unit.desc(), TradeOrder.created_at.asc())\
      .limit(10).all()
 
-    sell_depth = db.session.query(
-        TradeOrder.price_per_unit,
-        func.sum(TradeOrder.quantity - TradeOrder.quantity_filled).label('total_qty')
-    ).filter(
+    sell_orders = TradeOrder.query.filter(
         TradeOrder.resource_key == resource,
         TradeOrder.order_type == 'sell',
         TradeOrder.status == 'open',
-    ).group_by(TradeOrder.price_per_unit)\
-     .order_by(TradeOrder.price_per_unit.asc())\
+    ).order_by(TradeOrder.price_per_unit.asc(), TradeOrder.created_at.asc())\
      .limit(10).all()
 
     html = render_template(
         'trade/partials/order_book.html',
-        buy_depth=buy_depth,
-        sell_depth=sell_depth,
+        buy_orders=buy_orders,
+        sell_orders=sell_orders,
         resource=resource,
     )
     resp = current_app.response_class(html, status=200, mimetype='text/html')
@@ -370,6 +368,7 @@ def my_orders():
 @login_required
 def recent_trades():
     executions = TradeExecution.query\
+        .options(joinedload(TradeExecution.buyer_nation), joinedload(TradeExecution.seller_nation))\
         .order_by(TradeExecution.executed_at.desc()).limit(20).all()
     return render_template(
         'trade/partials/recent_trades.html',
@@ -384,7 +383,7 @@ def recent_trades():
 def analytics():
     resource = request.args.get('resource', 'food')
     from flask import redirect, url_for
-    return redirect(url_for('trade.trade_page', resource=resource))
+    return redirect(url_for('trade.trade_page', resource=resource, view='analytics'))
 
 
 @trade.route('/trade/analytics/data')

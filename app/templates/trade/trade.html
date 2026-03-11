@@ -4,266 +4,337 @@
 
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    [x-cloak] { display: none !important; }
+    .resource-icon-shadow { filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.2)); }
+    
+    /* Hide number input spinners */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input[type=number] {
+        -moz-appearance: textfield;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="p-6 max-w-6xl mx-auto" x-data="tradePageData()">
+<div class="p-4 sm:p-6 max-w-6xl mx-auto" x-data="tradePageData()">
 
-    <h1 class="text-2xl font-bold text-slate-100 mb-4">Global Market</h1>
+    {# Header & Help Section #}
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-100 flex items-center gap-3">
+                <i class="fas fa-chart-line text-amber-500"></i>
+                Global Market
+            </h1>
+            <p class="text-slate-400 text-sm mt-1">Trade resources with other nations across the world.</p>
+        </div>
 
-    {# How it works — collapsible #}
-    <div class="mb-6" x-data="{ helpOpen: false }">
-        <button @click="helpOpen = !helpOpen"
-                class="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors mb-2">
-            <i class="fas fa-question-circle text-amber-500"></i>
-            <span>How does the market work?</span>
-            <i class="fas fa-chevron-down text-[10px] transition-transform" :class="helpOpen ? 'rotate-180' : ''"></i>
-        </button>
-        <div x-show="helpOpen" x-cloak x-transition
-             class="bg-slate-800 border border-slate-700 rounded-lg p-4 text-sm text-slate-300 space-y-3">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <h3 class="font-semibold text-slate-100 mb-1"><i class="fas fa-arrow-down text-emerald-400 mr-1"></i> Buying</h3>
-                    <p>Place a buy order with your maximum price per unit. The total cost is escrowed (held) from your money balance immediately.
-                    If a matching sell order exists at or below your price, the trade fills instantly. Otherwise your order sits on the book until a seller matches it.</p>
+        {# How it works — collapsible #}
+        <div x-data="{ helpOpen: false }" class="relative">
+            <button @click="helpOpen = !helpOpen"
+                    class="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-slate-300 transition-colors">
+                <i class="fas fa-question-circle text-amber-500"></i>
+                <span>Market Guide</span>
+                <i class="fas fa-chevron-down text-[10px] transition-transform" :class="helpOpen ? 'rotate-180' : ''"></i>
+            </button>
+            <div x-show="helpOpen" @click.away="helpOpen = false" x-cloak x-transition
+                 class="absolute right-0 mt-2 w-80 md:w-[480px] bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-5 z-50 text-sm text-slate-300 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="font-bold text-slate-100 mb-1 flex items-center gap-2">
+                            <i class="fas fa-arrow-down text-emerald-400"></i> Buying
+                        </h3>
+                        <p class="text-xs leading-relaxed">Place a buy order with your max price. Money is escrowed instantly. If a match exists, it fills immediately.</p>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-100 mb-1 flex items-center gap-2">
+                            <i class="fas fa-arrow-up text-red-400"></i> Selling
+                        </h3>
+                        <p class="text-xs leading-relaxed">Place a sell order with your min price. Resources are escrowed. A {{ fee_pct }}% fee is deducted from proceeds.</p>
+                    </div>
                 </div>
-                <div>
-                    <h3 class="font-semibold text-slate-100 mb-1"><i class="fas fa-arrow-up text-red-400 mr-1"></i> Selling</h3>
-                    <p>Place a sell order with your minimum price. The resources are escrowed from your stockpile.
-                    If a matching buy order exists at or above your price, the trade fills instantly. A {{ fee_pct }}% fee is deducted from the sale proceeds.</p>
-                </div>
-                <div>
-                    <h3 class="font-semibold text-slate-100 mb-1"><i class="fas fa-book text-sky-400 mr-1"></i> Open Orders</h3>
-                    <p>The order book shows the top 10 buy and sell price levels for the selected resource. Green rows are bids (buyers); red rows are asks (sellers). The spread is the gap between the best bid and best ask.</p>
-                </div>
-                <div>
-                    <h3 class="font-semibold text-slate-100 mb-1"><i class="fas fa-ban text-slate-400 mr-1"></i> Cancelling</h3>
-                    <p>Open orders can be cancelled from the "My Orders" tab. Escrowed money or resources are refunded in full when you cancel.</p>
+                <div class="pt-3 border-t border-slate-700 text-[11px] text-slate-500 italic">
+                    All escrowed items are fully refunded if an order is cancelled.
                 </div>
             </div>
         </div>
     </div>
 
     {# Top-level tab bar #}
-    <div class="flex gap-1 border-b border-slate-700 mb-6">
+    <div class="flex gap-1 border-b border-slate-700 mb-8">
         <button @click="view = 'market'"
-                :class="view === 'market' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
-                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
-            <i class="fas fa-exchange-alt mr-1"></i> Market
+                :class="view === 'market' ? 'border-amber-500 text-amber-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-6 py-3 text-sm border-b-2 transition-all -mb-px flex items-center gap-2">
+            <i class="fas fa-exchange-alt"></i> Market
         </button>
         <button @click="view = 'analytics'; $nextTick(() => loadAnalytics())"
-                :class="view === 'analytics' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
-                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
-            <i class="fas fa-chart-line mr-1"></i> Analytics
+                :class="view === 'analytics' ? 'border-amber-500 text-amber-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-6 py-3 text-sm border-b-2 transition-all -mb-px flex items-center gap-2">
+            <i class="fas fa-chart-area"></i> Analytics
         </button>
     </div>
 
-    {# Resource Selector (shared) #}
-    <div class="mb-5">
-        <label class="block text-sm font-medium text-slate-400 mb-1">Resource</label>
-        <select x-model="resource" @change="onResourceChange()"
-                class="w-full max-w-xs bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
-            <optgroup label="Commodities">
-                {% for c in commodities %}
-                <option value="{{ c }}">{{ c.replace('_', ' ').title() }}</option>
-                {% endfor %}
-            </optgroup>
-            <optgroup label="Natural Resources">
-                {% for nr in natural_resources %}
-                <option value="{{ nr }}">{{ nr.replace('_', ' ').title() }}</option>
-                {% endfor %}
-            </optgroup>
-        </select>
-    </div>
-
-    {# ===== MARKET TAB ===== #}
-    <div x-show="view === 'market'" x-cloak:false>
-
-        {# Two-column layout: Order Book + Place Order #}
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-
-            {# Order Book #}
-            <div class="bg-slate-800 rounded-lg border border-slate-700">
-                <div class="px-4 py-3 border-b border-slate-700">
-                    <h2 class="text-lg font-semibold text-slate-100">Open Orders</h2>
-                </div>
-                <div id="order-book"
-                     hx-get="{{ url_for('trade.order_book', resource=selected_resource) }}"
-                     hx-trigger="load, refreshOrderBook from:body"
-                     hx-target="#order-book"
-                     hx-swap="innerHTML">
-                    <p class="text-slate-500 text-sm p-4">Loading...</p>
+    {# Market Content #}
+    <div x-show="view === 'market'" x-cloak:false class="space-y-8">
+        
+        {# Resource Focus Hero #}
+        <div class="bg-gradient-to-r from-slate-800 to-slate-800/50 border border-slate-700 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6">
+            <div class="w-20 h-20 bg-slate-700/50 rounded-2xl flex items-center justify-center p-3 resource-icon-shadow border border-slate-600/50">
+                <img :src="'/static/images/icons/' + resource + '_icon.png'" 
+                     class="w-full h-full object-contain"
+                     :alt="resource">
+            </div>
+            
+            <div class="flex-1 text-center md:text-left">
+                <div class="text-xs font-bold text-amber-500 uppercase tracking-widest mb-1">Active Market</div>
+                <h2 class="text-2xl font-bold text-white mb-2" x-text="resourceLabel(resource)"></h2>
+                <div class="flex flex-wrap justify-center md:justify-start gap-4">
+                    <div class="flex items-center gap-2 text-sm text-slate-400">
+                        <i class="fas fa-wallet text-slate-500"></i>
+                        Your Balance: <span class="text-slate-200 font-semibold" x-text="fmt(balances[resource] || 0) + ' ' + resourceLabel(resource)"></span>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm text-slate-400">
+                        <i class="fas fa-coins text-slate-500"></i>
+                        Money: <span class="text-emerald-400 font-semibold" x-text="fmt(balances['money'])"></span>
+                    </div>
                 </div>
             </div>
 
-            {# Place Order #}
-            <div class="bg-slate-800 rounded-lg border border-slate-700">
-                <div class="px-4 py-3 border-b border-slate-700">
-                    <h2 class="text-lg font-semibold text-slate-100">Place Order</h2>
-                </div>
-                <div class="p-4">
-                    {# Buy/Sell toggle #}
-                    <div class="flex mb-4 rounded overflow-hidden border border-slate-600">
-                        <button @click="side = 'buy'"
-                                :class="side === 'buy' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-400'"
-                                class="flex-1 py-2 text-sm font-semibold transition-colors">
-                            <i class="fas fa-arrow-down mr-1"></i> Buy
-                        </button>
-                        <button @click="side = 'sell'"
-                                :class="side === 'sell' ? 'bg-red-600 text-white' : 'bg-slate-700 text-slate-400'"
-                                class="flex-1 py-2 text-sm font-semibold transition-colors">
-                            <i class="fas fa-arrow-up mr-1"></i> Sell
-                        </button>
+            <div class="w-full md:w-auto">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 text-center md:text-left">Switch Resource</label>
+                <select x-model="resource" @change="onResourceChange()"
+                        class="w-full md:w-64 bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all appearance-none cursor-pointer">
+                    <optgroup label="Commodities" class="bg-slate-800 text-slate-300">
+                        {% for c in commodities %}
+                        <option value="{{ c }}">{{ c.replace('_', ' ').title() }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="Natural Resources" class="bg-slate-800 text-slate-300">
+                        {% for nr in natural_resources %}
+                        <option value="{{ nr }}">{{ nr.replace('_', ' ').title() }}</option>
+                        {% endfor %}
+                    </optgroup>
+                </select>
+            </div>
+        </div>
+
+        {# Main Grid #}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            {# Left Column: Order Book #}
+            <div class="lg:col-span-7 space-y-6">
+                <div class="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800">
+                        <h3 class="font-bold text-slate-100 flex items-center gap-2">
+                            <i class="fas fa-book-open text-sky-400"></i>
+                            Order Book
+                        </h3>
+                        <div class="flex items-center gap-2 text-[11px] text-slate-500 font-semibold uppercase tracking-wider">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Live Market
+                        </div>
                     </div>
+                    <div id="order-book"
+                         hx-get="{{ url_for('trade.order_book', resource=selected_resource) }}"
+                         hx-trigger="load, refreshOrderBook from:body"
+                         hx-target="#order-book"
+                         hx-swap="innerHTML">
+                        <div class="p-12 text-center">
+                            <i class="fas fa-circle-notch fa-spin text-amber-500 text-2xl mb-3"></i>
+                            <p class="text-slate-500 text-sm">Synchronizing orders...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                    <form hx-post="{{ url_for('trade.place_order') }}"
-                          hx-target="#order-book"
-                          hx-swap="innerHTML">
-                        <input type="hidden" name="resource" :value="resource">
-                        <input type="hidden" name="order_type" :value="side">
-
-                        <div class="mb-3">
-                            <label class="block text-sm font-medium text-slate-400 mb-1">Quantity</label>
-                            <input type="number" name="quantity" x-model.number="qty" min="1" step="1"
-                                   class="w-full bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
+            {# Right Column: Place Order #}
+            <div class="lg:col-span-5 space-y-6">
+                <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow-xl sticky top-6">
+                    <div class="px-5 py-4 border-b border-slate-700 bg-slate-800 flex items-center gap-2">
+                        <i class="fas fa-plus-circle text-amber-500"></i>
+                        <h3 class="font-bold text-slate-100">Place New Order</h3>
+                    </div>
+                    <div class="p-6">
+                        {# Buy/Sell toggle #}
+                        <div class="flex p-1 bg-slate-900 rounded-xl border border-slate-700 mb-6">
+                            <button @click="side = 'buy'"
+                                    :class="side === 'buy' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'"
+                                    class="flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2">
+                                <i class="fas fa-cart-arrow-down"></i> BUY
+                            </button>
+                            <button @click="side = 'sell'"
+                                    :class="side === 'sell' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'"
+                                    class="flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2">
+                                <i class="fas fa-tags"></i> SELL
+                            </button>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="block text-sm font-medium text-slate-400 mb-1">Price per Unit</label>
-                            <input type="number" name="price" x-model.number="price" min="0.01" step="0.01"
-                                   class="w-full bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
-                        </div>
+                        <form hx-post="{{ url_for('trade.place_order') }}"
+                              hx-target="#order-book"
+                              hx-swap="innerHTML"
+                              @submit="qty = 0; price = 0">
+                            <input type="hidden" name="resource" :value="resource">
+                            <input type="hidden" name="order_type" :value="side">
 
-                        {# Preview #}
-                        <div class="bg-slate-700/50 rounded p-3 mb-4 text-sm space-y-1">
-                            <div class="flex justify-between">
-                                <span class="text-slate-400">Total Cost:</span>
-                                <span class="font-semibold text-slate-200" x-text="fmt(qty * price)"></span>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between items-end mb-1.5">
+                                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Quantity</label>
+                                        <div class="flex gap-1">
+                                            <button type="button" @click="qty = Math.floor(getMaxQty() * 0.25)" class="text-[10px] px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-300">25%</button>
+                                            <button type="button" @click="qty = Math.floor(getMaxQty() * 0.5)" class="text-[10px] px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-300">50%</button>
+                                            <button type="button" @click="qty = getMaxQty()" class="text-[10px] px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-300">MAX</button>
+                                        </div>
+                                    </div>
+                                    <div class="relative group/input">
+                                        <input type="number" name="quantity" x-model.number="qty" min="1" step="1" required
+                                               class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl pl-4 pr-40 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all">
+                                        <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none border-l border-slate-700 pl-3">
+                                            <img :src="'/static/images/icons/' + resource + '_icon.png'" class="w-4 h-4 object-contain opacity-70" alt="">
+                                            <div class="text-[10px] font-bold text-slate-500 uppercase whitespace-nowrap" x-text="resource"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Price per Unit</label>
+                                    <div class="relative group/input">
+                                        <input type="number" name="price" x-model.number="price" min="0.01" step="0.01" required
+                                               class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl pl-4 pr-28 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all">
+                                        <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none border-l border-slate-700 pl-3">
+                                            <img src="/static/images/icons/money_icon.png" class="w-4 h-4 object-contain opacity-70" alt="">
+                                            <div class="text-[10px] font-bold text-slate-500 uppercase whitespace-nowrap">Money</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {# Order Summary #}
+                                <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50 space-y-3">
+                                    <div class="flex justify-between items-center text-sm">
+                                        <span class="text-slate-500">Subtotal</span>
+                                        <span class="text-slate-300 font-mono" x-text="'$' + fmt(qty * price)"></span>
+                                    </div>
+                                    
+                                    <template x-if="side === 'sell'">
+                                        <div class="flex justify-between items-center text-sm">
+                                            <span class="text-slate-500">Market Fee ({{ fee_pct }}%)</span>
+                                            <span class="text-red-400 font-mono" x-text="'-$' + fmt(qty * price * {{ fee_pct }} / 100)"></span>
+                                        </div>
+                                    </template>
+                                    
+                                    <div class="pt-3 border-t border-slate-700 flex justify-between items-center">
+                                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider" x-text="side === 'buy' ? 'Total Cost' : 'Net Proceeds'"></span>
+                                        <span class="text-lg font-bold font-mono" 
+                                              :class="side === 'buy' ? 'text-amber-400' : 'text-emerald-400'"
+                                              x-text="'$' + (side === 'buy' ? fmt(qty * price) : fmt(qty * price * (1 - {{ fee_pct }} / 100)))"></span>
+                                    </div>
+                                </div>
+
+                                <button type="submit"
+                                        :disabled="qty <= 0 || price <= 0"
+                                        :class="side === 'buy' ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20' : 'bg-red-600 hover:bg-red-500 shadow-red-900/20'"
+                                        class="w-full py-4 text-white font-bold rounded-xl shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                                    <i :class="side === 'buy' ? 'fas fa-shopping-cart' : 'fas fa-hand-holding-usd'"></i>
+                                    <span x-text="side === 'buy' ? 'Execute Buy Order' : 'List Sell Order'"></span>
+                                </button>
                             </div>
-                            <template x-if="side === 'sell'">
-                                <div class="flex justify-between">
-                                    <span class="text-slate-400">Fee ({{ fee_pct }}%):</span>
-                                    <span class="text-red-400 font-semibold" x-text="'-' + fmt(qty * price * {{ fee_pct }} / 100)"></span>
-                                </div>
-                            </template>
-                            <template x-if="side === 'sell'">
-                                <div class="flex justify-between">
-                                    <span class="text-slate-400">You Receive:</span>
-                                    <span class="text-emerald-400 font-semibold" x-text="fmt(qty * price * (1 - {{ fee_pct }} / 100))"></span>
-                                </div>
-                            </template>
-                            <template x-if="side === 'buy'">
-                                <div class="flex justify-between">
-                                    <span class="text-slate-400">Escrowed Money:</span>
-                                    <span class="text-amber-400 font-semibold" x-text="fmt(qty * price)"></span>
-                                </div>
-                            </template>
-                        </div>
-
-                        <button type="submit"
-                                :class="side === 'buy' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'"
-                                class="w-full py-2.5 text-white font-semibold rounded-md transition-colors text-sm">
-                            <span x-text="side === 'buy' ? 'Place Buy Order' : 'Place Sell Order'"></span>
-                        </button>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
 
-        {# Tabs: My Orders / Recent Trades #}
-        <div class="bg-slate-800 rounded-lg border border-slate-700" x-data="{ tab: 'my_orders' }">
-            <div class="flex border-b border-slate-700">
+        {# Secondary Tabs: My Orders / Recent Trades #}
+        <div class="bg-slate-800/30 border border-slate-700 rounded-2xl overflow-hidden" x-data="{ tab: 'my_orders' }">
+            <div class="flex bg-slate-800/80 backdrop-blur-sm border-b border-slate-700">
                 <button @click="tab = 'my_orders'"
-                        :class="tab === 'my_orders' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'"
-                        class="flex-1 py-3 text-sm font-semibold border-b-2 transition-colors text-center">
-                    My Orders
+                        :class="tab === 'my_orders' ? 'border-amber-500 text-amber-400 bg-slate-700/30' : 'border-transparent text-slate-500 hover:text-slate-300'"
+                        class="flex-1 py-4 text-xs font-bold border-b-2 transition-all text-center uppercase tracking-widest">
+                    My Active Orders
                 </button>
                 <button @click="tab = 'recent_trades'"
-                        :class="tab === 'recent_trades' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'"
-                        class="flex-1 py-3 text-sm font-semibold border-b-2 transition-colors text-center">
-                    Recent Trades
+                        :class="tab === 'recent_trades' ? 'border-amber-500 text-amber-400 bg-slate-700/30' : 'border-transparent text-slate-500 hover:text-slate-300'"
+                        class="flex-1 py-4 text-xs font-bold border-b-2 transition-all text-center uppercase tracking-widest">
+                    Recent Market History
                 </button>
             </div>
 
-            <div x-show="tab === 'my_orders'" x-cloak>
+            <div x-show="tab === 'my_orders'" x-cloak class="min-h-[200px]">
                 <div id="my-orders"
                      hx-get="{{ url_for('trade.my_orders') }}"
                      hx-trigger="load, refreshMyOrders from:body"
                      hx-target="#my-orders"
                      hx-swap="innerHTML">
-                    <p class="text-slate-500 text-sm p-4">Loading...</p>
+                    <div class="p-12 text-center text-slate-500 italic">Loading your orders...</div>
                 </div>
             </div>
 
-            <div x-show="tab === 'recent_trades'" x-cloak>
+            <div x-show="tab === 'recent_trades'" x-cloak class="min-h-[200px]">
                 <div id="recent-trades"
                      hx-get="{{ url_for('trade.recent_trades') }}"
                      hx-trigger="load, refreshRecentTrades from:body"
                      hx-target="#recent-trades"
                      hx-swap="innerHTML">
-                    <p class="text-slate-500 text-sm p-4">Loading...</p>
+                    <div class="p-12 text-center text-slate-500 italic">Loading recent history...</div>
                 </div>
             </div>
         </div>
-
     </div>
 
     {# ===== ANALYTICS TAB ===== #}
-    <div x-show="view === 'analytics'" x-cloak>
-
-        {# Time range selector #}
-        <div class="mb-5">
-            <label class="block text-sm font-medium text-slate-400 mb-1">Time Range</label>
-            <select x-model="days" @change="loadAnalytics()"
-                    class="bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
-                <option value="7">7 Days</option>
-                <option value="30">30 Days</option>
-                <option value="90">90 Days</option>
-            </select>
-        </div>
-
-        {# Stats cards #}
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4">
-                <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Best Bid</div>
-                <div class="text-lg font-bold text-emerald-400" x-text="analyticsStats.best_bid ? analyticsStats.best_bid.toFixed(2) : '—'"></div>
+    <div x-show="view === 'analytics'" x-cloak class="space-y-6">
+        {# Stats Grid #}
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-slate-800 rounded-2xl border border-slate-700 p-5 shadow-sm">
+                <div class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Best Bid</div>
+                <div class="text-2xl font-black text-emerald-400 font-mono" x-text="analyticsStats.best_bid ? '$' + analyticsStats.best_bid.toFixed(2) : '—'"></div>
             </div>
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4">
-                <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Best Ask</div>
-                <div class="text-lg font-bold text-red-400" x-text="analyticsStats.best_ask ? analyticsStats.best_ask.toFixed(2) : '—'"></div>
+            <div class="bg-slate-800 rounded-2xl border border-slate-700 p-5 shadow-sm">
+                <div class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Best Ask</div>
+                <div class="text-2xl font-black text-red-400 font-mono" x-text="analyticsStats.best_ask ? '$' + analyticsStats.best_ask.toFixed(2) : '—'"></div>
             </div>
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4">
-                <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">24h Volume</div>
-                <div class="text-lg font-bold text-slate-100" x-text="analyticsStats.volume_24h ? analyticsStats.volume_24h.toLocaleString() : '0'"></div>
+            <div class="bg-slate-800 rounded-2xl border border-slate-700 p-5 shadow-sm">
+                <div class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">24h Volume</div>
+                <div class="text-2xl font-black text-white font-mono" x-text="analyticsStats.volume_24h ? analyticsStats.volume_24h.toLocaleString() : '0'"></div>
             </div>
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4">
-                <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">24h Range</div>
-                <div class="text-lg font-bold text-slate-100">
-                    <span x-text="analyticsStats.low_24h ? analyticsStats.low_24h.toFixed(2) : '—'"></span>
-                    <span class="text-slate-500 text-sm mx-1">-</span>
-                    <span x-text="analyticsStats.high_24h ? analyticsStats.high_24h.toFixed(2) : '—'"></span>
+            <div class="bg-slate-800 rounded-2xl border border-slate-700 p-5 shadow-sm">
+                <div class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">24h Range</div>
+                <div class="text-lg font-black text-slate-300 font-mono pt-1">
+                    <span x-text="analyticsStats.low_24h ? '$' + analyticsStats.low_24h.toFixed(2) : '—'"></span>
+                    <span class="text-slate-600 mx-1">/</span>
+                    <span x-text="analyticsStats.high_24h ? '$' + analyticsStats.high_24h.toFixed(2) : '—'"></span>
                 </div>
             </div>
         </div>
 
-        {# Price chart #}
-        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6">
-            <h2 class="text-lg font-semibold text-slate-100 mb-3">Price History</h2>
-            <div class="relative" style="height: 300px;">
-                <canvas id="priceChart"></canvas>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-slate-800 rounded-2xl border border-slate-700 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg font-bold text-slate-100">Price Performance</h2>
+                    <select x-model="days" @change="loadAnalytics()"
+                            class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-amber-500/50">
+                        <option value="7">Past Week</option>
+                        <option value="30">Past Month</option>
+                        <option value="90">Past Quarter</option>
+                    </select>
+                </div>
+                <div class="relative" style="height: 350px;">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="bg-slate-800 rounded-2xl border border-slate-700 p-6 flex flex-col">
+                <h2 class="text-lg font-bold text-slate-100 mb-6">Trade Activity</h2>
+                <div class="flex-1 relative" style="height: 350px;">
+                    <canvas id="volumeChart"></canvas>
+                </div>
             </div>
         </div>
-
-        {# Volume chart #}
-        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4">
-            <h2 class="text-lg font-semibold text-slate-100 mb-3">Trade Volume</h2>
-            <div class="relative" style="height: 200px;">
-                <canvas id="volumeChart"></canvas>
-            </div>
-        </div>
-
     </div>
-
 </div>
 {% endblock %}
 
@@ -271,12 +342,19 @@
 <script>
 function tradePageData() {
     return {
-        view: 'market',
+        view: '{{ request.args.get("view", "market") }}',
         resource: '{{ selected_resource }}',
         side: 'buy',
         qty: 0,
         price: 0,
         fee_pct: {{ fee_pct }},
+        balances: {{ balances|tojson }},
+
+        init() {
+            if (this.view === 'analytics') {
+                this.$nextTick(() => this.loadAnalytics());
+            }
+        },
 
         // Analytics state
         days: 30,
@@ -285,6 +363,24 @@ function tradePageData() {
         volumeChart: null,
 
         fmt: window.fmt,
+
+        getMaxQty() {
+            if (this.side === 'sell') {
+                return this.balances[this.resource] || 0;
+            } else {
+                if (this.price <= 0) return 0;
+                return Math.floor(this.balances['money'] / this.price);
+            }
+        },
+
+        setPrice(p) {
+            this.price = p;
+        },
+
+        resourceLabel(key) {
+            if (!key) return '';
+            return key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        },
 
         onResourceChange() {
             // Update order book hx-get so trigger-based refreshes use the current resource
@@ -311,8 +407,8 @@ function tradePageData() {
             if (this.priceChart) this.priceChart.destroy();
             if (this.volumeChart) this.volumeChart.destroy();
 
-            const darkGrid = { color: 'rgba(148, 163, 184, 0.1)' };
-            const darkTicks = { color: '#94a3b8' };
+            const darkGrid = { color: 'rgba(148, 163, 184, 0.05)' };
+            const darkTicks = { color: '#64748b', font: { size: 10 } };
 
             const priceEl = document.getElementById('priceChart');
             if (!priceEl) return;
@@ -321,36 +417,37 @@ function tradePageData() {
                 data: {
                     labels: data.labels,
                     datasets: [{
-                        label: 'Last Price',
+                        label: 'Market Price',
                         data: data.prices,
                         borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        backgroundColor: 'rgba(245, 158, 11, 0.05)',
                         fill: true,
-                        tension: 0.3,
-                        pointRadius: 3,
-                    }, {
-                        label: 'High',
-                        data: data.highs,
-                        borderColor: '#22c55e',
-                        borderDash: [5, 5],
-                        pointRadius: 0,
-                        fill: false,
-                    }, {
-                        label: 'Low',
-                        data: data.lows,
-                        borderColor: '#ef4444',
-                        borderDash: [5, 5],
-                        pointRadius: 0,
-                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#f59e0b',
+                        borderWidth: 3
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top', labels: { color: '#94a3b8' } } },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#1e293b',
+                            titleColor: '#94a3b8',
+                            bodyColor: '#f1f5f9',
+                            borderColor: '#334155',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false
+                        }
+                    },
                     scales: {
-                        y: { beginAtZero: false, grid: darkGrid, ticks: darkTicks },
-                        x: { ticks: { ...darkTicks, maxTicksLimit: 10 }, grid: darkGrid }
+                        y: { beginAtZero: false, grid: darkGrid, ticks: { ...darkTicks, callback: (v) => '$' + v } },
+                        x: { ticks: { ...darkTicks, maxTicksLimit: 8 }, grid: { display: false } }
                     }
                 }
             });
@@ -364,9 +461,10 @@ function tradePageData() {
                     datasets: [{
                         label: 'Volume',
                         data: data.volumes,
-                        backgroundColor: 'rgba(245, 158, 11, 0.5)',
-                        borderColor: '#f59e0b',
-                        borderWidth: 1,
+                        backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                        borderColor: '#38bdf8',
+                        borderWidth: 2,
+                        borderRadius: 4
                     }]
                 },
                 options: {
@@ -375,7 +473,7 @@ function tradePageData() {
                     plugins: { legend: { display: false } },
                     scales: {
                         y: { beginAtZero: true, grid: darkGrid, ticks: darkTicks },
-                        x: { ticks: { ...darkTicks, maxTicksLimit: 10 }, grid: darkGrid }
+                        x: { ticks: { ...darkTicks, maxTicksLimit: 6 }, grid: { display: false } }
                     }
                 }
             });
