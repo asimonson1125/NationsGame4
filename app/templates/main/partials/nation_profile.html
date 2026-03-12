@@ -314,6 +314,30 @@
         {% set preamble_leader = nation.leader or 'Unknown' %}
         {% set preamble_alliance = alliance_blurb %}
         {% include 'shared/_preamble.html' %}
+
+        {# --- natural resources blurb --- #}
+        {% if natural_resources %}
+        {% set nr_max = natural_resources[0].amount %}
+        {% set nr_parts = [] %}
+        {% for nr in natural_resources[:3] %}
+            {% set q = 'many' if nr.amount >= nr_max * 0.6 else ('some' if nr.amount >= nr_max * 0.25 else 'a few') %}
+            {% set _ = nr_parts.append(q ~ ' ' ~ (nr.resource_key | replace('_', ' '))) %}
+        {% endfor %}
+        <p class="text-slate-300 mb-3">The region is home to
+            {%- if nr_parts | length == 1 %} {{ nr_parts[0] }}
+            {%- elif nr_parts | length == 2 %} {{ nr_parts[0] }} and {{ nr_parts[1] }}
+            {%- else %} {{ nr_parts[0] }}, {{ nr_parts[1] }} and {{ nr_parts[2] }}
+            {%- endif %}.</p>
+        {% endif %}
+
+        {# --- military blurb --- #}
+        {% if total_units > 0 and top_unit_type %}
+        {% set mil_size = 'small' if total_units < 20 else 'powerful' %}
+        {% set mil_focus = 'focused' if (unit_type_counts[top_unit_type] / total_units) > 0.6 else 'diverse' %}
+        {% set mil_conc = 'significant' if (unit_type_counts[top_unit_type] / total_units) > 0.5 else 'minor' %}
+        <p class="text-slate-300 mb-3">Its {{ mil_size }} military is {{ mil_focus }}, with a {{ mil_conc }} concentration in {{ top_unit_type | lower }} units.</p>
+        {% endif %}
+
         <hr>
 
         <div id="nation-description">
@@ -327,128 +351,100 @@
         </div>
     </div>
 
-    {# ===== STATS GRID ===== #}
-    <div class="max-w-4xl mx-auto">
-        <h2 class="text-lg font-semibold text-slate-100 mb-3">Nation Overview</h2>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 text-center">
-                <div class="text-xs text-slate-400 mb-1">Total GP</div>
-                <div class="text-lg font-bold text-slate-100">{{ nation.total_gp | format_resource }}</div>
-            </div>
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 text-center">
-                <div class="text-xs text-slate-400 mb-1">Total Land</div>
-                <div class="text-lg font-bold text-slate-100">{{ nation.total_land | format_resource }}</div>
-            </div>
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 text-center">
-                <div class="text-xs text-slate-400 mb-1">Population</div>
-                <div class="text-lg font-bold text-slate-100">{{ nation.population | format_resource }}</div>
-            </div>
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 text-center">
-                <div class="text-xs text-slate-400 mb-1">Factories</div>
-                <div class="text-lg font-bold text-slate-100">{{ total_factories | format_resource }}</div>
-            </div>
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 text-center">
-                <div class="text-xs text-slate-400 mb-1">Military Units</div>
-                <div class="text-lg font-bold text-slate-100">{{ total_units | format_resource }}</div>
-            </div>
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 text-center">
-                <div class="text-xs text-slate-400 mb-1">Divisions</div>
-                <div class="text-lg font-bold text-slate-100">{{ total_divisions | format_resource }}</div>
-            </div>
+    {# ===== LAND & NATURAL RESOURCES ===== #}
+    {% set land_types = [
+        ('urban_areas',   'Urban Areas',   'urban_areas_icon.png',  'Urban areas are created automatically from cleared land for population growth'),
+        ('used_land',     'Used Land',     'used_land_icon.png',    'Used land is land claimed by factories and buildings'),
+        ('cleared_land',  'Cleared Land',  'cleared_land_icon.png', ''),
+        ('forest',        'Forest',        'forest_icon.png',       ''),
+        ('grassland',     'Grassland',     'grassland_icon.png',    ''),
+        ('jungle',        'Jungle',        'jungle_icon.png',       ''),
+        ('desert',        'Desert',        'desert_icon.png',       ''),
+        ('mountain',      'Mountain',      'mountain_icon.png',     ''),
+        ('tundra',        'Tundra',        'tundra_icon.png',       ''),
+        ('river',         'River',         'river_icon.png',        ''),
+        ('lake',          'Lake',          'lake_icon.png',         ''),
+    ] %}
+    <div class="max-w-4xl mx-auto" x-data="{ view: 'land' }">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold text-slate-100" x-text="view === 'land' ? 'Land Breakdown' : 'Natural Resources'"></h2>
+            <select x-model="view" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded px-3 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <option value="land">Land</option>
+                <option value="resources">Natural Resources</option>
+            </select>
         </div>
-    </div>
 
-    {# ===== GP BREAKDOWN ===== #}
-    <div class="max-w-4xl mx-auto">
-        <h2 class="text-lg font-semibold text-slate-100 mb-3">GP Breakdown</h2>
-        <div class="bg-slate-800 rounded-lg border border-slate-700 p-5">
-            {% set gp_components = [
-                ('Population', nation.population_gp, 'fas fa-users', 'blue'),
-                ('Land',       nation.land_gp,       'fas fa-map',   'green'),
-                ('Factories',  nation.factory_gp,    'fas fa-industry', 'yellow'),
-                ('Buildings',  nation.building_gp,   'fas fa-building', 'purple'),
-                ('Military',   nation.military_gp,   'fas fa-shield-alt', 'red'),
-            ] %}
-            <div class="space-y-2">
-                {% for label, value, icon, color in gp_components %}
-                <div class="flex items-center justify-between py-2 {% if not loop.last %}border-b border-slate-700{% endif %}">
-                    <span class="flex items-center gap-2 text-sm text-slate-400">
-                        <i class="{{ icon }} text-{{ color }}-400 w-4 text-center"></i>
-                        {{ label }}
-                    </span>
-                    <span class="text-sm font-medium text-slate-200">{{ "{:,}".format(value) }}</span>
-                </div>
-                {% endfor %}
-                <div class="flex justify-between pt-2 mt-1 font-bold text-sm border-t-2 border-slate-600">
-                    <span class="text-slate-100">Total</span>
-                    <span class="text-amber-400">{{ "{:,}".format(nation.total_gp) }}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {# ===== LAND BREAKDOWN ===== #}
-    <div class="max-w-4xl mx-auto">
-        <h2 class="text-lg font-semibold text-slate-100 mb-3">Land Breakdown</h2>
-        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-3">
-            <div class="flex items-center justify-center gap-2 text-slate-300">
+        <div x-show="view === 'land'">
+            <div class="bg-slate-800 rounded-lg border border-slate-700 p-3 mb-3 flex items-center justify-center gap-2 text-slate-300">
                 <i class="fas fa-globe text-emerald-500"></i>
                 <span class="text-sm font-medium">Total Land:</span>
                 <span class="text-lg font-bold text-slate-100">{{ nation.total_land | format_resource }}</span>
             </div>
+            <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-visible">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-700/50 text-left text-slate-400">
+                            <th class="px-4 py-2">Type</th>
+                            <th class="px-4 py-2 text-right">Tiles</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for field, label, icon, tooltip in land_types %}
+                        {% set tile_amount = nation | attr(field) or 0 %}
+                        {% if tile_amount > 0 %}
+                        <tr class="border-t border-slate-700 {% if loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %}">
+                            <td class="px-4 py-2">
+                                <div class="flex items-center gap-2">
+                                    <img src="{{ url_for('static', filename='images/icons/' ~ icon) }}" alt="{{ label }}" class="w-5 h-5" onerror="this.style.display='none'">
+                                    <span class="text-slate-300">{{ label }}</span>
+                                    {% if tooltip %}
+                                    <span class="tt cursor-help text-slate-500 hover:text-slate-300 transition-colors" data-tooltip="{{ tooltip }}">
+                                        <i class="fas fa-question-circle text-[10px]"></i>
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-4 py-2 text-right font-medium text-slate-100">{{ tile_amount | format_resource }}</td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
-        {% set land_types = [
-            ('cleared_land',  'Cleared Land',  'cleared_land_icon.png', ''),
-            ('urban_areas',   'Urban Areas',   'urban_areas_icon.png',  'Urban areas are created automatically from cleared land for population growth'),
-            ('used_land',     'Used Land',     'used_land_icon.png',    ''),
-            ('forest',        'Forest',        'forest_icon.png',       ''),
-            ('grassland',     'Grassland',     'grassland_icon.png',    ''),
-            ('jungle',        'Jungle',        'jungle_icon.png',       ''),
-            ('desert',        'Desert',        'desert_icon.png',       ''),
-            ('mountain',      'Mountain',      'mountain_icon.png',     ''),
-            ('tundra',        'Tundra',        'tundra_icon.png',       ''),
-            ('river',         'River',         'river_icon.png',        ''),
-            ('lake',          'Lake',          'lake_icon.png',         ''),
-        ] %}
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {% for field, label, icon, tooltip in land_types %}
-            {% set tile_amount = nation | attr(field) or 0 %}
-            {% if tile_amount > 0 %}
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-3 flex flex-col items-center text-center">
-                <img src="{{ url_for('static', filename='images/icons/' ~ icon) }}"
-                     alt="{{ label }}"
-                     class="w-8 h-8 mb-2"
-                     onerror="this.style.display='none'">
-                <div class="text-xs text-slate-400 mb-1 flex items-center justify-center gap-1">
-                    {{ label }}
-                    {% if tooltip %}
-                    <span class="tt cursor-help text-slate-500 hover:text-slate-300 transition-colors" data-tooltip="{{ tooltip }}">
-                        <i class="fas fa-question-circle text-[10px]"></i>
-                    </span>
-                    {% endif %}
-                </div>
-                <div class="text-sm font-bold text-slate-100">{{ tile_amount | format_resource }}</div>
+
+        <div x-show="view === 'resources'">
+            {% if natural_resources %}
+            <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-700/50 text-left text-slate-400">
+                            <th class="px-4 py-2">Resource</th>
+                            <th class="px-4 py-2 text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for nr in natural_resources %}
+                        <tr class="border-t border-slate-700 {% if loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %}">
+                            <td class="px-4 py-2">
+                                <div class="flex items-center gap-2">
+                                    {{ res_icon(nr.resource_key, 'w-5 h-5') }}
+                                    <span class="text-slate-300 capitalize">{{ nr.resource_key | replace('_', ' ') }}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-2 text-right font-medium text-slate-100">{{ nr.amount | format_resource }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 text-center text-slate-500 text-sm">
+                No natural resources discovered yet.
             </div>
             {% endif %}
-            {% endfor %}
         </div>
     </div>
-
-    {# ===== NATURAL RESOURCES ===== #}
-    {% if natural_resources %}
-    <div class="max-w-4xl mx-auto">
-        <h2 class="text-lg font-semibold text-slate-100 mb-3">Natural Resources</h2>
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {% for nr in natural_resources %}
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-3 flex flex-col items-center text-center">
-                {{ res_icon(nr.resource_key, 'w-8 h-8 mb-2') }}
-                <div class="text-xs text-slate-400 mb-1 capitalize">{{ nr.resource_key | replace('_', ' ') }}</div>
-                <div class="text-sm font-bold text-slate-100">{{ nr.amount | format_resource }}</div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
 
     {# ===== FACTORY SUMMARY ===== #}
     {% if factory_summary %}

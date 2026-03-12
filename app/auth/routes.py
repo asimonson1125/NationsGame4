@@ -85,7 +85,13 @@ def register():
             db.session.add(nation)
             db.session.flush()
             from ..helpers import grant_factories
-            grant_factories(nation, [('farm', 5), ('windmill', 5), ('quarry', 3)], production_capacity=6)
+            from ..game.factories import FACTORY_DEFS
+            starter = [('farm', 5), ('windmill', 5), ('quarry', 3)]
+            grant_factories(nation, starter, production_capacity=6)
+            nation.used_land = (nation.used_land or 0) + sum(
+                qty * sum(FACTORY_DEFS[key].land_required.values())
+                for key, qty in starter if key in FACTORY_DEFS
+            )
 
             # Seed 6 infantry — 4 in "Division 1", 2 in reserve
             div = Division(nation_id=nation.id, name='Division 1')

@@ -31,8 +31,15 @@ def _nation_summary(nation):
     # Natural resources
     natural_resources = NaturalResource.query.filter_by(nation_id=nation.id).filter(NaturalResource.amount > 0).order_by(NaturalResource.amount.desc()).all()
 
-    # Military counts
-    total_units = Unit.query.filter_by(nation_id=nation.id).count()
+    # Military counts with type breakdown for preamble
+    units_list = Unit.query.filter_by(nation_id=nation.id).with_entities(Unit.unit_key).all()
+    total_units = len(units_list)
+    unit_type_counts = {}
+    for (unit_key,) in units_list:
+        udef = UNIT_DEFS.get(unit_key)
+        if udef and not udef.npc_only:
+            unit_type_counts[udef.unit_type] = unit_type_counts.get(udef.unit_type, 0) + 1
+    top_unit_type = max(unit_type_counts, key=unit_type_counts.get) if unit_type_counts else None
     total_divisions = Division.query.filter_by(nation_id=nation.id).count()
 
     return dict(
@@ -40,6 +47,8 @@ def _nation_summary(nation):
         factory_summary=factory_summary,
         natural_resources=natural_resources,
         total_units=total_units,
+        unit_type_counts=unit_type_counts,
+        top_unit_type=top_unit_type,
         total_divisions=total_divisions,
     )
 
