@@ -219,7 +219,7 @@ def cleanup_pve_battles():
     with scheduler.app.app_context():
         cutoff = datetime.now(timezone.utc) - timedelta(weeks=2)
         old_pve = Battle.query.filter(
-            Battle.battle_type.in_(('pve', 'pve_mission')),
+            Battle.battle_type.in_(('peacekeeping', 'pve_mission')),
             Battle.status == 'finished',
             Battle.finished_at <= cutoff,
         ).all()

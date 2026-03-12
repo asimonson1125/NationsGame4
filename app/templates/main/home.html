@@ -59,6 +59,23 @@
                 </button>
             </form>
 
+            {# Banner Image #}
+            <form hx-post="{{ url_for('main.update_banner') }}" hx-swap="none"
+                  @htmx:after-request="if ($event.detail.successful) location.reload();"
+                  class="p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                <label class="text-sm font-medium text-slate-300 sm:w-28 shrink-0">Banner Image
+                    <span class="text-xs text-slate-500 block font-normal">Header background</span>
+                </label>
+                <input type="text" name="new_banner"
+                       value="{{ nation.banner_url or '' }}"
+                       placeholder="https://... image URL (blank to use continent default)"
+                       class="flex-1 w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm">
+                <button type="submit"
+                        class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md transition-colors font-semibold text-sm shrink-0">
+                    Save
+                </button>
+            </form>
+
             {# Vacation Mode #}
             <form hx-post="{{ url_for('auth.toggle_vacation') }}" hx-swap="none"
                   class="p-4 flex items-center justify-between">

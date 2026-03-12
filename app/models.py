@@ -28,6 +28,7 @@ class Nation(db.Model):
     name = db.Column(db.String(120), nullable=False)
     demonym = db.Column(db.String(120), default='')
     flag_url = db.Column(db.String(500), default='')
+    banner_url = db.Column(db.String(500), default='')
     leader = db.Column(db.String(120), default='')
     population = db.Column(db.BigInteger, default=1_000_000)
     tier = db.Column(db.Integer, default=1)
@@ -276,8 +277,9 @@ class Battle(db.Model):
     defender_nation_name = db.Column(db.String(120), nullable=True)
     status = db.Column(db.String(20), default='active')  # active|finished
     winner = db.Column(db.String(20), nullable=True)      # attacker|defender|null
-    battle_type = db.Column(db.String(20), default='pvp')  # pvp|pve|pve_mission
+    battle_type = db.Column(db.String(20), default='pvp')  # pvp|peacekeeping|pve_mission
     mission_offer_id = db.Column(db.Integer, nullable=True)  # plain int — no FK (partitioned table)
+    location = db.Column(db.String(50), nullable=True)  # continent name for this battle
     started_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     finished_at = db.Column(db.DateTime, nullable=True)
     attacker_snapshot = db.Column(db.Text, nullable=True)  # JSON unit state at battle end

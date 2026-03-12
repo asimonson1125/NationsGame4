@@ -2,7 +2,29 @@
 
 {% block title %}Battle #{{ battle.id }}{% endblock %}
 
+{% if battle.location %}
+{% set continent_slug = battle.location | lower | replace(' ', '_') %}
+{% set continent_ext = 'png' if continent_slug == 'tind' else 'jpeg' %}
+{% block head %}
+<style>
+    body { background-color: transparent !important; }
+    #battle-bg {
+        position: fixed; inset: 0; z-index: -1;
+        background-image: url("{{ url_for('static', filename='images/continents/' ~ continent_slug ~ '.' ~ continent_ext) }}");
+        background-size: cover; background-position: center;
+    }
+    #battle-bg::after {
+        content: ''; position: absolute; inset: 0;
+        background: rgba(2, 6, 23, 0.30);
+    }
+</style>
+{% endblock %}
+{% endif %}
+
 {% block content %}
+{% if battle.location %}
+<div id="battle-bg" aria-hidden="true"></div>
+{% endif %}
 <div class="p-4 max-w-7xl mx-auto"
      x-data="{
         showDetail: false,
@@ -12,6 +34,25 @@
      }"
      @open-combat-detail.window="open($event.detail)"
 >
+    {# ── Location / Battle title header ── #}
+    {% if battle.location %}
+    <div class="flex bg-slate-800 rounded-lg border border-slate-700 px-4 py-3 items-end justify-between mb-4 pb-3 border-b border-white/10">
+        <div>
+            <div class="text-white/50 text-[11px] uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                <i class="fas fa-map-marker-alt text-[10px]"></i>{{ battle.location }}
+            </div>
+            <div class="text-white text-xl font-bold leading-tight">
+                <i class="fas fa-crosshairs mr-2 text-red-500"></i>{{ battle_title }}
+            </div>
+        </div>
+        {% if battle.status == 'finished' %}
+        <span class="bg-green-700 text-slate-400 text-sm font-medium px-3 py-1 rounded-full">Finished</span>
+        {% else %}
+        <span class="bg-red-500/20 text-red-400 text-sm font-medium px-3 py-1 rounded-full animate-pulse">Live</span>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <span id="battle-spin" class="htmx-indicator fixed top-4 right-4 z-50 w-4 h-4 border-2 border-slate-500 border-t-slate-200 rounded-full animate-spin pointer-events-none"></span>
     {% include 'military/partials/battle_status.html' %}
 

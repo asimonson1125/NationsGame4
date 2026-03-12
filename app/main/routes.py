@@ -278,6 +278,29 @@ def update_flag():
     return resp
 
 
+@main.route('/update-banner', methods=['POST'])
+@login_required
+def update_banner():
+    new_banner = request.form.get('new_banner', '').strip()
+    if new_banner:
+        IMAGE_EXTS = ('.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.svg',
+                      '.tiff', '.tif', '.ico', '.avif', '.apng', '.jfif')
+        path = new_banner.split('?')[0].split('#')[0].lower()
+        if not any(path.endswith(ext) for ext in IMAGE_EXTS):
+            resp = current_app.response_class(status=422)
+            resp.headers['HX-Trigger'] = json.dumps(
+                {'showMessage': {'message': 'Invalid banner URL. Must link to an image file.', 'type': 'error'}}
+            )
+            return resp
+    current_user.nation.banner_url = new_banner
+    db.session.commit()
+    resp = current_app.response_class(status=204)
+    resp.headers['HX-Trigger'] = json.dumps(
+        {'showMessage': {'message': 'Banner updated successfully.', 'type': 'success'}}
+    )
+    return resp
+
+
 @main.route('/update-description', methods=['POST'])
 @login_required
 def update_description():

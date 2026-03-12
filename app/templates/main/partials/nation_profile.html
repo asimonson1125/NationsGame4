@@ -7,15 +7,16 @@
     'Amarino':       'amarino.jpeg',
     'San Sebastian': 'san_sebastian.jpeg',
 } %}
+{% set bg_image = nation.banner_url if nation.banner_url else url_for('static', filename='images/continents/' ~ continent_bg.get(nation.continent, 'tind.png')) %}
 <div class="relative bg-cover bg-center"
-     style="background-image: url('{{ url_for('static', filename='images/continents/' ~ continent_bg.get(nation.continent, 'tind.png')) }}'); padding: 100px 20px;">
+     {% if is_owner %}x-data="{ flagModal: false }"{% endif %}
+     style="background-image: url('{{ bg_image }}'); padding: 100px 20px;">
     <div class="absolute inset-0 bg-slate-950/60"></div>
     <div class="relative max-w-5xl mx-auto flex items-center text-white"
          style="text-shadow: 1px 1px 4px rgba(0,0,0,.7)">
 
         {# Left: flag + nation name #}
-        <div class="flex-1 flex flex-col items-center pr-4"
-             {% if is_owner %}x-data="{ flagModal: false }"{% endif %}>
+        <div class="flex-1 flex flex-col items-center pr-4">
             {% if is_owner %}
             <div @click="flagModal = true"
                  class="relative cursor-pointer mb-4 group">
@@ -332,14 +333,14 @@
 
         {# --- military blurb --- #}
         {% if total_units > 0 and top_unit_type %}
-        {% set mil_size = 'small' if total_units < 20 else 'powerful' %}
+        {% set mil_size = 'small' if (nation.population / 5000) > nation.military_gp else 'average' if (nation.population / 1000) > nation.military_gp else 'powerful' %}
         {% set mil_focus = 'focused' if (unit_type_counts[top_unit_type] / total_units) > 0.6 else 'diverse' %}
         {% set mil_conc = 'significant' if (unit_type_counts[top_unit_type] / total_units) > 0.5 else 'minor' %}
         <p class="text-slate-300 mb-3">Its {{ mil_size }} military is {{ mil_focus }}, with a {{ mil_conc }} concentration in {{ top_unit_type | lower }} units.</p>
         {% endif %}
-
+        <br />
         <hr>
-
+        <br />
         <div id="nation-description">
             {% if is_owner %}
             {% include 'main/partials/nation_description.html' %}
@@ -470,5 +471,6 @@
         </div>
     </div>
     {% endif %}
+
 
 </div>

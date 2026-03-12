@@ -278,7 +278,7 @@ def _effective_maneuver(unit, allies, enemies, is_defender=False, continent=None
     return max(man, 0.01)  # floor to avoid zero weight
 
 
-def select_initiative(attacker_units, defender_units):
+def select_initiative(attacker_units, defender_units, continent=None):
     """Select one unit from the combined pool, weighted by effective maneuver.
 
     Returns (unit, side) where side is 'attacker' or 'defender'.
@@ -290,12 +290,12 @@ def select_initiative(attacker_units, defender_units):
     for unit in attacker_units:
         candidates.append((unit, 'attacker'))
         weights.append(_effective_maneuver(unit, attacker_units, defender_units,
-                                           is_defender=False))
+                                           is_defender=False, continent=continent))
 
     for unit in defender_units:
         candidates.append((unit, 'defender'))
         weights.append(_effective_maneuver(unit, defender_units, attacker_units,
-                                           is_defender=True))
+                                           is_defender=True, continent=continent))
 
     if not candidates:
         return None, None
@@ -440,8 +440,8 @@ def process_battle_round(battle, db_session):
     """
     from ..models import Unit, CombatReport
 
-    # Get defender continent for equipment continent buffs
-    defender_continent = getattr(battle.defender_nation, 'continent', '') or ''
+    # Get battle location for equipment continent buffs
+    defender_continent = getattr(battle, 'location', '') or ''
 
     # Query ALL units (including dead) to build stable indices, then filter alive
     all_atk = Unit.query.filter_by(division_id=battle.attacker_division_id, nation_id=battle.attacker_nation_id).order_by(Unit.division_joined_at, Unit.id).all()
@@ -513,7 +513,8 @@ def process_battle_round(battle, db_session):
         return reports
 
     # Select initiative winner from the combined pool
-    init_unit, init_side = select_initiative(attacker_units, defender_units)
+    init_unit, init_side = select_initiative(attacker_units, defender_units,
+                                             continent=defender_continent)
 
     # Pick a random target from the opposing side
     if init_side == 'attacker':
@@ -750,7 +751,7 @@ def _send_battle_notifications(battle, atk_units, def_units, db_session,
     """Send system mail to battle participants and grant loot tokens to the winner."""
     from ..models import Message, Nation
 
-    is_pve = battle.battle_type in ('pve', 'pve_mission')
+    is_pve = battle.battle_type in ('peacekeeping', 'pve_mission')
     winner_side = battle.winner  # 'attacker' or 'defender'
 
     atk_nation = db_session.get(Nation, battle.attacker_nation_id)
@@ -884,7 +885,7 @@ def _end_battle(battle, db_session):
         _resolve_mission(battle, db_session)
 
     # For PvE variants, the NPC defender division is disposable — delete it entirely
-    is_pve = battle.battle_type in ('pve', 'pve_mission')
+    is_pve = battle.battle_type in ('peacekeeping', 'pve_mission')
 
     # Destroy destroyed units (reduce military GP, destroy equipment)
     for unit in atk_units:

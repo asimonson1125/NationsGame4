@@ -10,6 +10,7 @@ from ..models import Division, Unit, RecruitmentQueue, Battle, CombatReport, Nat
 from ..helpers import error_response as _error_response, can_afford as _can_afford, deduct_cost as _deduct_cost, compute_total_upkeep
 from ..game.units import UNIT_DEFS
 from ..game.missions import MISSION_DEFS, roll_two_missions
+from ..game.constants import CONTINENTS
 from ..game.equipment import EQUIPMENT_SLOTS, RARITY_COLORS, get_slot_category, BUFF_FILTER_OPTIONS, apply_buff_filter
 from . import military
 
@@ -573,6 +574,17 @@ def battle_view(battle_id):
     ).order_by(CombatReport.id.desc()).limit(50).all()
     attacker_units, defender_units = _get_battle_units(battle)
     nation = current_user.nation
+
+    battle_title = 'Peacekeeping Combat'
+    if battle.battle_type == 'pve_mission' and battle.mission_offer_id:
+        offer = MissionOffer.query.filter_by(id=battle.mission_offer_id).first()
+        if offer:
+            mdef = MISSION_DEFS.get(offer.mission_key)
+            if mdef:
+                battle_title = mdef.name
+    elif battle.battle_type == 'pvp':
+        battle_title = 'Nation vs Nation'
+
     return render_template(
         'military/battle.html',
         battle=battle,
@@ -581,6 +593,7 @@ def battle_view(battle_id):
         defender_units=defender_units,
         unit_defs=UNIT_DEFS,
         is_participant=nation and nation.id in (battle.attacker_nation_id, battle.defender_nation_id),
+        battle_title=battle_title,
     )
 
 
@@ -694,7 +707,8 @@ def deploy_peacekeeping(div_id):
         defender_nation_id=npc_nation.id,
         attacker_nation_name=nation.name,
         defender_nation_name=getattr(npc_div, '_pk_faction_name', 'Local Insurgents'),
-        battle_type='pve',
+        battle_type='peacekeeping',
+        location=random.choice(CONTINENTS),
     )
     db.session.add(battle)
     div.in_combat = True
@@ -934,6 +948,7 @@ def deploy_mission(offer_id):
         defender_nation_name=mdef.enemy_name,
         battle_type='pve_mission',
         mission_offer_id=offer.id,
+        location=mdef.location,
     )
     db.session.add(battle)
     div.in_combat = True

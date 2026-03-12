@@ -23,7 +23,7 @@
                 </td>
                 <td class="px-4 py-3"><a href="{{ url_for('main.nation_view', nation_id=b.attacker_nation_id) }}" class="text-amber-500 hover:text-amber-400">{{ b.attacker_nation_name or b.attacker_nation.name }}</a></td>
                 <td class="px-4 py-3">
-                    {% if b.battle_type in ('pve', 'pve_mission') %}
+                    {% if b.battle_type in ('pve', 'pve_mission', 'peacekeeping') %}
                         <span class="text-slate-300">{{ b.defender_nation_name or b.defender_nation.name }}</span>
                     {% else %}
                         <a href="{{ url_for('main.nation_view', nation_id=b.defender_nation_id) }}" class="text-amber-500 hover:text-amber-400">{{ b.defender_nation_name or b.defender_nation.name }}</a>
@@ -34,6 +34,8 @@
                         <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/20 text-emerald-400">PvE</span>
                     {% elif b.battle_type == 'pve_mission' %}
                         <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-500/20 text-purple-400">Mission</span>
+                    {% elif b.battle_type == 'peacekeeping' %}
+                        <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-sky-500/20 text-sky-400">Peacekeeping</span>
                     {% else %}
                         <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-red-500/20 text-red-400">PvP</span>
                     {% endif %}
@@ -44,7 +46,7 @@
                     {% elif b.winner == 'attacker' %}
                         <span class="text-emerald-400 font-medium"><a href="{{ url_for('main.nation_view', nation_id=b.attacker_nation_id) }}" class="hover:underline">{{ b.attacker_nation_name or b.attacker_nation.name }}</a> won</span>
                     {% elif b.winner == 'defender' %}
-                        {% if b.battle_type in ('pve', 'pve_mission') %}
+                        {% if b.battle_type in ('pve', 'pve_mission', 'peacekeeping') %}
                         <span class="text-emerald-400 font-medium">{{ b.defender_nation_name or b.defender_nation.name }} won</span>
                         {% else %}
                         <span class="text-emerald-400 font-medium"><a href="{{ url_for('main.nation_view', nation_id=b.defender_nation_id) }}" class="hover:underline">{{ b.defender_nation_name or b.defender_nation.name }}</a> won</span>
@@ -99,7 +101,7 @@
         {{ battle_table(my_active, 'You have no active battles.') }}
     </div>
     <div x-show="tab === 'history'" x-cloak>
-        {{ battle_table(my_history, 'No finished battles yet.') }}
+        {{ battle_table(my_history, 'You have not finished any battles yet.') }}
     </div>
     <div x-show="tab === 'global'" x-cloak>
         {{ battle_table(global_active, 'No active battles worldwide.') }}
