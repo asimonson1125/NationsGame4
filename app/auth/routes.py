@@ -86,6 +86,8 @@ def register():
             db.session.flush()
             from ..helpers import grant_factories
             from ..game.factories import FACTORY_DEFS
+            from ..models import NationBuilding
+            from ..game.buildings import BUILDING_DEFS
             starter = [('farm', 5), ('windmill', 5), ('quarry', 3)]
             grant_factories(nation, starter, production_capacity=6)
             nation.used_land = (nation.used_land or 0) + sum(
@@ -102,6 +104,11 @@ def register():
                                             division_id=div.id if i < 4 else None)
                 db.session.add(unit)
             nation.military_gp = (nation.military_gp or 0) + 6  # 1 GP per infantry
+
+            # Seed Barracks at level 1 (free starting building)
+            barracks = NationBuilding(nation_id=nation.id, building_key='barracks', level=1)
+            db.session.add(barracks)
+            nation.building_gp = BUILDING_DEFS['barracks'].gp_per_level[0]
 
             nation.land_gp = (nation.total_land or 0) // 10
             nation.population_gp = compute_population_gp(nation.population)

@@ -8,6 +8,8 @@ from ..helpers import error_response as _error_response, can_afford as _can_affo
 from ..game.constants import CONTINENTS
 from ..game.discovery import roll_expansion, roll_colonization
 from ..game.factories import FACTORY_DEFS
+from ..game.buildings import BUILDING_DEFS, units_unlocked_at_level
+from ..game.units import UNIT_DEFS
 from . import economy
 
 _EXPAND_COOLDOWN = 60       # seconds between expand attempts
@@ -277,27 +279,58 @@ def convert_to_cleared_land():
     return resp
 
 
-@economy.route('/industry')
-@login_required
-def industry():
-    nation = current_user.nation
+def _industry_context(nation):
+    """Build all template vars for the industry page/partial."""
+    from ..models import NationBuilding, BuildingUpgradeQueue
+
     factory_map = {}
     build_queue = []
     if nation:
         for nf in nation.factories:
             factory_map[nf.factory_key] = nf
         build_queue = FactoryBuildQueue.query.filter_by(nation_id=nation.id).all()
-    # Build a map of factory_key -> list of queue entries for template use
+
     queue_map = {}
     for entry in build_queue:
         queue_map.setdefault(entry.factory_key, []).append(entry)
-    return render_template(
-        'economy/industry.html',
-        nation=nation,
+
+    building_map = {}
+    upgrade_map = {}
+    if nation:
+        for nb in NationBuilding.query.filter_by(nation_id=nation.id).all():
+            building_map[nb.building_key] = nb
+        for entry in BuildingUpgradeQueue.query.filter_by(nation_id=nation.id).all():
+            upgrade_map[entry.building_key] = entry
+
+    building_units = {}
+    for bkey, bdef in BUILDING_DEFS.items():
+        building_units[bkey] = {}
+        for lvl in range(1, bdef.max_level + 1):
+            building_units[bkey][lvl] = [
+                (ukey, UNIT_DEFS[ukey].name)
+                for ukey in units_unlocked_at_level(bkey, lvl)
+            ]
+
+    return dict(
         factory_defs=FACTORY_DEFS,
         factory_map=factory_map,
         build_queue=build_queue,
         queue_map=queue_map,
+        building_defs=BUILDING_DEFS,
+        building_map=building_map,
+        upgrade_map=upgrade_map,
+        building_units=building_units,
+    )
+
+
+@economy.route('/industry')
+@login_required
+def industry():
+    nation = current_user.nation
+    return render_template(
+        'economy/industry.html',
+        nation=nation,
+        **_industry_context(nation),
     )
 
 
@@ -378,19 +411,11 @@ def build_factory():
 
     db.session.commit()
 
-    factory_map = {nf_item.factory_key: nf_item for nf_item in nation.factories}
-    build_queue = FactoryBuildQueue.query.filter_by(nation_id=nation.id).all()
-    queue_map = {}
-    for e in build_queue:
-        queue_map.setdefault(e.factory_key, []).append(e)
     resp_html = render_template(
         'economy/partials/industry_content.html',
         nation=nation,
-        factory_defs=FACTORY_DEFS,
-        factory_map=factory_map,
-        build_queue=build_queue,
-        queue_map=queue_map,
         default_tab='build',
+        **_industry_context(nation),
     )
     resp = current_app.response_class(resp_html, status=200, mimetype='text/html')
     resp.headers['HX-Trigger'] = json.dumps({
@@ -413,6 +438,81 @@ def _format_duration(minutes):
     if remaining_hours:
         return f'{days}d {remaining_hours}h'
     return f'{days}d'
+
+
+@economy.route('/industry/buildings/upgrade', methods=['POST'])
+@login_required
+def upgrade_building():
+    from ..models import NationBuilding, BuildingUpgradeQueue
+
+    nation = current_user.nation
+    if not nation:
+        return _error_response('No nation found.')
+
+    building_key = request.form.get('building_key', '').strip()
+    bdef = BUILDING_DEFS.get(building_key)
+    if not bdef:
+        return _error_response('Unknown building type.')
+
+    if (nation.tier or 1) < bdef.unlock_tier:
+        return _error_response(f'{bdef.name} requires Tier {bdef.unlock_tier}.')
+
+    active = BuildingUpgradeQueue.query.filter_by(nation_id=nation.id, building_key=building_key).first()
+    if active:
+        return _error_response(f'{bdef.name} is already being upgraded.')
+
+    nb = NationBuilding.query.filter_by(nation_id=nation.id, building_key=building_key).first()
+    current_level = nb.level if nb else 0
+    target_level = current_level + 1
+
+    if target_level > bdef.max_level:
+        return _error_response(f'{bdef.name} is already at maximum level.')
+
+    cost = bdef.level_costs[current_level]
+    if cost and not _can_afford(nation, cost):
+        for res, needed in cost.items():
+            if nation.get_resource(res) < needed:
+                return _error_response(f'Insufficient {res.replace("_", " ")}. Need {needed:,}.')
+
+    upgrade_minutes = bdef.level_upgrade_time[current_level]
+
+    if cost:
+        _deduct_cost(nation, cost)
+
+    if not nb:
+        nb = NationBuilding(nation_id=nation.id, building_key=building_key, level=0)
+        db.session.add(nb)
+
+    if upgrade_minutes == 0:
+        nb.level = target_level
+        nation.building_gp = (nation.building_gp or 0) + bdef.gp_per_level[current_level]
+        db.session.commit()
+        msg = f'{bdef.name} built!'
+    else:
+        now = datetime.now(timezone.utc)
+        entry = BuildingUpgradeQueue(
+            nation_id=nation.id,
+            building_key=building_key,
+            target_level=target_level,
+            started_at=now,
+            completes_at=now + timedelta(minutes=upgrade_minutes),
+        )
+        db.session.add(entry)
+        db.session.commit()
+        msg = f'{bdef.name} upgrade to Lvl {target_level} queued — completes in {_format_duration(upgrade_minutes)}.'
+
+    resp_html = render_template(
+        'economy/partials/industry_content.html',
+        nation=nation,
+        default_tab='buildings',
+        **_industry_context(nation),
+    )
+    resp = current_app.response_class(resp_html, status=200, mimetype='text/html')
+    resp.headers['HX-Trigger'] = json.dumps({
+        'showMessage': {'message': msg, 'type': 'success'},
+        'refreshResourceFooter': True,
+    })
+    return resp
 
 
 @economy.route('/industry/collect/<factory_key>', methods=['POST'])

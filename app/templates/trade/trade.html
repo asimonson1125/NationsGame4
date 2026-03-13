@@ -287,6 +287,30 @@
 
     {# ===== ANALYTICS TAB ===== #}
     <div x-show="view === 'analytics'" x-cloak class="space-y-6">
+
+        {# Resource + time controls #}
+        <div class="flex flex-wrap items-center gap-3">
+            <select x-model="resource" @change="loadAnalytics()"
+                    class="bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500/50">
+                <optgroup label="Commodities" class="bg-slate-800">
+                    {% for c in commodities %}
+                    <option value="{{ c }}">{{ c.replace('_', ' ').title() }}</option>
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="Natural Resources" class="bg-slate-800">
+                    {% for nr in natural_resources %}
+                    <option value="{{ nr }}">{{ nr.replace('_', ' ').title() }}</option>
+                    {% endfor %}
+                </optgroup>
+            </select>
+            <select x-model="days" @change="loadAnalytics()"
+                    class="bg-slate-900 border border-slate-700 text-slate-300 text-sm rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500/50">
+                <option value="7">Past Week</option>
+                <option value="30">Past Month</option>
+                <option value="90">Past Quarter</option>
+            </select>
+        </div>
+
         {# Stats Grid #}
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div class="bg-slate-800 rounded-2xl border border-slate-700 p-5 shadow-sm">
@@ -313,15 +337,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2 bg-slate-800 rounded-2xl border border-slate-700 p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-lg font-bold text-slate-100">Price Performance</h2>
-                    <select x-model="days" @change="loadAnalytics()"
-                            class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-amber-500/50">
-                        <option value="7">Past Week</option>
-                        <option value="30">Past Month</option>
-                        <option value="90">Past Quarter</option>
-                    </select>
-                </div>
+                <h2 class="text-lg font-bold text-slate-100 mb-6">Price Performance</h2>
                 <div class="relative" style="height: 350px;">
                     <canvas id="priceChart"></canvas>
                 </div>

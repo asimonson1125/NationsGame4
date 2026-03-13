@@ -201,6 +201,29 @@ def process_factory_queue():
             db.session.commit()
 
 
+def process_building_upgrades():
+    """Runs every 60s. Completes building upgrades whose timer has expired."""
+    from .models import BuildingUpgradeQueue, NationBuilding, Nation
+    from .game.buildings import BUILDING_DEFS
+    from . import db
+    with scheduler.app.app_context():
+        now = datetime.now(timezone.utc)
+        ready = BuildingUpgradeQueue.query.filter(BuildingUpgradeQueue.completes_at <= now).all()
+        for entry in ready:
+            nb = NationBuilding.query.filter_by(
+                nation_id=entry.nation_id, building_key=entry.building_key
+            ).first()
+            if nb:
+                nb.level = entry.target_level
+                bdef = BUILDING_DEFS.get(entry.building_key)
+                nation = db.session.get(Nation, entry.nation_id)
+                if nation and bdef and entry.target_level <= len(bdef.gp_per_level):
+                    nation.building_gp = (nation.building_gp or 0) + bdef.gp_per_level[entry.target_level - 1]
+            db.session.delete(entry)
+        if ready:
+            db.session.commit()
+
+
 def reset_daily_counters():
     """Runs daily at midnight UTC. Resets per-nation daily counters."""
     from .models import Nation
@@ -256,6 +279,8 @@ def register_tasks(app):
     scheduler.add_job(id='process_recruitment', func=process_recruitment_queue,
                       trigger='interval', seconds=60)
     scheduler.add_job(id='process_factory_build', func=process_factory_queue,
+                      trigger='interval', seconds=60)
+    scheduler.add_job(id='process_building_upgrades', func=process_building_upgrades,
                       trigger='interval', seconds=60)
     scheduler.add_job(id='process_combat', func=process_combat_rounds,
                       trigger='interval', seconds=10)

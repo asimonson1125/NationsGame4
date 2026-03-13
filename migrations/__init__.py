@@ -14,6 +14,7 @@ MIGRATIONS = [
     'add_mission_skips',
     'add_battle_nation_names',
     'add_vacation_cooldown',
+    'add_buildings',
 ]
 
 

@@ -96,6 +96,8 @@ class Nation(db.Model):
     equipment = db.relationship('Equipment', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
     trade_orders = db.relationship('TradeOrder', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
     messages_received = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient_nation', lazy='dynamic', overlaps="recipient,recipient_nation")
+    buildings = db.relationship('NationBuilding', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
+    building_upgrades = db.relationship('BuildingUpgradeQueue', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
 
     def get_resource(self, key):
         return getattr(self, key, 0) or 0
@@ -378,6 +380,26 @@ class Message(db.Model):
 
     sender = db.relationship('Nation', foreign_keys=[sender_id])
     recipient = db.relationship('Nation', foreign_keys=[recipient_id], overlaps='messages_received,recipient_nation')
+
+
+class NationBuilding(db.Model):
+    __tablename__ = 'nation_buildings'
+    id = db.Column(db.Integer, primary_key=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False, index=True)
+    building_key = db.Column(db.String(64), nullable=False)
+    level = db.Column(db.Integer, default=1, nullable=False)
+    __table_args__ = (db.UniqueConstraint('nation_id', 'building_key'),)
+
+
+class BuildingUpgradeQueue(db.Model):
+    __tablename__ = 'building_upgrade_queue'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False, index=True)
+    building_key = db.Column(db.String(64), nullable=False)
+    target_level = db.Column(db.Integer, nullable=False)
+    started_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    completes_at = db.Column(db.DateTime, nullable=False)
+    __table_args__ = (db.UniqueConstraint('nation_id', 'building_key'),)
 
 
 class MissionOffer(db.Model):

@@ -137,6 +137,11 @@
                 <div class="w-full text-center py-2 px-4 rounded text-sm bg-slate-700 text-slate-500 cursor-not-allowed">
                     <i class="fas fa-lock mr-1"></i>Requires Tier {{ udef.tier }}
                 </div>
+                {% elif building_lock_map and key in building_lock_map %}
+                {% set block = building_lock_map[key] %}
+                <div class="w-full text-center py-2 px-4 rounded text-sm bg-slate-700 text-slate-500 cursor-not-allowed">
+                    <i class="fas fa-building mr-1"></i>Requires {{ block.name }} Lvl {{ block.level }}
+                </div>
                 {% else %}
                 <form hx-post="{{ url_for('military.recruit_unit') }}"
                       hx-swap="none"

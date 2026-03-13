@@ -17,6 +17,21 @@ from . import military
 
 # ── OVERVIEW ──────────────────────────────────────────────────────────────
 
+def _building_lock_map(nation_id, unit_defs):
+    """Return dict of unit_key -> {'name': str, 'level': int} for units locked by building prereqs."""
+    from ..game.buildings import building_for_unit_type, required_level as _req_level, BUILDING_DEFS
+    from ..models import NationBuilding
+    nb_levels = {nb.building_key: nb.level for nb in NationBuilding.query.filter_by(nation_id=nation_id).all()}
+    locks = {}
+    for unit_key, udef in unit_defs.items():
+        bkey = building_for_unit_type(udef.unit_type)
+        if bkey:
+            req_lvl = _req_level(bkey, udef.tier)
+            if nb_levels.get(bkey, 0) < req_lvl:
+                locks[unit_key] = {'name': BUILDING_DEFS[bkey].name, 'level': req_lvl}
+    return locks
+
+
 @military.route('/military')
 @login_required
 def overview():
@@ -40,6 +55,7 @@ def overview():
         total_upkeep=total_upkeep,
         default_tab=request.args.get('tab', 'overview'),
         div_battles=_get_div_battles(nation.id),
+        building_lock_map=_building_lock_map(nation.id, player_unit_defs),
     )
 
 
@@ -426,6 +442,18 @@ def recruit_unit():
 
     if (nation.tier or 1) < udef.tier:
         return _error_response(f'{udef.name} requires Tier {udef.tier}.')
+
+    # Check building prerequisite
+    from ..game.buildings import building_for_unit_type, required_level as _building_req_level, BUILDING_DEFS
+    from ..models import NationBuilding
+    bkey = building_for_unit_type(udef.unit_type)
+    if bkey:
+        req_lvl = _building_req_level(bkey, udef.tier)
+        nb = NationBuilding.query.filter_by(nation_id=nation.id, building_key=bkey).first()
+        if not nb or nb.level < req_lvl:
+            return _error_response(
+                f'{udef.name} requires {BUILDING_DEFS[bkey].name} Lvl {req_lvl}.'
+            )
 
     # Check queue limit (max 10)
     queue_count = RecruitmentQueue.query.filter_by(nation_id=nation.id).count()

@@ -11,7 +11,26 @@ python3 run.py init-db  # create DB tables (first run only)
 
 No `python` binary — always use `python3`/`pip3` on this machine.
 
-PostgreSQL is required for all environments. Schema is initialized via `python3 run.py init-db`, which also creates the necessary hash partitions. Schema changes require dropping and recreating the DB in development.
+PostgreSQL is required for all environments. Schema is initialized via `python3 run.py init-db`, which also creates the necessary hash partitions.
+
+## Migrations
+
+Schema changes use a lightweight migration system in `migrations/`. Each migration is a Python module with a `migrate(app)` function. The runner tracks applied migrations in a `_migrations_applied` table.
+
+**Adding a migration:**
+1. Create `migrations/<name>.py` with a `migrate(app)` function using raw SQL via `db.session.execute(text(...))`
+2. Add the module name to the `MIGRATIONS` list in `migrations/__init__.py`
+
+**Running migrations:**
+```bash
+# Run all pending migrations (preferred)
+python3 -c "from run import app; from migrations import run_all; run_all(app)"
+
+# Run a single migration directly
+python3 -c "from run import app; from migrations.<name> import migrate; migrate(app)"
+```
+
+Migrations must be idempotent — use `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, and `ON CONFLICT DO NOTHING` for data backfills. Never drop or destructively alter existing columns in a migration.
 
 ## Architecture
 
