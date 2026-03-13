@@ -11,8 +11,8 @@ CHANGELOG = [
         'date': '2026-03-13',
         'body': (
             'Welcome to NG4. Project is approaching the end of '
-            'of its alpha phase.  This version '
-            'introduces industrial and recruitment buildings.'
+            'of its alpha phase.  This version introduces industrial '
+            'and recruitment buildings.  Alliance and mail QoL improved.'
         ),
     },
     {

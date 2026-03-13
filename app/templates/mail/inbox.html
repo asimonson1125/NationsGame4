@@ -19,11 +19,13 @@
                 :class="tab === 'notifications' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
                 class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
             <i class="fas fa-bell mr-1"></i> Notifications
+            {% if unread_notifications %}<span class="ml-1 bg-amber-500/20 text-amber-400 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ unread_notifications }}</span>{% endif %}
         </button>
         <button @click="tab = 'inbox'; htmx.ajax('GET', '/mail/messages?tab=inbox', {target: '#message-list', swap: 'innerHTML'})"
                 :class="tab === 'inbox' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
                 class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
             <i class="fas fa-inbox mr-1"></i> Inbox
+            {% if unread_inbox %}<span class="ml-1 bg-amber-500/20 text-amber-400 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ unread_inbox }}</span>{% endif %}
         </button>
         <button @click="tab = 'sent'; htmx.ajax('GET', '/mail/messages?tab=sent', {target: '#message-list', swap: 'innerHTML'})"
                 :class="tab === 'sent' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"

@@ -22,7 +22,7 @@
 
             {# Recipient with autocomplete #}
             <div>
-                <label class="block text-sm font-medium text-slate-400 mb-1">To</label>
+                <label class="block text-sm font-medium text-slate-400 mb-1">To (nation name):</label>
                 {# Hidden input carries the value for form submission; x-model keeps it in sync #}
                 <input type="hidden" name="recipient" x-bind:value="query">
                 {{ nation_autocomplete_input(placeholder='Nation name...') }}

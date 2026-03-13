@@ -343,4 +343,8 @@ Jobs are registered in `app/tasks.py` and guarded with `WERKZEUG_RUN_MAIN` to pr
 
 ## Starter State (on Registration)
 
-New nations receive: farms, windmills, quarries, and 500 tiles of land distributed by continent weights.
+New nations receive: 
+ - farms, windmills, quarries
+ - 500 tiles of land distributed by continent weights
+ - lvl 1 barracks
+ - 6 infantry units

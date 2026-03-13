@@ -15,6 +15,7 @@ MIGRATIONS = [
     'add_battle_nation_names',
     'add_vacation_cooldown',
     'add_buildings',
+    'add_alliance_applications',
 ]
 
 

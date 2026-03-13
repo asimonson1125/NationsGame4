@@ -18,6 +18,22 @@ class Alliance(db.Model):
 
     members = db.relationship('Nation', backref='alliance', lazy=True, foreign_keys='Nation.alliance_id')
     founder = db.relationship('Nation', foreign_keys=[founder_id])
+    applications = db.relationship('AllianceApplication', backref='alliance', lazy='dynamic',
+                                   foreign_keys='AllianceApplication.alliance_id')
+
+
+class AllianceApplication(db.Model):
+    __tablename__ = 'alliance_applications'
+
+    id = db.Column(db.Integer, primary_key=True)
+    alliance_id = db.Column(db.Integer, db.ForeignKey('alliances.id'), nullable=False, index=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False, index=True)
+    status = db.Column(db.String(20), default='pending')  # pending | approved | rejected
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (db.UniqueConstraint('alliance_id', 'nation_id'),)
+
+    nation = db.relationship('Nation', foreign_keys=[nation_id])
 
 
 class Nation(db.Model):

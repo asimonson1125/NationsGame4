@@ -146,6 +146,81 @@
         {% include 'alliance/partials/member_table.html' %}
     </div>
 
+    {# Apply to Join — shown to unallied nations that aren't members #}
+    {% if nation and not is_member and not nation.alliance_id %}
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-5">
+            {% if pending_application %}
+            <p class="text-slate-400 text-sm">
+                <i class="fas fa-clock mr-2 text-amber-400"></i>
+                Your application to join {{ alliance.name }} is pending review.
+            </p>
+            {% else %}
+            <form hx-post="{{ url_for('alliance.apply_to_alliance') }}" hx-swap="none"
+                  @htmx:after-request="if ($event.detail.successful) location.reload()">
+                <input type="hidden" name="alliance_id" value="{{ alliance.id }}">
+                <button type="submit"
+                        class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md transition-colors font-semibold text-sm">
+                    <i class="fas fa-paper-plane mr-1"></i> Apply to Join
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# Pending Applications — founder only #}
+    {% if is_founder and applications %}
+    <div class="max-w-4xl mx-auto">
+        <h2 class="text-lg font-semibold text-slate-100 mb-3">
+            <i class="fas fa-inbox mr-2 text-amber-400"></i>Pending Applications ({{ applications | length }})
+        </h2>
+        <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-slate-700/50 text-left text-slate-400">
+                        <th class="px-4 py-2">Nation</th>
+                        <th class="px-4 py-2 text-right">GP</th>
+                        <th class="px-4 py-2 text-right">Applied</th>
+                        <th class="px-4 py-2"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr class="border-t border-slate-700 hover:bg-slate-700/30 transition-colors" id="app-row-{{ app.id }}">
+                        <td class="px-4 py-2">
+                            <div class="flex items-center gap-2">
+                                {% if app.nation.flag_url %}
+                                <img src="{{ app.nation.flag_url }}" alt="" class="w-5 h-auto rounded-sm" onerror="this.style.display='none'">
+                                {% endif %}
+                                <a href="{{ url_for('main.nation_view', nation_id=app.nation.id) }}"
+                                   class="text-amber-500 hover:text-amber-400 font-medium">{{ app.nation.name }}</a>
+                            </div>
+                        </td>
+                        <td class="px-4 py-2 text-right text-amber-400 font-semibold">{{ '{:,}'.format(app.nation.total_gp | int) }}</td>
+                        <td class="px-4 py-2 text-right text-slate-500">{{ app.created_at.strftime('%b %d') }}</td>
+                        <td class="px-4 py-2 text-right">
+                            <div class="flex justify-end gap-2">
+                                <button hx-post="{{ url_for('alliance.approve_application', id=app.id) }}" hx-swap="none"
+                                        @htmx:after-request="if ($event.detail.successful) document.getElementById('app-row-{{ app.id }}').remove()"
+                                        class="px-3 py-1 bg-green-700 hover:bg-green-600 text-white rounded text-xs font-semibold transition-colors">
+                                    Approve
+                                </button>
+                                <button hx-post="{{ url_for('alliance.reject_application', id=app.id) }}" hx-swap="none"
+                                        @htmx:after-request="if ($event.detail.successful) document.getElementById('app-row-{{ app.id }}').remove()"
+                                        class="px-3 py-1 bg-slate-600 hover:bg-slate-500 text-slate-200 rounded text-xs font-semibold transition-colors">
+                                    Reject
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
     {# Actions #}
     {% if is_member %}
     <div class="max-w-4xl mx-auto">

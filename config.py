@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 from app.game.changelog import CHANGELOG
 
@@ -16,9 +17,21 @@ class Config:
     SCHEDULER_API_ENABLED = False
     CACHE_DEFAULT_TIMEOUT = 300
     CACHE_KEY_PREFIX = f'ng4_{_version}_'
+    
+    # Session and Cookie configuration
+    REMEMBER_COOKIE_DURATION = timedelta(days=30)
+    PERMANENT_SESSION_LIFETIME = timedelta(days=30)
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    REMEMBER_COOKIE_SECURE = True
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = 'Lax'
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    SESSION_COOKIE_SECURE = False  # Disable secure cookies for local development
+    REMEMBER_COOKIE_SECURE = False
     # Default to localhost:5433 if not inside container
     _user = os.environ.get('POSTGRES_USER', 'ng4')
     _pw = os.environ.get('POSTGRES_PASSWORD', 'ng4')

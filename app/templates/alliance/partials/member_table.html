@@ -7,11 +7,12 @@
                 <th class="px-4 py-3">Continent</th>
                 <th class="px-4 py-3 text-right">Population</th>
                 <th class="px-4 py-3 text-right">GP</th>
+                {% if is_founder %}<th class="px-4 py-3"></th>{% endif %}
             </tr>
         </thead>
         <tbody>
             {% for member in members %}
-            <tr class="border-t border-slate-700 {% if nation and member.id == nation.id %}bg-amber-500/10{% elif loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %} hover:bg-slate-700/50 transition-colors">
+            <tr class="border-t border-slate-700 {% if nation and member.id == nation.id %}bg-amber-500/10{% elif loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %} hover:bg-slate-700/50 transition-colors" id="member-row-{{ member.id }}">
                 <td class="px-4 py-3 text-slate-400">{{ loop.index }}</td>
                 <td class="px-4 py-3">
                     <div class="flex items-center">
@@ -27,10 +28,22 @@
                 <td class="px-4 py-3 text-slate-500">{{ member.continent or '—' }}</td>
                 <td class="px-4 py-3 text-right text-slate-300">{{ '{:,}'.format(member.population | int) }}</td>
                 <td class="px-4 py-3 text-right font-semibold text-amber-400">{{ '{:,}'.format(member.total_gp | int) }}</td>
+                {% if is_founder %}
+                <td class="px-4 py-3 text-right">
+                    {% if member.id != alliance.founder_id %}
+                    <button hx-post="{{ url_for('alliance.kick_member', nation_id=member.id) }}" hx-swap="none"
+                            hx-confirm="Kick {{ member.name }} from the alliance?"
+                            @htmx:after-request="if ($event.detail.successful) document.getElementById('member-row-{{ member.id }}').remove()"
+                            class="px-2 py-1 bg-slate-700 hover:bg-red-700 text-slate-400 hover:text-white rounded text-xs font-semibold transition-colors">
+                        Kick
+                    </button>
+                    {% endif %}
+                </td>
+                {% endif %}
             </tr>
             {% else %}
             <tr>
-                <td colspan="5" class="px-4 py-8 text-center text-slate-500">No members.</td>
+                <td colspan="{{ 6 if is_founder else 5 }}" class="px-4 py-8 text-center text-slate-500">No members.</td>
             </tr>
             {% endfor %}
         </tbody>

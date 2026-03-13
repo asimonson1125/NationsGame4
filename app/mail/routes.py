@@ -13,7 +13,15 @@ from . import mail
 def inbox():
     nation = current_user.nation
     tab = request.args.get('tab', 'notifications')
-    return render_template('mail/inbox.html', nation=nation, active_tab=tab)
+    unread_notifications = Message.query.filter_by(
+        recipient_id=nation.id, message_type='system', is_read=False
+    ).count()
+    unread_inbox = Message.query.filter_by(
+        recipient_id=nation.id, message_type='player', is_read=False
+    ).count()
+    return render_template('mail/inbox.html', nation=nation, active_tab=tab,
+                           unread_notifications=unread_notifications,
+                           unread_inbox=unread_inbox)
 
 
 @mail.route('/mail/messages')
