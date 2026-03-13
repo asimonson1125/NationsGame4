@@ -89,5 +89,22 @@
         <div id="search-results" class="mt-4"></div>
     </div>
 
+    {# Search section — Alliance tab only #}
+    <div x-show="tab === 'alliance'" x-cloak class="mt-10 bg-slate-800 rounded-lg border border-slate-700 p-5">
+        <h2 class="text-xl font-semibold text-slate-100 mb-4">Search Alliances</h2>
+        <div class="flex gap-2">
+            <input type="text"
+                   name="q"
+                   placeholder="Search by alliance name..."
+                   class="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded text-sm placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50"
+                   hx-get="{{ url_for('main.leaderboard_alliance_search') }}"
+                   hx-trigger="keyup changed delay:300ms, search"
+                   hx-target="#alliance-search-results"
+                   hx-swap="innerHTML"
+                   hx-include="this">
+        </div>
+        <div id="alliance-search-results" class="mt-4"></div>
+    </div>
+
 </div>
 {% endblock %}

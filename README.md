@@ -2,6 +2,17 @@
 
 A browser-based nation-building simulator. Players manage resources, industry, land, and military across five continents.
 
+TODO:
+- Wars
+___
+Start Beta Phase:
+- Events (a la 2.0)
+- Rate Limiting
+- Pushing calculations and displays to client JS
+- DB-compulted columns (like land_gp)
+- Economics balancing
+- 1.0 release
+
 **Stack:** Flask · SQLAlchemy (PostgreSQL with Partitioning) · HTMX · Alpine.js · Tailwind CSS · Flask-Caching (SimpleCache dev / Redis prod)
 
 ---
@@ -102,13 +113,13 @@ python3 -c "from run import app; from migrations import run_all; run_all(app)"
 
 **Standalone** (includes Nginx):
 ```bash
-python3 setup_env.py
+python3 scripts/setup_env.py
 docker compose --profile standalone up --build -d
 ```
 
 **Behind Nginx Proxy Manager** (or another external proxy):
 ```bash
-python3 setup_env.py           # set APP_PORT when prompted, e.g. 127.0.0.1:8001
+python3 scripts/setup_env.py           # set APP_PORT when prompted, e.g. 127.0.0.1:8001
 docker compose up --build -d   # starts app, postgres, redis — no nginx
 ```
 Then point NPM to `http://127.0.0.1:8001`.
@@ -130,13 +141,13 @@ The app is accessible at `http://localhost` (or the `HOST_PORT` set in `.env`). 
 
 ```bash
 pip3 install -r requirements.txt
-python3 setup_env.py           # generates .env with a random SECRET_KEY
+python3 scripts/setup_env.py           # generates .env with a random SECRET_KEY
 # edit .env — set DATABASE_URL, REDIS_URL, etc.
 source .env
 gunicorn -c gunicorn.conf.py wsgi:app
 ```
 
-`setup_env.py` flags:
+`scripts/setup_env.py` flags:
 - `--defaults` — accept all defaults without prompting (CI/scripted deploys)
 - `--force` — overwrite an existing `.env`
 
@@ -172,7 +183,8 @@ app/
     cache.py        ← cached accessors for static game data
     population.py   ← population tick rates
     discovery.py    ← land/resource weights per continent
-    factories.py    ← 66 factory definitions
+    factories.py    ← 66 factory definitions (category: flora/fauna/mined/none)
+    buildings.py    ← 8 building definitions (military + factory prerequisites)
     units.py        ← unit stats and upkeep
     combat.py       ← battle resolution
     equipment.py    ← equipment buffs
@@ -263,6 +275,36 @@ Controls what terrain and resources appear when a nation expands or colonizes. W
 
 ---
 
+### Buildings — `app/game/buildings.py`
+
+Buildings are prerequisites for unit recruitment and natural-resource-consuming factories. Each nation starts with **Barracks Lvl 1**.
+
+**Military buildings** gate unit recruitment by tier. The required building level for a unit at a given tier is `tier - (unlock_tier - 1)`.
+
+| Building | Unit Type | Unlock Tier | Max Level |
+|---|---|---|---|
+| Barracks | Infantry | 1 | 4 |
+| Special Forces HQ | Special Forces | 2 | 4 |
+| Armored Vehicle Factory | Armour | 3 | 5 |
+| Artillery & Defense Base | Static | 3 | 5 |
+| Airfield | Air | 4 | 5 |
+
+Example: Infantry Tier 3 requires Barracks Lvl `3 - (1-1) = 3`.
+
+**Factory prerequisite buildings** gate natural-resource-consuming factories by tier band (`level_max_tier` list). Required level = first band index where `factory_tier ≤ level_max_tier[i]`, plus 1.
+
+| Building | Factory Category | Max Level | Tier Bands (per level) |
+|---|---|---|---|
+| Botanical Research Station | flora | 4 | ≤2, ≤4, ≤6, ≤10 |
+| Wildlife Ranch | fauna | 3 | ≤2, ≤4, ≤6 |
+| Mining Bureau | mined | 3 | ≤2, ≤4, ≤6 |
+
+Example: a flora tier 5 factory requires Botanical Research Station Lvl 3 (tier 5 falls in the ≤6 band).
+
+Upgrades autocomplete via `process_building_upgrades()` (60s scheduler task), using the same queue pattern as factory builds. Building locks are enforced at the route level in both `recruit_unit` and `build_factory`, and surfaced in the UI via `building_lock_map` / `factory_lock_map`.
+
+---
+
 ### Military Upkeep — `app/game/units.py`
 
 Each unit definition has a per-hour `upkeep` dict (e.g. `{money: 5, food: 1, ammunition: 1}`). If a nation can't afford full upkeep for any resource, **all units take 10% max-HP attrition** (floored at 20% max HP) that tick instead of deducting resources.
@@ -283,6 +325,7 @@ Each unit definition has a per-hour `upkeep` dict (e.g. `{money: 5, food: 1, amm
 | Military upkeep | Hourly | `deduct_military_upkeep` |
 | Factory capacity | Hourly | `increment_production_capacity` |
 | Factory queue | Every 60s | `process_factory_queue` |
+| Building upgrades | Every 60s | `process_building_upgrades` |
 | Battle tick | Every 60s | `process_battle_tick` |
 
 Jobs are registered in `app/tasks.py` and guarded with `WERKZEUG_RUN_MAIN` to prevent double-start in debug mode.

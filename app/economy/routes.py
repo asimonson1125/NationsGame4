@@ -8,7 +8,10 @@ from ..helpers import error_response as _error_response, can_afford as _can_affo
 from ..game.constants import CONTINENTS
 from ..game.discovery import roll_expansion, roll_colonization
 from ..game.factories import FACTORY_DEFS
-from ..game.buildings import BUILDING_DEFS, units_unlocked_at_level
+from ..game.buildings import (BUILDING_DEFS, units_unlocked_at_level,
+                              factories_unlocked_at_level,
+                              building_for_factory_category,
+                              required_level as _building_req_level)
 from ..game.units import UNIT_DEFS
 from . import economy
 
@@ -306,10 +309,30 @@ def _industry_context(nation):
     for bkey, bdef in BUILDING_DEFS.items():
         building_units[bkey] = {}
         for lvl in range(1, bdef.max_level + 1):
-            building_units[bkey][lvl] = [
-                (ukey, UNIT_DEFS[ukey].name)
-                for ukey in units_unlocked_at_level(bkey, lvl)
-            ]
+            if bdef.unit_type:
+                building_units[bkey][lvl] = [
+                    (ukey, UNIT_DEFS[ukey].name)
+                    for ukey in units_unlocked_at_level(bkey, lvl)
+                ]
+            elif bdef.factory_category:
+                building_units[bkey][lvl] = [
+                    (fkey, FACTORY_DEFS[fkey].name)
+                    for fkey in factories_unlocked_at_level(bkey, lvl)
+                ]
+
+    # factory_key -> {name, level} for factories blocked by a missing building
+    nb_levels = {nb.building_key: nb.level for nb in building_map.values()} if building_map else {}
+    factory_lock_map = {}
+    if nation:
+        for fkey, fdef in FACTORY_DEFS.items():
+            if not fdef.category:
+                continue
+            bkey = building_for_factory_category(fdef.category)
+            if not bkey:
+                continue
+            req_lvl = _building_req_level(bkey, fdef.tier)
+            if nb_levels.get(bkey, 0) < req_lvl:
+                factory_lock_map[fkey] = {'name': BUILDING_DEFS[bkey].name, 'level': req_lvl}
 
     return dict(
         factory_defs=FACTORY_DEFS,
@@ -320,6 +343,7 @@ def _industry_context(nation):
         building_map=building_map,
         upgrade_map=upgrade_map,
         building_units=building_units,
+        factory_lock_map=factory_lock_map,
     )
 
 
@@ -358,6 +382,18 @@ def build_factory():
 
     if (nation.tier or 1) < fdef.tier:
         return _error_response(f'{fdef.name} requires Tier {fdef.tier}.')
+
+    # Check factory building prerequisite
+    if fdef.category:
+        from ..models import NationBuilding
+        bkey = building_for_factory_category(fdef.category)
+        if bkey:
+            req_lvl = _building_req_level(bkey, fdef.tier)
+            nb = NationBuilding.query.filter_by(nation_id=nation.id, building_key=bkey).first()
+            if not nb or nb.level < req_lvl:
+                return _error_response(
+                    f'{fdef.name} requires {BUILDING_DEFS[bkey].name} Lvl {req_lvl}.'
+                )
 
     # Check land
     for land_type, per_factory in fdef.land_required.items():

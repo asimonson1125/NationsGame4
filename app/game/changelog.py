@@ -6,6 +6,16 @@ Add newest entries at the TOP of the list.
 
 CHANGELOG = [
     {
+        'version': '0.2.3-alpha',
+        'title': 'v0.2.3 Buildings',
+        'date': '2026-03-13',
+        'body': (
+            'Welcome to NG4. Project is approaching the end of '
+            'of its alpha phase.  This version '
+            'introduces industrial and recruitment buildings.'
+        ),
+    },
+    {
         'version': '0.2.2-alpha',
         'title': 'v0.2.2 Battle Logs',
         'date': '2026-03-12',

@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 from flask import render_template, url_for, request, current_app, abort, jsonify, make_response
 from flask_login import login_required, current_user
 from .. import db, cache
-from ..models import Nation, NationFactory, NaturalResource, Alliance, Division, Unit, RecruitmentQueue
+from ..models import Nation, NationFactory, NaturalResource, Alliance, Division, Unit, RecruitmentQueue, FactoryBuildQueue, BuildingUpgradeQueue, NationBuilding
 from ..helpers import error_response as _error_response, compute_total_upkeep
 from ..game.population import (get_population_effects, estimate_pop_delta, FOOD_PER_CITIZEN,
                                 food_abundance_multiplier, get_food_days,
@@ -28,6 +28,14 @@ def _nation_summary(nation):
         total_factories += f.count
     factory_summary.sort(key=lambda x: x[0])
 
+    # Buildings
+    from ..game.buildings import BUILDING_DEFS
+    nation_buildings = NationBuilding.query.filter_by(nation_id=nation.id).all()
+    building_summary = sorted(
+        [(BUILDING_DEFS[nb.building_key].name, nb.level) for nb in nation_buildings if nb.building_key in BUILDING_DEFS],
+        key=lambda x: x[0]
+    )
+
     # Natural resources
     natural_resources = NaturalResource.query.filter_by(nation_id=nation.id).filter(NaturalResource.amount > 0).order_by(NaturalResource.amount.desc()).all()
 
@@ -45,6 +53,7 @@ def _nation_summary(nation):
     return dict(
         total_factories=total_factories,
         factory_summary=factory_summary,
+        building_summary=building_summary,
         natural_resources=natural_resources,
         total_units=total_units,
         unit_type_counts=unit_type_counts,
@@ -400,6 +409,25 @@ def leaderboard_alliance_table():
                            results=results, current_nation=current_user.nation)
 
 
+@main.route('/leaderboard/alliance-search')
+@login_required
+def leaderboard_alliance_search():
+    from sqlalchemy import func
+    q = request.args.get('q', '').strip()
+    if len(q) < 2:
+        return render_template('main/partials/leaderboard_alliance_search.html', query='', results=[])
+    results = (db.session.query(
+        Alliance,
+        func.count(Nation.id).label('member_count'),
+        func.sum(Nation.total_gp).label('total_gp'),
+    ).join(Nation, Nation.alliance_id == Alliance.id)
+     .filter(Alliance.name.ilike(f'%{q}%'))
+     .group_by(Alliance.id)
+     .order_by(func.sum(Nation.total_gp).desc())
+     .limit(20).all())
+    return render_template('main/partials/leaderboard_alliance_search.html', query=q, results=results)
+
+
 @main.route('/leaderboard/search')
 @login_required
 def leaderboard_search():
@@ -461,8 +489,11 @@ _ADMIN_RESOURCE_GROUPS = [
 def _admin_panel_context(nation):
     """Build template context for the admin panel partial."""
     queue = RecruitmentQueue.query.filter_by(nation_id=nation.id).order_by(RecruitmentQueue.completes_at).all()
+    factory_queue = FactoryBuildQueue.query.filter_by(nation_id=nation.id).order_by(FactoryBuildQueue.completes_at).all()
+    building_queue = BuildingUpgradeQueue.query.filter_by(nation_id=nation.id).order_by(BuildingUpgradeQueue.completes_at).all()
     res_values = {r: getattr(nation, r, 0) or 0 for r in ADMIN_RESOURCES}
-    return dict(target=nation, queue=queue, resource_groups=_ADMIN_RESOURCE_GROUPS, res_values=res_values)
+    return dict(target=nation, queue=queue, factory_queue=factory_queue, building_queue=building_queue,
+                resource_groups=_ADMIN_RESOURCE_GROUPS, res_values=res_values)
 
 
 @main.route('/admin/nation/<int:nation_id>')
@@ -551,6 +582,69 @@ def admin_complete_queue(nation_id, entry_id):
     )
     resp.headers['HX-Trigger'] = json.dumps(
         {'showMessage': {'message': f'{udef.name} completed instantly.', 'type': 'success'}}
+    )
+    return resp
+
+
+@main.route('/admin/nation/<int:nation_id>/complete-factory/<int:entry_id>', methods=['POST'])
+@login_required
+@require_admin
+def admin_complete_factory_queue(nation_id, entry_id):
+    from ..helpers import grant_factories
+    nation = db.session.get(Nation, nation_id)
+    if not nation:
+        return _error_response('Nation not found.')
+
+    entry = FactoryBuildQueue.query.filter_by(id=entry_id, nation_id=nation_id).first()
+    if not entry:
+        return _error_response('Queue entry not found.')
+
+    fdef = FACTORY_DEFS.get(entry.factory_key)
+    grant_factories(nation, [(entry.factory_key, entry.quantity)])
+    db.session.delete(entry)
+    db.session.commit()
+
+    label = fdef.name if fdef else entry.factory_key
+    resp = current_app.make_response(
+        render_template('main/partials/admin_panel.html', **_admin_panel_context(nation))
+    )
+    resp.headers['HX-Trigger'] = json.dumps(
+        {'showMessage': {'message': f'{label} build completed instantly.', 'type': 'success'}}
+    )
+    return resp
+
+
+@main.route('/admin/nation/<int:nation_id>/complete-building/<int:entry_id>', methods=['POST'])
+@login_required
+@require_admin
+def admin_complete_building_queue(nation_id, entry_id):
+    from ..game.buildings import BUILDING_DEFS
+    nation = db.session.get(Nation, nation_id)
+    if not nation:
+        return _error_response('Nation not found.')
+
+    entry = BuildingUpgradeQueue.query.filter_by(id=entry_id, nation_id=nation_id).first()
+    if not entry:
+        return _error_response('Queue entry not found.')
+
+    nb = NationBuilding.query.filter_by(nation_id=nation_id, building_key=entry.building_key).first()
+    if nb:
+        nb.level = entry.target_level
+        bdef = BUILDING_DEFS.get(entry.building_key)
+        if bdef and entry.target_level <= len(bdef.gp_per_level):
+            nation.building_gp = (nation.building_gp or 0) + bdef.gp_per_level[entry.target_level - 1]
+        label = bdef.name if bdef else entry.building_key
+    else:
+        label = entry.building_key
+
+    db.session.delete(entry)
+    db.session.commit()
+
+    resp = current_app.make_response(
+        render_template('main/partials/admin_panel.html', **_admin_panel_context(nation))
+    )
+    resp.headers['HX-Trigger'] = json.dumps(
+        {'showMessage': {'message': f'{label} upgrade completed instantly.', 'type': 'success'}}
     )
     return resp
 

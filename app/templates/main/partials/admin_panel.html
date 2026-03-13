@@ -55,7 +55,7 @@
     {# ── Recruitment queue ── #}
     <h4 class="font-semibold text-slate-300 mb-2 border-b border-slate-700 pb-1">Recruitment Queue</h4>
     {% if queue %}
-    <div class="space-y-2">
+    <div class="space-y-2 mb-6">
         {% for entry in queue %}
         <div class="flex items-center justify-between bg-slate-700/50 rounded px-3 py-2 text-sm">
             <div>
@@ -63,6 +63,54 @@
                 <span class="text-slate-500 ml-2">Completes: {{ entry.completes_at.strftime('%Y-%m-%d %H:%M UTC') }}</span>
             </div>
             <form hx-post="{{ url_for('main.admin_complete_queue', nation_id=target.id, entry_id=entry.id) }}"
+                  hx-target="#admin-panel-content" hx-swap="outerHTML">
+                <button type="submit"
+                        class="px-3 py-1 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-500 transition-colors">
+                    Complete Now
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-500 italic mb-6">No items in queue.</p>
+    {% endif %}
+
+    {# ── Factory build queue ── #}
+    <h4 class="font-semibold text-slate-300 mb-2 border-b border-slate-700 pb-1">Factory Build Queue</h4>
+    {% if factory_queue %}
+    <div class="space-y-2 mb-6">
+        {% for entry in factory_queue %}
+        <div class="flex items-center justify-between bg-slate-700/50 rounded px-3 py-2 text-sm">
+            <div>
+                <span class="font-medium text-slate-200">{{ entry.factory_key }} &times;{{ entry.quantity }}</span>
+                <span class="text-slate-500 ml-2">Completes: {{ entry.completes_at.strftime('%Y-%m-%d %H:%M UTC') }}</span>
+            </div>
+            <form hx-post="{{ url_for('main.admin_complete_factory_queue', nation_id=target.id, entry_id=entry.id) }}"
+                  hx-target="#admin-panel-content" hx-swap="outerHTML">
+                <button type="submit"
+                        class="px-3 py-1 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-500 transition-colors">
+                    Complete Now
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-500 italic mb-6">No items in queue.</p>
+    {% endif %}
+
+    {# ── Building upgrade queue ── #}
+    <h4 class="font-semibold text-slate-300 mb-2 border-b border-slate-700 pb-1">Building Upgrade Queue</h4>
+    {% if building_queue %}
+    <div class="space-y-2">
+        {% for entry in building_queue %}
+        <div class="flex items-center justify-between bg-slate-700/50 rounded px-3 py-2 text-sm">
+            <div>
+                <span class="font-medium text-slate-200">{{ entry.building_key }} → Lvl {{ entry.target_level }}</span>
+                <span class="text-slate-500 ml-2">Completes: {{ entry.completes_at.strftime('%Y-%m-%d %H:%M UTC') }}</span>
+            </div>
+            <form hx-post="{{ url_for('main.admin_complete_building_queue', nation_id=target.id, entry_id=entry.id) }}"
                   hx-target="#admin-panel-content" hx-swap="outerHTML">
                 <button type="submit"
                         class="px-3 py-1 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-500 transition-colors">

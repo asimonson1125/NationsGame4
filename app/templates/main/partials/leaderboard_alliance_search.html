@@ -1,0 +1,42 @@
+{% if query %}
+<div class="overflow-x-auto bg-slate-800 rounded-lg border border-slate-700">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="bg-slate-700/50 text-left text-slate-400">
+                <th class="px-4 py-2">Alliance</th>
+                <th class="px-4 py-2">Founder</th>
+                <th class="px-4 py-2 text-right">Members</th>
+                <th class="px-4 py-2 text-right">Total GP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for alliance, member_count, total_gp in results %}
+            <tr class="border-t border-slate-700 {% if loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %} hover:bg-slate-700/50 transition-colors">
+                <td class="px-4 py-2">
+                    <div class="flex items-center">
+                        {% if alliance.flag_url %}
+                        <img src="{{ alliance.flag_url }}" alt="Flag" class="w-6 h-auto mr-2 rounded-sm" onerror="this.style.display='none'">
+                        {% endif %}
+                        <a href="{{ url_for('alliance.alliance_view', id=alliance.id) }}" class="text-amber-500 hover:text-amber-400 font-medium">{{ alliance.name }}</a>
+                    </div>
+                </td>
+                <td class="px-4 py-2 text-slate-300">
+                    {% if alliance.founder %}
+                        <a href="{{ url_for('main.nation_view', nation_id=alliance.founder.id) }}" class="text-slate-300 hover:text-slate-100">{{ alliance.founder.name }}</a>
+                    {% else %}
+                        <span class="text-slate-500">—</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-2 text-right text-slate-300">{{ member_count }}</td>
+                <td class="px-4 py-2 text-right font-semibold text-amber-400">{{ '{:,}'.format(total_gp | int) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="px-4 py-6 text-center text-slate-500">No alliances match "{{ query }}".</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="text-xs text-slate-500 mt-1">{{ results | length }} result{{ 's' if results | length != 1 else '' }} for "{{ query }}"</p>
+{% endif %}

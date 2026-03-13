@@ -48,6 +48,8 @@ Migrations must be idempotent — use `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE
 - `Nation` — resource columns (money, food, power, building_materials, consumer_goods, metal, ammunition, fuel, uranium, whz), land columns (cleared_land, urban_areas, forested_land, mountainous_land, coastal_land, fertile_land, arid_land, tundra_land, swamp_land, volcanic_land, used_land, total_land), GP columns (land_gp, factory_gp), tier, continent, flag_url, description
 - `NaturalResource` — nation_id + resource_key + amount
 - `NationFactory` — nation_id + factory_key + count + production_capacity (0–24)
+- `NationBuilding` — nation_id + building_key + level (unique per nation+key)
+- `BuildingUpgradeQueue` — nation_id + building_key + target_level + completes_at (unique per nation+key)
 - `Alliance` — basic group
 
 **Background task** (`app/tasks.py`): `increment_production_capacity` runs hourly, adds 1 to every `NationFactory.production_capacity` (capped at 24). Guarded with `WERKZEUG_RUN_MAIN` to avoid double-start in debug mode.
@@ -66,11 +68,43 @@ Migrations must be idempotent — use `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE
 - Tab state: `x-data="{ tab: '{{ default_tab | default(\'collect\') }}' }"` — `default_tab` is passed from the route on build success to reopen the Build tab.
 - Build card reactivity: `x-data="{ qty: 1, fmt(n){...} }"` per card; land/cost values use `x-text="fmt(qty * {{ server_value }})"`. Input/output rates are static Jinja (not reactive).
 
+## Building System
+
+**Definitions** (`app/game/buildings.py`): 8 buildings in `BUILDING_DEFS`, split into two modes.
+
+**Military buildings** gate unit recruitment by tier. Each has `unit_type` and `unlock_tier`. The required building level for a unit of a given tier is `tier - (unlock_tier - 1)`.
+
+| Building | unit_type | unlock_tier | max_level |
+|---|---|---|---|
+| Barracks | Infantry | 1 | 4 |
+| Special Forces HQ | Special Forces | 2 | 4 |
+| Armored Vehicle Factory | Armour | 3 | 5 |
+| Artillery & Defense Base | Static | 3 | 5 |
+| Airfield | Air | 4 | 5 |
+
+Example: an Infantry Tier 3 unit requires Barracks Lvl `3 - (1-1) = 3`.
+
+**Factory prerequisite buildings** gate natural-resource-consuming factories by tier band. Each has `factory_category` and `level_max_tier` list. The required level is the first index where `tier <= level_max_tier[i]`, plus 1.
+
+| Building | factory_category | max_level | level_max_tier |
+|---|---|---|---|
+| Botanical Research Station | flora | 4 | [2, 4, 6, 10] |
+| Wildlife Ranch | fauna | 3 | [2, 4, 6] |
+| Mining Bureau | mined | 3 | [2, 4, 6] |
+
+Example: a flora tier 5 factory requires Botanical Research Station Lvl 3 (since 5 ≤ 6, the third band).
+
+**Models:** `NationBuilding` (nation_id, building_key, level) + `BuildingUpgradeQueue` (nation_id, building_key, target_level, completes_at). Upgrades autocomplete via `process_building_upgrades()` (60s scheduler task), matching the factory build queue pattern.
+
+**Seeding:** All nations start with Barracks Lvl 1 — seeded on registration in `auth/routes.py` and backfilled via `migrations/add_buildings.py`.
+
+**Gate enforcement:** `build_factory` (economy) and `recruit_unit` (military) both check building prerequisites and return an error toast if unmet. `factory_lock_map` and `building_lock_map` dicts are computed in `_industry_context()` and `_building_lock_map()` respectively for template rendering.
+
 ## Factory System
 
 **Definitions** (`app/game/factories.py`): 66 factories in `FACTORY_DEFS` dict, keyed by snake_case string (e.g. `farm`, `coal_power_plant`, `nuclear_reactor`). All match NG3 data exactly.
 
-`FactoryDef` fields: `name`, `tier` (1–10), `inputs` (dict res→rate/h), `outputs` (dict res→rate/h), `max_collect_hours`, `build_cost` (dict res→amount), `land_required` (dict land_type→tiles), `gp_value`.
+`FactoryDef` fields: `name`, `tier` (1–10), `category` (`'flora'`/`'fauna'`/`'mined'`/`''`), `inputs` (dict res→rate/h), `outputs` (dict res→rate/h), `max_collect_hours`, `build_cost` (dict res→amount), `land_required` (dict land_type→tiles), `gp_value`. Factories with a non-empty `category` require the corresponding prerequisite building (see Building System above).
 
 Resource key aliases used in definitions: `_M=money`, `_P=power`, `_F=food`, `_BM=building_materials`, `_CG=consumer_goods`, `_ME=metal`, `_AM=ammunition`, `_FU=fuel`, `_UR=uranium`, `_WH=whz`.
 
