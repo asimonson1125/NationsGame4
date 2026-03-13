@@ -4,13 +4,17 @@ A browser-based nation-building simulator. Players manage resources, industry, l
 
 TODO:
 - Wars
+- Custom 500 page
+- Mobile readiness
 ___
 Start Beta Phase:
+- News (nation events)
 - Events (a la 2.0)
 - Rate Limiting
 - Pushing calculations and displays to client JS
 - DB-compulted columns (like land_gp)
 - Economics balancing
+- Email verification on registration and "Forgot password?"
 - 1.0 release
 
 **Stack:** Flask · SQLAlchemy (PostgreSQL with Partitioning) · HTMX · Alpine.js · Tailwind CSS · Flask-Caching (SimpleCache dev / Redis prod)

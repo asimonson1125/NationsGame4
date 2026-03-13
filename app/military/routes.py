@@ -55,6 +55,7 @@ def overview():
         total_upkeep=total_upkeep,
         default_tab=request.args.get('tab', 'overview'),
         div_battles=_get_div_battles(nation.id),
+        div_traveling=_get_div_traveling(nation.id),
         building_lock_map=_building_lock_map(nation.id, player_unit_defs),
     )
 
@@ -98,12 +99,20 @@ def rename_division(div_id):
 @military.route('/military/division/<int:div_id>/disband', methods=['POST'])
 @login_required
 def disband_division(div_id):
+    from ..models import WarDeploymentQueue
     nation = current_user.nation
     div = Division.query.filter_by(id=div_id, nation_id=nation.id).first()
     if not div:
         return _error_response('Division not found.')
     if div.in_combat:
         return _error_response('Cannot disband a division that is in combat.')
+    traveling = WarDeploymentQueue.query.filter_by(
+        division_id=div.id, deploying_nation_id=nation.id, status='traveling'
+    ).first()
+    if traveling:
+        return _error_response('Cannot disband a division that is en route to battle.')
+    if div.is_defensive:
+        div.is_defensive = False
     # Move units to reserve
     Unit.query.filter_by(division_id=div.id).update({'division_id': None})
     db.session.delete(div)
@@ -144,15 +153,53 @@ def mobilize_division(div_id):
 @military.route('/military/division/<int:div_id>/demobilize', methods=['POST'])
 @login_required
 def demobilize_division(div_id):
+    from ..models import WarDeploymentQueue
     nation = current_user.nation
     div = Division.query.filter_by(id=div_id, nation_id=nation.id).first()
     if not div:
         return _error_response('Division not found.')
     if div.in_combat:
         return _error_response('Cannot demobilize a division in combat.')
+    traveling = WarDeploymentQueue.query.filter_by(
+        division_id=div.id, deploying_nation_id=nation.id, status='traveling'
+    ).first()
+    if traveling:
+        return _error_response('Cannot demobilize a division that is en route to battle.')
+    if div.is_defensive:
+        return _error_response('Cannot demobilize your defensive division. Assign a different division to defense first.')
     div.mobilization_state = 'demobilized'
     db.session.commit()
     return _division_list_response(nation, f'"{div.name}" demobilized.')
+
+
+@military.route('/military/set-defense', methods=['POST'])
+@login_required
+def set_defense():
+    nation = current_user.nation
+    div_id = request.form.get('division_id', type=int)
+
+    if div_id is None:
+        # Clear defensive designation
+        Division.query.filter_by(nation_id=nation.id, is_defensive=True).update({'is_defensive': False})
+        db.session.commit()
+        return _division_list_response(nation, 'Defensive division cleared.')
+
+    div = Division.query.filter_by(id=div_id, nation_id=nation.id).first()
+    if not div:
+        return _error_response('Division not found.')
+    if div.mobilization_state != 'mobilized':
+        return _error_response('Division must be mobilized to serve as a defensive division.')
+    if div.in_combat:
+        return _error_response('Cannot designate a division that is in combat.')
+    traveling = _get_div_traveling(nation.id)
+    if div.id in traveling:
+        return _error_response('Cannot designate a division that is en route.')
+
+    # Clear any previous defensive division for this nation
+    Division.query.filter_by(nation_id=nation.id, is_defensive=True).update({'is_defensive': False})
+    div.is_defensive = True
+    db.session.commit()
+    return _division_list_response(nation, f'"{div.name}" set as your defensive division.')
 
 
 def _get_div_battles(nation_id):
@@ -169,6 +216,15 @@ def _get_div_battles(nation_id):
     return div_battles
 
 
+def _get_div_traveling(nation_id):
+    """Return dict mapping division_id -> WarDeploymentQueue for traveling deployments."""
+    from ..models import WarDeploymentQueue
+    entries = WarDeploymentQueue.query.filter_by(
+        deploying_nation_id=nation_id, status='traveling'
+    ).all()
+    return {e.division_id: e for e in entries}
+
+
 def _division_list_response(nation, message):
     divisions = Division.query.filter_by(nation_id=nation.id).order_by(Division.id).all()
     reserve_units = Unit.query.filter_by(nation_id=nation.id, division_id=None).order_by(Unit.id).all()
@@ -179,6 +235,7 @@ def _division_list_response(nation, message):
         reserve_units=reserve_units,
         unit_defs=UNIT_DEFS,
         div_battles=_get_div_battles(nation.id),
+        div_traveling=_get_div_traveling(nation.id),
     )
     resp = current_app.response_class(resp_html, status=200, mimetype='text/html')
     resp.headers['HX-Trigger'] = json.dumps(
@@ -202,6 +259,7 @@ def division_list():
         reserve_units=reserve_units,
         unit_defs=UNIT_DEFS,
         div_battles=_get_div_battles(nation.id),
+        div_traveling=_get_div_traveling(nation.id),
     )
 
 
@@ -718,6 +776,11 @@ def deploy_peacekeeping(div_id):
         return _error_response('Division must be mobilized for peacekeeping.')
     if div.in_combat:
         return _error_response('Division is already in combat.')
+    if div.is_defensive:
+        return _error_response('Cannot deploy your defensive division.')
+    traveling = _get_div_traveling(nation.id)
+    if div.id in traveling:
+        return _error_response('Division is currently en route to a war deployment.')
 
     alive_count = Unit.query.filter_by(division_id=div.id).filter(Unit.hp > 0).count()
     if alive_count < 1:
@@ -957,6 +1020,11 @@ def deploy_mission(offer_id):
         return _error_response('Division must be mobilized to deploy on a mission.')
     if div.in_combat:
         return _error_response('Division is already in combat.')
+    if div.is_defensive:
+        return _error_response('Cannot deploy your defensive division.')
+    traveling = _get_div_traveling(nation.id)
+    if div.id in traveling:
+        return _error_response('Division is currently en route to a war deployment.')
 
     alive_count = Unit.query.filter_by(division_id=div.id).filter(Unit.hp > 0).count()
     if alive_count < 1:

@@ -1,0 +1,79 @@
+{% macro war_row(w, nation) %}
+{% set is_atk = w.attacker_nation_id == nation.id %}
+{% set opponent = w.defender_nation if is_atk else w.attacker_nation %}
+{% set score = (w.attacker_victories | string) ~ ' – ' ~ (w.defender_victories | string) %}
+<tr class="border-t border-slate-700 hover:bg-slate-700/30 transition-colors">
+    <td class="px-4 py-3">
+        <a href="{{ url_for('war.war_detail', war_id=w.id) }}"
+           class="text-amber-400 hover:text-amber-300 font-medium">{{ w.name }}</a>
+    </td>
+    <td class="px-4 py-3">
+        <a href="{{ url_for('main.nation_view', nation_id=w.attacker_nation_id) }}"
+           class="text-slate-300 hover:text-amber-400 {% if is_atk %}font-semibold text-amber-400{% endif %}">
+            {{ w.attacker_nation.name }}
+        </a>
+    </td>
+    <td class="px-4 py-3">
+        <a href="{{ url_for('main.nation_view', nation_id=w.defender_nation_id) }}"
+           class="text-slate-300 hover:text-amber-400 {% if not is_atk %}font-semibold text-amber-400{% endif %}">
+            {{ w.defender_nation.name }}
+        </a>
+    </td>
+    <td class="px-4 py-3 text-center font-mono text-slate-200">{{ score }}</td>
+    <td class="px-4 py-3">
+        {% if w.status == 'active' %}
+            <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-red-500/20 text-red-400">Active</span>
+        {% elif w.status == 'peace' %}
+            <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-sky-500/20 text-sky-400">White Peace</span>
+        {% elif w.status == 'compensated' %}
+            <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-400">Reparations</span>
+        {% elif w.status == 'annexed' %}
+            <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-500/20 text-purple-400">Annexed</span>
+        {% endif %}
+    </td>
+    <td class="px-4 py-3 text-slate-500 text-sm">{{ w.declared_at.strftime('%Y-%m-%d') }}</td>
+</tr>
+{% endmacro %}
+
+{% macro war_table(wars, empty_msg) %}
+<div class="overflow-x-auto bg-slate-800 rounded-lg border border-slate-700">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="bg-slate-700/50 text-left text-slate-400">
+                <th class="px-4 py-3">War Name</th>
+                <th class="px-4 py-3">Attacker</th>
+                <th class="px-4 py-3">Defender</th>
+                <th class="px-4 py-3 text-center">Score</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Declared</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for w in wars %}
+                {{ war_row(w, nation) }}
+            {% else %}
+            <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-slate-500">{{ empty_msg }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endmacro %}
+
+<div class="space-y-6">
+    <div>
+        <h3 class="text-base font-semibold text-slate-200 mb-3">
+            <i class="fas fa-crosshairs text-red-400 mr-1"></i> Active Wars
+        </h3>
+        {{ war_table(active_wars, 'You are not involved in any active wars.') }}
+    </div>
+    {% if war_history %}
+    <div>
+        <h3 class="text-base font-semibold text-slate-400 mb-3">
+            <i class="fas fa-history mr-1"></i> War History
+        </h3>
+        {{ war_table(war_history, '') }}
+    </div>
+    {% endif %}
+</div>

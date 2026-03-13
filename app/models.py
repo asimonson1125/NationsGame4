@@ -174,6 +174,7 @@ class Division(db.Model):
     name = db.Column(db.String(120), nullable=False, default='New Division')
     mobilization_state = db.Column(db.String(20), default='demobilized')  # demobilized|mobilizing|mobilized
     in_combat = db.Column(db.Boolean, default=False)
+    is_defensive = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     __table_args__ = ({'postgresql_partition_by': 'HASH (nation_id)'},)
 
@@ -444,6 +445,54 @@ class MissionRecord(db.Model):
     __table_args__ = (
         db.UniqueConstraint('nation_id', 'mission_key', name='uq_mission_record_nation_key'),
     )
+
+
+class War(db.Model):
+    __tablename__ = 'wars'
+
+    id = db.Column(db.Integer, primary_key=True)
+    attacker_nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False, index=True)
+    defender_nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    casus_belli = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='active')  # active|peace|compensated|annexed
+    attacker_victories = db.Column(db.Integer, nullable=False, default=0)
+    defender_victories = db.Column(db.Integer, nullable=False, default=0)
+    declared_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    ended_at = db.Column(db.DateTime, nullable=True)
+    peace_offered_by = db.Column(db.Integer, nullable=True)  # plain nation_id, no FK
+
+    attacker_nation = db.relationship('Nation', foreign_keys=[attacker_nation_id])
+    defender_nation = db.relationship('Nation', foreign_keys=[defender_nation_id])
+    battles = db.relationship('WarBattle', backref='war', lazy='dynamic')
+    deployments = db.relationship('WarDeploymentQueue', backref='war', lazy='dynamic')
+
+
+class WarBattle(db.Model):
+    """Join table linking a War to its constituent Battles."""
+    __tablename__ = 'war_battles'
+
+    id = db.Column(db.Integer, primary_key=True)
+    war_id = db.Column(db.Integer, db.ForeignKey('wars.id'), nullable=False, index=True)
+    # Plain ints — no FKs because Battle is hash-partitioned
+    battle_id = db.Column(db.Integer, nullable=False)
+    attacker_nation_id = db.Column(db.Integer, nullable=False)  # needed to look up the partitioned row
+    # 'attacker' if war.attacker_nation sent this deployment; 'defender' otherwise
+    side = db.Column(db.String(20), nullable=False)
+
+
+class WarDeploymentQueue(db.Model):
+    """24-hour travel queue for attacking deployments."""
+    __tablename__ = 'war_deployment_queue'
+
+    id = db.Column(db.Integer, primary_key=True)
+    war_id = db.Column(db.Integer, db.ForeignKey('wars.id'), nullable=False, index=True)
+    deploying_nation_id = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False, index=True)
+    division_id = db.Column(db.Integer, nullable=False)  # plain int — partitioned table
+    arrives_at = db.Column(db.DateTime, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='traveling')  # traveling|arrived|cancelled
+
+    deploying_nation = db.relationship('Nation', foreign_keys=[deploying_nation_id])
 
 
 @login_manager.user_loader

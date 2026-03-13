@@ -489,11 +489,10 @@
                class="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md transition-colors text-sm font-semibold">
                 <i class="fas fa-envelope"></i> Send Mail
             </a>
-            <button disabled
-                    class="inline-flex items-center gap-2 px-4 py-2 bg-red-900/40 text-red-400/60 rounded-md text-sm font-semibold cursor-not-allowed"
-                    title="Not yet implemented">
+            <a href="{{ url_for('war.declare_war', nation_id=nation.id) }}"
+               class="inline-flex items-center gap-2 px-4 py-2 bg-red-800 hover:bg-red-700 text-red-100 rounded-md text-sm font-semibold transition-colors">
                 <i class="fas fa-skull-crossbones"></i> Declare War
-            </button>
+            </a>
         </div>
     </div>
     {% endif %}

@@ -106,11 +106,11 @@
     <div x-show="tab === 'global'" x-cloak>
         {{ battle_table(global_active, 'No active battles worldwide.') }}
     </div>
-    <div x-show="tab === 'wars'" x-cloak>
-        <div class="bg-slate-800 rounded-lg border border-slate-700 p-12 text-center">
-            <i class="fas fa-person-rifle text-slate-600 text-5xl mb-4"></i>
-            <p class="text-slate-500 text-sm">Wars coming soon.</p>
-        </div>
+    <div x-show="tab === 'wars'" x-cloak
+         hx-get="{{ url_for('war.wars_list') }}"
+         hx-trigger="intersect once"
+         hx-swap="innerHTML">
+        <div class="text-center py-10 text-slate-500 text-sm">Loading wars…</div>
     </div>
 </div>
 {% endblock %}

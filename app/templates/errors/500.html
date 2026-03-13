@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}500 - Internal Server Error{% endblock %}
+
+{% block content %}
+<div style="padding-top: 120px; padding-bottom: 80px;" class="px-6">
+    <div class="max-w-md mx-auto text-center">
+
+        {# Decorative Icon Group #}
+        <div style="display: inline-flex; position: relative; width: 96px; height: 96px; align-items: center; justify-content: center; margin-bottom: 2rem;">
+            {# Glow effect #}
+            <div style="position: absolute; inset: 0; background: rgba(239, 68, 68, 0.12); filter: blur(24px); border-radius: 9999px;"></div>
+
+            {# Primary Icon Circle #}
+            <div style="position: relative; width: 80px; height: 80px; background: #1e293b; border: 1px solid #475569; border-radius: 9999px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);">
+                <i class="fas fa-server" style="font-size: 40px; color: #ef4444; display: block;"></i>
+
+                {# Warning Badge #}
+                <div style="position: absolute; top: -2px; right: -2px; width: 28px; height: 28px; background: #0f172a; border: 1px solid #475569; border-radius: 9999px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);">
+                    <i class="fas fa-exclamation" style="font-size: 14px; color: #f87171; display: block;"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-100 tracking-tight">
+                500 <span class="text-red-500">—</span> Server Error
+            </h1>
+            <p class="text-slate-400 text-lg leading-relaxed">
+                We're experiencing an outage.  If an action triggered this message please create a bug report.
+            </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 mt-10">
+            <a href="{{ url_for('main.home') }}"
+               class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg shadow-lg transition-all active:scale-95">
+                <i class="fas fa-home"></i> Return Home
+            </a>
+            <a href="{{ url_for('main.leaderboard') }}"
+               class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold border border-slate-700 rounded-lg transition-all active:scale-95">
+                <i class="fas fa-medal"></i> Leaderboards
+            </a>
+        </div>
+
+        <p class="text-xs text-slate-600 italic mt-12">
+            "War is unpredictable.  Any game with war is bound to have problems.  We should remove it by force."
+        </p>
+    </div>
+</div>
+{% endblock %}

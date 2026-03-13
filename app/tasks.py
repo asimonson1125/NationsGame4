@@ -201,6 +201,153 @@ def process_factory_queue():
             db.session.commit()
 
 
+def process_war_deployments():
+    """Runs every 60s. Fires battles when war deployments arrive."""
+    from .models import WarDeploymentQueue, War, Division, Unit, Battle, WarBattle, Message, Nation
+    from . import db
+    with scheduler.app.app_context():
+        now = datetime.now(timezone.utc)
+        ready = WarDeploymentQueue.query.filter(
+            WarDeploymentQueue.status == 'traveling',
+            WarDeploymentQueue.arrives_at <= now,
+        ).all()
+
+        for entry in ready:
+            war = db.session.get(War, entry.war_id)
+            if not war or war.status != 'active':
+                entry.status = 'arrived'
+                continue
+
+            deploying_id = entry.deploying_nation_id
+            side = 'attacker' if deploying_id == war.attacker_nation_id else 'defender'
+            opponent_id = (war.defender_nation_id if side == 'attacker'
+                           else war.attacker_nation_id)
+
+            atk_div = db.session.get(Division, (entry.division_id, deploying_id))
+            if not atk_div:
+                entry.status = 'arrived'
+                continue
+
+            # Find opponent's defensive division
+            def_div = Division.query.filter_by(
+                nation_id=opponent_id, is_defensive=True, mobilization_state='mobilized'
+            ).filter(Division.in_combat == False).first()
+
+            link = f'<a href="/war/{war.id}" class="text-amber-400 hover:text-amber-300 underline">View War</a>'
+
+            if not def_div:
+                # Unopposed — create an instantly-resolved battle for the record
+                from .game.war import credit_war_victory
+                atk_nation = db.session.get(Nation, deploying_id)
+                def_nation = db.session.get(Nation, opponent_id)
+
+                battle = Battle(
+                    attacker_division_id=atk_div.id,
+                    defender_division_id=None,
+                    attacker_division_name=atk_div.name,
+                    defender_division_name='(Unopposed)',
+                    attacker_nation_id=deploying_id,
+                    defender_nation_id=opponent_id,
+                    attacker_nation_name=atk_nation.name if atk_nation else str(deploying_id),
+                    defender_nation_name=def_nation.name if def_nation else str(opponent_id),
+                    battle_type='pvp',
+                    location=None,
+                    status='finished',
+                    winner='attacker',
+                    finished_at=now,
+                )
+                db.session.add(battle)
+                db.session.flush()
+
+                war_battle = WarBattle(
+                    war_id=war.id,
+                    battle_id=battle.id,
+                    attacker_nation_id=deploying_id,
+                    side=side,
+                )
+                db.session.add(war_battle)
+                db.session.flush()
+
+                credit_war_victory(war, war_battle, 'attacker')
+
+                deploying_name = atk_nation.name if atk_nation else str(deploying_id)
+                db.session.add(Message(
+                    sender_id=None,
+                    recipient_id=deploying_id,
+                    subject=f'Unopposed Victory — {war.name}',
+                    body=f'Your forces met no resistance and claimed an unopposed victory.\n\n{link}',
+                    message_type='system',
+                ))
+                db.session.add(Message(
+                    sender_id=None,
+                    recipient_id=opponent_id,
+                    subject=f'Overrun — {war.name}',
+                    body=f'{deploying_name} attacked with no defensive division set. An unopposed victory was awarded to them.\n\n{link}',
+                    message_type='system',
+                ))
+                entry.status = 'arrived'
+
+                _check_war_settlement_available(war, link)
+                continue
+
+            # Create the battle
+            atk_nation = db.session.get(Nation, deploying_id)
+            def_nation = db.session.get(Nation, opponent_id)
+            battle = Battle(
+                attacker_division_id=atk_div.id,
+                defender_division_id=def_div.id,
+                attacker_division_name=atk_div.name,
+                defender_division_name=def_div.name,
+                attacker_nation_id=deploying_id,
+                defender_nation_id=opponent_id,
+                attacker_nation_name=atk_nation.name if atk_nation else str(deploying_id),
+                defender_nation_name=def_nation.name if def_nation else str(opponent_id),
+                battle_type='pvp',
+                location=None,
+            )
+            db.session.add(battle)
+            db.session.flush()
+
+            war_battle = WarBattle(
+                war_id=war.id,
+                battle_id=battle.id,
+                attacker_nation_id=deploying_id,
+                side=side,
+            )
+            db.session.add(war_battle)
+
+            atk_div.in_combat = True
+            def_div.in_combat = True
+            entry.status = 'arrived'
+
+        if ready:
+            db.session.commit()
+
+
+def _check_war_settlement_available(war, link):
+    """Send a notification if the 3-victory threshold has just been crossed."""
+    from .models import Message
+    from . import db
+    from .game.war import compute_war_scores
+    scores = compute_war_scores(war)
+    if scores['attacker_can_demand']:
+        db.session.add(Message(
+            sender_id=None,
+            recipient_id=war.attacker_nation_id,
+            subject=f'Settlement Available — {war.name}',
+            body=f'You have a lead of 3+ victories. You may now demand war compensation or annexation.\n\n{link}',
+            message_type='system',
+        ))
+    if scores['defender_can_demand']:
+        db.session.add(Message(
+            sender_id=None,
+            recipient_id=war.defender_nation_id,
+            subject=f'Settlement Available — {war.name}',
+            body=f'You have a lead of 3+ victories. You may now demand war compensation or annexation.\n\n{link}',
+            message_type='system',
+        ))
+
+
 def process_building_upgrades():
     """Runs every 60s. Completes building upgrades whose timer has expired."""
     from .models import BuildingUpgradeQueue, NationBuilding, Nation
@@ -281,6 +428,8 @@ def register_tasks(app):
     scheduler.add_job(id='process_factory_build', func=process_factory_queue,
                       trigger='interval', seconds=60)
     scheduler.add_job(id='process_building_upgrades', func=process_building_upgrades,
+                      trigger='interval', seconds=60)
+    scheduler.add_job(id='process_war_deployments', func=process_war_deployments,
                       trigger='interval', seconds=60)
     scheduler.add_job(id='process_combat', func=process_combat_rounds,
                       trigger='interval', seconds=10)

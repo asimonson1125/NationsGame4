@@ -33,6 +33,11 @@
                 class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
             <i class="fas fa-tasks mr-1"></i> Missions
         </button>
+        <button @click="tab = 'guide'"
+                :class="tab === 'guide' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
+            <i class="fas fa-book-open mr-1"></i> Guide
+        </button>
     </div>
 
     {# ===== OVERVIEW TAB ===== #}
@@ -138,6 +143,87 @@
                 <p class="text-sm">Click the Missions tab to load your available missions.</p>
             </div>
         </div>
+    </div>
+
+    {# ===== GUIDE TAB ===== #}
+    <div x-show="tab === 'guide'" x-cloak
+         x-data="{ open: 'divisions' }"
+         class="space-y-2">
+
+        {% macro guide_section(key, icon, title) %}
+        <div class="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+            <button @click="open = open === '{{ key }}' ? null : '{{ key }}'"
+                    class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-700/40 transition-colors">
+                <span class="flex items-center gap-2 text-sm font-semibold text-slate-200">
+                    <i class="{{ icon }} text-amber-400 w-4 text-center"></i>
+                    {{ title }}
+                </span>
+                <i class="fas fa-chevron-down text-slate-500 text-xs transition-transform"
+                   :class="open === '{{ key }}' ? 'rotate-180' : ''"></i>
+            </button>
+            <div x-show="open === '{{ key }}'" x-cloak
+                 class="px-5 pb-5 text-sm text-slate-300 leading-relaxed space-y-3 border-t border-slate-700">
+        {% endmacro %}
+
+        {% macro end_section() %}</div></div>{% endmacro %}
+
+        {# ── Divisions & Mobilization ── #}
+        {{ guide_section('divisions', 'fas fa-flag', 'Divisions & Mobilization') }}
+                <p>Units must be organized into <strong class="text-slate-100">divisions</strong> before they can act. A division groups your units together for deployment, combat, and administration.</p>
+                <ul class="list-disc list-inside space-y-1 text-slate-400">
+                    <li><span class="text-slate-200 font-medium">Demobilized</span> — division is at rest. Units recover but cannot be deployed.</li>
+                    <li><span class="text-slate-200 font-medium">Mobilizing</span> — division is being called up. Cannot act yet.</li>
+                    <li><span class="text-slate-200 font-medium">Mobilized</span> — division is ready. Can be deployed to wars, missions, or peacekeeping.</li>
+                </ul>
+                <p>You can <strong class="text-slate-100">rename</strong> or <strong class="text-slate-100">disband</strong> a division at any time (disbanding moves units to reserve). A division in combat cannot be disbanded.</p>
+                <p class="text-slate-500 text-xs">Demobilization is blocked while a division is set as defensive, traveling, or in active combat.</p>
+        {{ end_section() }}
+
+        {# ── Defensive Divisions ── #}
+        {{ guide_section('defense', 'fas fa-shield-halved', 'Defensive Divisions') }}
+                <p>Each nation can designate one <strong class="text-slate-100">defensive division</strong>. This division guards your nation against incoming attacks from any active war — it applies nation-wide, not per-war.</p>
+                <p>To assign a defensive division, open a mobilized division and click <strong class="text-slate-100">Set Defense</strong>. The division will be marked with a <i class="fas fa-shield-halved text-sky-400"></i> shield icon.</p>
+                <ul class="list-disc list-inside space-y-1 text-slate-400">
+                    <li>A defensive division <strong class="text-slate-200">cannot be demobilized</strong> while assigned. Relieve it first.</li>
+                    <li>A defensive division <strong class="text-slate-200">cannot be deployed offensively</strong> to wars, missions, or peacekeeping.</li>
+                    <li>If you have no defensive division when an attack arrives, it resolves as an <strong class="text-red-400">unopposed victory</strong> for your enemy.</li>
+                </ul>
+                <p>To remove a division from defense, click <strong class="text-slate-100">Relieve from Defense</strong> on that division's panel.</p>
+        {{ end_section() }}
+
+        {# ── Deployment ── #}
+        {{ guide_section('deploy', 'fas fa-paper-plane', 'Deployment & Travel') }}
+                <p>To send an attack in a war, open the war page and select a division from the <strong class="text-slate-100">Deploy Attack</strong> panel. The division will travel for <strong class="text-slate-100">24 hours</strong> before the battle resolves.</p>
+                <p>Only divisions that meet <em>all</em> of the following are eligible to deploy:</p>
+                <ul class="list-disc list-inside space-y-1 text-slate-400">
+                    <li>Mobilized</li>
+                    <li>Not currently set as your defensive division</li>
+                    <li>Not already traveling to any war</li>
+                    <li>Not already in active combat</li>
+                    <li>Has at least one living unit</li>
+                </ul>
+                <p>You may cancel a deployment while it is still <span class="text-violet-400 font-medium">EN ROUTE</span>. Once it arrives, battle begins automatically.</p>
+                <p>The same deployment eligibility rules apply to <strong class="text-slate-100">peacekeeping</strong> and <strong class="text-slate-100">missions</strong>.</p>
+        {{ end_section() }}
+
+        {# ── Wars ── #}
+        {{ guide_section('wars', 'fas fa-person-rifle', 'Wars') }}
+                <p>Wars are declared from an enemy's nation profile page. You must supply a <strong class="text-slate-100">war name</strong> and a <strong class="text-slate-100">casus belli</strong> (justification) that will appear publicly on the war page.</p>
+
+                <p class="font-semibold text-slate-200">Scoring</p>
+                <p>Each battle in a war awards a <strong class="text-slate-100">victory point</strong> to the winning side. The score is tracked on the war page.</p>
+
+                <p class="font-semibold text-slate-200">Settlements</p>
+                <ul class="list-disc list-inside space-y-1 text-slate-400">
+                    <li><span class="text-sky-300 font-medium">White Peace</span> — either side may offer at any time. If accepted, the war ends with no transfers. An offer can be withdrawn before the opponent accepts.</li>
+                    <li><span class="text-amber-300 font-medium">War Compensation</span> — available when you hold a lead of <strong class="text-slate-200">3 or more victories</strong>. Claims 35% of the enemy's resource stockpiles and ends the war.</li>
+                    <li><span class="text-purple-300 font-medium">Annexation</span> — requires <strong class="text-slate-200">3+ total victory lead AND 3+ offensive victories</strong>. Transfers 20% of the enemy's land and population and ends the war.</li>
+                </ul>
+
+                <p class="font-semibold text-slate-200">Unopposed Attacks</p>
+                <p>If an attack arrives and your enemy has no mobilized, non-combat defensive division, a battle is recorded instantly as an unopposed victory for the attacker. It appears in battle logs with the defender listed as <em>(Unopposed)</em>.</p>
+        {{ end_section() }}
+
     </div>
 
     {# ===== UNIT DETAIL POPUP ===== #}

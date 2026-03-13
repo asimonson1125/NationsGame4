@@ -6,6 +6,16 @@ Add newest entries at the TOP of the list.
 
 CHANGELOG = [
     {
+        'version': '0.3.0-alpha',
+        'title': 'v0.3.0 War!',
+        'date': '2026-03-15',
+        'body': (
+            'Welcome to NG4. Project is approaching the end of '
+            'of its alpha phase.  This version introduces 1v1 PvP conflict '
+            'via the war feature.  See military guide for details.'
+        ),
+    },
+    {
         'version': '0.2.3-alpha',
         'title': 'v0.2.3 Buildings',
         'date': '2026-03-13',

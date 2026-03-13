@@ -921,6 +921,71 @@ def _end_battle(battle, db_session):
     if atk_div:
         atk_div.in_combat = False
 
+    # Credit war victories for pvp battles
+    if battle.battle_type == 'pvp' and battle.winner:
+        _credit_war_victory(battle, db_session)
+
+
+def _credit_war_victory(battle, db_session):
+    """If this pvp battle is part of a war, credit the victory and notify participants."""
+    from ..models import WarBattle, War, Message
+    from .war import credit_war_victory, compute_war_scores
+
+    wb = WarBattle.query.filter_by(
+        battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id
+    ).first()
+    if not wb:
+        return
+
+    war = db_session.get(War, wb.war_id)
+    if not war or war.status != 'active':
+        return
+
+    credit_war_victory(war, wb, battle.winner)
+
+    link = (f'<a href="/war/{war.id}" class="text-amber-400 hover:text-amber-300 underline">'
+            f'View War</a>')
+    winner_nation_id = (battle.attacker_nation_id if battle.winner == 'attacker'
+                        else battle.defender_nation_id)
+    loser_nation_id = (battle.defender_nation_id if battle.winner == 'attacker'
+                       else battle.attacker_nation_id)
+    battle_link = (f'<a href="/military/battle/{battle.id}" '
+                   f'class="text-amber-400 hover:text-amber-300 underline">View Battle</a>')
+
+    db_session.add(Message(
+        sender_id=None,
+        recipient_id=winner_nation_id,
+        subject=f'Battle Victory — {war.name}',
+        body=f'You won a battle in the war "{war.name}".\n\n{battle_link} | {link}',
+        message_type='system',
+    ))
+    db_session.add(Message(
+        sender_id=None,
+        recipient_id=loser_nation_id,
+        subject=f'Battle Defeat — {war.name}',
+        body=f'You lost a battle in the war "{war.name}".\n\n{battle_link} | {link}',
+        message_type='system',
+    ))
+
+    # Notify if a settlement threshold has been crossed
+    scores = compute_war_scores(war)
+    if scores['attacker_can_demand'] and war.attacker_victories == 3 and war.defender_victories == 0:
+        db_session.add(Message(
+            sender_id=None,
+            recipient_id=war.attacker_nation_id,
+            subject=f'Settlement Available — {war.name}',
+            body=f'You now lead by 3+ victories and may demand war compensation or annexation.\n\n{link}',
+            message_type='system',
+        ))
+    if scores['defender_can_demand'] and war.defender_victories == 3 and war.attacker_victories == 0:
+        db_session.add(Message(
+            sender_id=None,
+            recipient_id=war.defender_nation_id,
+            subject=f'Settlement Available — {war.name}',
+            body=f'You now lead by 3+ victories and may demand war compensation or annexation.\n\n{link}',
+            message_type='system',
+        ))
+
 
 def _resolve_mission(battle, db_session):
     """Mark mission offer as completed/failed on a pve_mission battle end.

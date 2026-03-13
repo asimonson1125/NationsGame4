@@ -9,6 +9,12 @@
         {% if div.mobilization_state == 'mobilized' %}
         <span class="ml-1 text-xs bg-emerald-500 text-white px-1.5 py-0.5 rounded-full">MOB</span>
         {% endif %}
+        {% if div.is_defensive %}
+        <i class="fas fa-shield-halved ml-1 text-sky-400 text-xs"></i>
+        {% endif %}
+        {% if div_traveling.get(div.id) %}
+        <span class="ml-1 text-xs bg-violet-600 text-white px-1.5 py-0.5 rounded-full animate-pulse">TRAVEL</span>
+        {% endif %}
         {% if div.in_combat %}
         <span class="ml-1 text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">COMBAT</span>
         {% endif %}
@@ -36,6 +42,11 @@
                     {% else %}bg-slate-700 text-slate-400{% endif %}">
                     {{ div.mobilization_state | title }}
                 </span>
+                {% if div.is_defensive %}
+                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400">
+                    <i class="fas fa-shield-halved text-[10px]"></i> Defending
+                </span>
+                {% endif %}
             </div>
             {% if div.in_combat and div_battles.get(div.id) %}
             <a href="{{ url_for('military.battle_view', battle_id=div_battles[div.id]) }}"
@@ -43,6 +54,17 @@
                 <i class="fas fa-crosshairs animate-pulse"></i>
                 <span class="font-medium">View Ongoing Battle</span>
                 <i class="fas fa-arrow-right text-[10px]"></i>
+            </a>
+            {% endif %}
+            {% set travel_entry = div_traveling.get(div.id) %}
+            {% if travel_entry %}
+            <a href="{{ url_for('war.war_detail', war_id=travel_entry.war_id) }}"
+               class="inline-flex items-center gap-1.5 text-xs bg-violet-500/20 text-violet-400 border border-violet-500/30 px-2.5 py-1 rounded hover:bg-violet-500/30 transition-colors"
+               x-data="{ t: '{{ travel_entry.arrives_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}', label: '' }"
+               x-init="(function tick(){const d=new Date(t)-new Date();if(d<=0){label='arriving';return;}const h=Math.floor(d/3600000),m=Math.floor((d%3600000)/60000),s=Math.floor((d%60000)/1000);label=h+'h '+m+'m '+s+'s';setTimeout(tick,1000);})()">
+                <i class="fas fa-route animate-pulse"></i>
+                <span class="font-medium">En Route</span>
+                <span x-text="label" class="font-mono"></span>
             </a>
             {% endif %}
         </div>
@@ -54,7 +76,7 @@
                     <i class="fas fa-bolt mr-1"></i>Mobilize
                 </button>
             </form>
-            {% else %}
+            {% elif not div.is_defensive and not div.in_combat and not div_traveling.get(div.id) %}
             <form hx-post="{{ url_for('military.demobilize_division', div_id=div.id) }}"
                   hx-target="#division-content" hx-swap="innerHTML" class="inline">
                 <button type="submit" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium py-1.5 px-3 rounded transition-colors">
@@ -79,7 +101,7 @@
             </div>
 
             {# Peacekeeping #}
-            {% if div.mobilization_state == 'mobilized' and not div.in_combat %}
+            {% if div.mobilization_state == 'mobilized' and not div.in_combat and not div.is_defensive and not div_traveling.get(div.id) %}
             <form hx-post="{{ url_for('military.deploy_peacekeeping', div_id=div.id) }}"
                   hx-target="#division-content" hx-swap="innerHTML"
                   hx-confirm="Deploy {{ div.name }} on peacekeeping? They will enter combat against insurgents."
@@ -88,6 +110,30 @@
                     <i class="fas fa-dove mr-1"></i>Peacekeeping
                 </button>
             </form>
+            {% endif %}
+
+            {# Set / clear defensive division #}
+            {% if div.mobilization_state == 'mobilized' and not div.in_combat and not div_traveling.get(div.id) %}
+            {% if div.is_defensive %}
+            <form hx-post="{{ url_for('military.set_defense') }}"
+                  hx-target="#division-content" hx-swap="innerHTML"
+                  hx-confirm="Remove {{ div.name }} from defense? It can then be demobilized or deployed elsewhere."
+                  class="inline">
+                <input type="hidden" name="division_id" value="">
+                <button type="submit" class="bg-sky-700 hover:bg-sky-600 text-white text-xs font-medium py-1.5 px-3 rounded transition-colors">
+                    <i class="fas fa-shield-halved mr-1"></i>Relieve from Defense
+                </button>
+            </form>
+            {% else %}
+            <form hx-post="{{ url_for('military.set_defense') }}"
+                  hx-target="#division-content" hx-swap="innerHTML"
+                  class="inline">
+                <input type="hidden" name="division_id" value="{{ div.id }}">
+                <button type="submit" class="bg-slate-700 hover:bg-sky-700 text-slate-300 hover:text-white text-xs font-medium py-1.5 px-3 rounded transition-colors">
+                    <i class="fas fa-shield mr-1"></i>Set Defense
+                </button>
+            </form>
+            {% endif %}
             {% endif %}
 
             {# Disband Division #}

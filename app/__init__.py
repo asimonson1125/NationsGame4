@@ -112,6 +112,9 @@ def create_app(config_name='default'):
     from .mail import mail as mail_blueprint
     app.register_blueprint(mail_blueprint)
 
+    from .war import war as war_blueprint
+    app.register_blueprint(war_blueprint)
+
     @app.context_processor
     def inject_unread_count():
         from flask_login import current_user
@@ -128,6 +131,10 @@ def create_app(config_name='default'):
     @app.errorhandler(404)
     def page_not_found(e):
         return render_template('errors/404.html'), 404
+
+    @app.errorhandler(500)
+    def internal_server_error(e):
+        return render_template('errors/500.html'), 500
 
     import os
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':

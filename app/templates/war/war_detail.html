@@ -1,0 +1,301 @@
+{% extends 'base.html' %}
+{% block title %}{{ war.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-5xl mx-auto">
+
+    {# ── War header ── #}
+    <div class="mb-6">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-100 mb-1">
+                    <i class="fas fa-person-rifle mr-2 text-red-500"></i>{{ war.name }}
+                </h1>
+                <div class="text-sm text-slate-400">
+                    Declared {{ war.declared_at.strftime('%Y-%m-%d %H:%M') }} UTC
+                    &mdash;
+                    <a href="{{ url_for('main.nation_view', nation_id=war.attacker_nation_id) }}"
+                       class="text-amber-400 hover:text-amber-300">{{ war.attacker_nation.name }}</a>
+                    vs.
+                    <a href="{{ url_for('main.nation_view', nation_id=war.defender_nation_id) }}"
+                       class="text-amber-400 hover:text-amber-300">{{ war.defender_nation.name }}</a>
+                </div>
+            </div>
+            <div>
+                {% if war.status == 'active' %}
+                    <span class="inline-block px-3 py-1 text-sm font-semibold rounded-full bg-red-500/20 text-red-400">Active War</span>
+                {% elif war.status == 'peace' %}
+                    <span class="inline-block px-3 py-1 text-sm font-semibold rounded-full bg-sky-500/20 text-sky-400">Ended — White Peace</span>
+                {% elif war.status == 'compensated' %}
+                    <span class="inline-block px-3 py-1 text-sm font-semibold rounded-full bg-amber-500/20 text-amber-400">Ended — Reparations</span>
+                {% elif war.status == 'annexed' %}
+                    <span class="inline-block px-3 py-1 text-sm font-semibold rounded-full bg-purple-500/20 text-purple-400">Ended — Annexation</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Casus belli #}
+        <div class="mt-4 bg-slate-800 border border-slate-700 rounded-lg p-4">
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Casus Belli</p>
+            <p class="text-slate-300 text-sm whitespace-pre-line">{{ war.casus_belli }}</p>
+        </div>
+    </div>
+
+    {# ── Scoreboard ── #}
+    <div class="bg-slate-800 border border-slate-700 rounded-lg p-5 mb-6">
+        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Score</h2>
+        <div class="grid grid-cols-3 gap-4 text-center">
+            <div>
+                <a href="{{ url_for('main.nation_view', nation_id=war.attacker_nation_id) }}"
+                   class="text-base font-semibold text-slate-200 hover:text-amber-400 block truncate">
+                    {{ war.attacker_nation.name }}
+                </a>
+                <div class="text-xs text-slate-500 mb-2">Attacker</div>
+                <div class="text-4xl font-bold text-emerald-400">{{ scores.attacker_victories }}</div>
+                <div class="text-xs text-slate-500 mt-1">victories</div>
+            </div>
+            <div class="flex items-center justify-center text-slate-600 text-2xl font-bold">vs</div>
+            <div>
+                <a href="{{ url_for('main.nation_view', nation_id=war.defender_nation_id) }}"
+                   class="text-base font-semibold text-slate-200 hover:text-amber-400 block truncate">
+                    {{ war.defender_nation.name }}
+                </a>
+                <div class="text-xs text-slate-500 mb-2">Defender</div>
+                <div class="text-4xl font-bold text-emerald-400">{{ scores.defender_victories }}</div>
+                <div class="text-xs text-slate-500 mt-1">victories</div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Battles ── #}
+    <div class="mb-6">
+        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">
+            <i class="fas fa-swords mr-1"></i> Battles
+        </h2>
+        {% if resolved_battles %}
+        <div class="overflow-x-auto bg-slate-800 rounded-lg border border-slate-700">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-slate-700/50 text-left text-slate-400">
+                        <th class="px-4 py-3">Battle</th>
+                        <th class="px-4 py-3">Attacker</th>
+                        <th class="px-4 py-3">Defender</th>
+                        <th class="px-4 py-3">Result</th>
+                        <th class="px-4 py-3">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for wb, b in resolved_battles %}
+                    <tr class="border-t border-slate-700 hover:bg-slate-700/30 transition-colors">
+                        <td class="px-4 py-3">
+                            <a href="{{ url_for('military.battle_view', battle_id=b.id) }}"
+                               class="text-amber-400 hover:text-amber-300 font-medium">#{{ b.id }}</a>
+                        </td>
+                        <td class="px-4 py-3 text-slate-300">
+                            <a href="{{ url_for('main.nation_view', nation_id=b.attacker_nation_id) }}"
+                               class="hover:text-amber-400">{{ b.attacker_nation_name or b.attacker_nation.name }}</a>
+                        </td>
+                        <td class="px-4 py-3 text-slate-300">
+                            <a href="{{ url_for('main.nation_view', nation_id=b.defender_nation_id) }}"
+                               class="hover:text-amber-400">{{ b.defender_nation_name or b.defender_nation.name }}</a>
+                        </td>
+                        <td class="px-4 py-3">
+                            {% if b.status == 'active' %}
+                                <span class="text-amber-400 font-medium">In Progress</span>
+                            {% elif b.winner == 'attacker' %}
+                                <span class="text-emerald-400">{{ b.attacker_nation_name or b.attacker_nation.name }} won</span>
+                            {% elif b.winner == 'defender' %}
+                                <span class="text-emerald-400">{{ b.defender_nation_name or b.defender_nation.name }} won</span>
+                            {% else %}
+                                <span class="text-slate-500">Finished</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-slate-500">{{ b.started_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-slate-800 border border-slate-700 rounded-lg p-10 text-center text-slate-500 text-sm">
+            No battles have been fought yet.
+        </div>
+        {% endif %}
+    </div>
+
+    {# ── War Actions ── #}
+    {% if is_participant and war.status == 'active' %}
+    <div class="space-y-5 mt-6">
+
+        {# Defensive division #}
+        <div class="bg-slate-800 border border-slate-700 rounded-lg p-5">
+            <h3 class="text-sm font-semibold text-slate-300 mb-3">
+                <i class="fas fa-shield-halved text-sky-400 mr-1"></i> Defensive Division
+            </h3>
+            {% if my_defensive_div %}
+            <p class="text-sm text-slate-400 mb-3">
+                Currently defending: <span class="text-slate-100 font-semibold">{{ my_defensive_div.name }}</span>
+            </p>
+            {% else %}
+            <p class="text-sm text-amber-400 mb-3">
+                <i class="fas fa-triangle-exclamation mr-1"></i>
+                No defensive division set. Enemy attacks will be unopposed.
+            </p>
+            {% endif %}
+            <p class="text-xs text-slate-500 mb-3">
+                Set a defensive division on the
+                <a href="{{ url_for('military.overview', tab='overview') }}"
+                   class="text-amber-400 hover:text-amber-300 underline">Military page</a>.
+                Your defensive division is nation-wide and applies to all active wars.
+            </p>
+        </div>
+
+        {# Deploy attack #}
+        <div class="bg-slate-800 border border-slate-700 rounded-lg p-5">
+            <h3 class="text-sm font-semibold text-slate-300 mb-3">
+                <i class="fas fa-paper-plane text-red-400 mr-1"></i> Deploy Attack
+            </h3>
+            {% if active_deploy %}
+            <div class="text-sm text-slate-300 mb-3">
+                <i class="fas fa-spinner fa-spin text-amber-400 mr-1"></i>
+                <span class="font-semibold text-slate-100">{{ active_deploy_div.name if active_deploy_div else 'Division' }}</span>
+                en route — arrives in
+                <strong class="text-amber-400 font-mono"
+                        x-data="{ t: '{{ active_deploy.arrives_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}', label: '' }"
+                        x-init="(function tick(){const d=new Date(t)-new Date();if(d<=0){label='now';return;}const h=Math.floor(d/3600000),m=Math.floor((d%3600000)/60000),s=Math.floor((d%60000)/1000);label=h+'h '+m+'m '+s+'s';setTimeout(tick,1000);})()"
+                        x-text="label">
+                </strong>
+            </div>
+            <form hx-post="{{ url_for('war.cancel_deploy', war_id=war.id, queue_id=active_deploy.id) }}"
+                  hx-swap="none"
+                  hx-confirm="Cancel this deployment?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit"
+                        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-md text-sm font-semibold transition-colors">
+                    Cancel Deployment
+                </button>
+            </form>
+            {% elif my_divisions %}
+            <form hx-post="{{ url_for('war.deploy_attack', war_id=war.id) }}"
+                  hx-swap="none"
+                  class="flex gap-3 items-end flex-wrap">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="flex-1 min-w-48">
+                    <label class="block text-xs text-slate-500 mb-1">Select Division</label>
+                    <select name="division_id"
+                            class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md text-sm focus:outline-none focus:border-red-500">
+                        {% for div in my_divisions %}
+                        <option value="{{ div.id }}">{{ div.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit"
+                        class="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-md text-sm font-semibold transition-colors whitespace-nowrap"
+                        hx-confirm="Deploy this division? It will arrive in 24 hours.">
+                    <i class="fas fa-paper-plane mr-1"></i> Deploy (24h)
+                </button>
+            </form>
+            {% else %}
+            <p class="text-sm text-slate-500">No mobilized, available divisions to deploy.</p>
+            {% endif %}
+        </div>
+
+        {# Diplomacy #}
+        <div class="bg-slate-800 border border-slate-700 rounded-lg p-5">
+            <h3 class="text-sm font-semibold text-slate-300 mb-4">
+                <i class="fas fa-handshake text-emerald-400 mr-1"></i> Diplomacy & Settlement
+            </h3>
+            <div class="space-y-3">
+
+                {# White peace #}
+                {% if war.peace_offered_by and war.peace_offered_by != my_nation_id %}
+                <div class="flex items-center gap-4 bg-sky-900/20 border border-sky-700/40 rounded-lg p-3">
+                    <span class="text-sm text-sky-300 flex-1">
+                        <i class="fas fa-dove mr-1 text-sky-400"></i>
+                        Your opponent has offered white peace.
+                    </span>
+                    <form hx-post="{{ url_for('war.accept_peace', war_id=war.id) }}"
+                          hx-swap="none"
+                          hx-confirm="Accept white peace? The war ends with no transfers.">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="px-3 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs font-semibold rounded-md transition-colors">
+                            Accept White Peace
+                        </button>
+                    </form>
+                </div>
+                {% elif war.peace_offered_by == my_nation_id %}
+                <div class="flex items-center gap-4 bg-slate-700/30 border border-slate-600/40 rounded-lg p-3">
+                    <span class="text-sm text-slate-400 flex-1 italic">
+                        <i class="fas fa-dove mr-1"></i> You have offered white peace. Awaiting response.
+                    </span>
+                    <form hx-post="{{ url_for('war.cancel_peace', war_id=war.id) }}"
+                          hx-swap="none"
+                          hx-confirm="Withdraw your white peace offer?">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-slate-300 text-xs font-semibold rounded-md transition-colors">
+                            Withdraw Offer
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <form hx-post="{{ url_for('war.offer_peace', war_id=war.id) }}"
+                      hx-swap="none"
+                      hx-confirm="Offer unconditional white peace? Your opponent can accept at any time.">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-md text-sm font-semibold transition-colors">
+                        <i class="fas fa-dove mr-1"></i> Offer White Peace
+                    </button>
+                </form>
+                {% endif %}
+
+                {# War compensation #}
+                {% set can_demand = (is_attacker and scores.attacker_can_demand) or (not is_attacker and scores.defender_can_demand) %}
+                {% set my_lead = scores.attacker_lead if is_attacker else scores.defender_lead %}
+                {% if can_demand %}
+                <form hx-post="{{ url_for('war.demand_compensation', war_id=war.id) }}"
+                      hx-swap="none"
+                      hx-confirm="Demand war compensation? 35% of the enemy's resources will be transferred to you and the war will end.">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="px-4 py-2 bg-amber-700 hover:bg-amber-600 text-white rounded-md text-sm font-semibold transition-colors">
+                        <i class="fas fa-sack-dollar mr-1"></i> Demand Compensation (35% resources)
+                    </button>
+                </form>
+                {% else %}
+                <div class="flex items-center gap-2">
+                    <button disabled
+                            class="px-4 py-2 bg-slate-700/50 text-slate-500 rounded-md text-sm font-semibold cursor-not-allowed">
+                        <i class="fas fa-sack-dollar mr-1"></i> Demand Compensation
+                    </button>
+                    <span class="text-xs text-slate-600">Need +3 victory lead (currently {{ my_lead }})</span>
+                </div>
+                {% endif %}
+
+                {# Annexation — requires 3+ total lead AND 3+ offensive victories #}
+                {% if can_demand and my_offensive_wins >= 3 %}
+                <form hx-post="{{ url_for('war.demand_annexation', war_id=war.id) }}"
+                      hx-swap="none"
+                      hx-confirm="Demand annexation? 20% of the enemy's land and population will be transferred and the war will end.">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-md text-sm font-semibold transition-colors">
+                        <i class="fas fa-flag mr-1"></i> Demand Annexation (20% land &amp; population)
+                    </button>
+                </form>
+                {% else %}
+                <div class="flex items-center gap-2">
+                    <button disabled
+                            class="px-4 py-2 bg-slate-700/50 text-slate-500 rounded-md text-sm font-semibold cursor-not-allowed">
+                        <i class="fas fa-flag mr-1"></i> Demand Annexation
+                    </button>
+                    <span class="text-xs text-slate-600">
+                        Need +3 total lead ({{ my_lead }}) and 3 offensive victories ({{ my_offensive_wins }})
+                    </span>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

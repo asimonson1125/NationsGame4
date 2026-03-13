@@ -16,6 +16,12 @@ MIGRATIONS = [
     'add_vacation_cooldown',
     'add_buildings',
     'add_alliance_applications',
+    'add_battle_location',
+    'add_banner_url',
+    'add_wars',
+    'add_war_battles',
+    'add_war_deployment_queue',
+    'add_division_defensive',
 ]
 
 

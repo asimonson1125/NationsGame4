@@ -110,7 +110,7 @@
                             {% endif %}
                         </div>
                         {% if report.details %}
-                        <button onclick="window.dispatchEvent(new CustomEvent('open-combat-detail', { detail: {{ report.details }} }))"
+                        <button onclick='window.dispatchEvent(new CustomEvent("open-combat-detail", { detail: {{ report.details | safe }} }))'
                                 class="shrink-0 mt-1 w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-slate-400 hover:text-slate-200 flex items-center justify-center transition-colors text-xs"
                                 title="Show combat roll">
                             <i class="fas fa-dice-d20"></i>
