@@ -4,14 +4,45 @@
 
 {% block title %}Military — {{ nation.name }}{% endblock %}
 
+{% block head %}
+<style>
+@media (max-width: 639px) {
+    #unit-detail-popup {
+        top: auto !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        transform: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: 85vh !important;
+        border-bottom-left-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+        border-top-left-radius: 0.75rem !important;
+        border-top-right-radius: 0.75rem !important;
+    }
+    #eq-picker-popup {
+        top: 5vh !important;
+        left: 0.5rem !important;
+        right: 0.5rem !important;
+        transform: none !important;
+        width: auto !important;
+        max-width: 100% !important;
+        max-height: 90vh !important;
+        border-radius: 0.75rem !important;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="p-6 max-w-6xl mx-auto" x-data="{ tab: '{{ default_tab | default('overview') }}' }">
+<div class="p-3 sm:p-6 max-w-6xl mx-auto" x-data="{ tab: '{{ default_tab | default('overview') }}' }">
     <h1 class="text-2xl font-bold text-slate-100 mb-6">
         <i class="fas fa-shield-alt mr-2 text-slate-400"></i>Military
     </h1>
 
     {# Tab Bar #}
-    <div class="flex gap-1 border-b border-slate-700 mb-6">
+    <div class="flex gap-1 border-b border-slate-700 mb-6 overflow-x-auto">
         <button @click="tab = 'overview'"
                 :class="tab === 'overview' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
                 class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
@@ -42,21 +73,6 @@
 
     {# ===== OVERVIEW TAB ===== #}
     <div x-show="tab === 'overview'" x-cloak:false>
-
-        {# Create Division Form #}
-        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6">
-            <form hx-post="{{ url_for('military.create_division') }}"
-                  hx-target="#division-content"
-                  hx-swap="innerHTML"
-                  class="flex items-center gap-3">
-                <input type="text" name="name" placeholder="New division name..."
-                       class="flex-1 bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
-                <button type="submit"
-                        class="bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                    <i class="fas fa-plus mr-1"></i>Create Division
-                </button>
-            </form>
-        </div>
 
         {# Division Content #}
         <div x-data="{ activeDiv: 'reserve' }">
@@ -228,13 +244,13 @@
 
     {# ===== UNIT DETAIL POPUP ===== #}
     <div id="unit-detail-overlay" class="hidden fixed inset-0 bg-black/60 z-[1050]" onclick="closeUnitDetail()"></div>
-    <div id="unit-detail-popup" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl z-[1100] w-[95%] max-w-5xl max-h-[90vh] overflow-y-auto">
+    <div id="unit-detail-popup" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl z-[1100] w-[95%] max-w-3xl max-h-[80vh] overflow-y-auto">
         <div id="unit-detail-content"></div>
     </div>
 
     {# ===== EQUIPMENT PICKER POPUP ===== #}
     <div id="eq-picker-overlay" class="hidden fixed inset-0 bg-black/40 z-[1150]" onclick="closeEqPicker()"></div>
-    <div id="eq-picker-popup" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl z-[1200] w-[90%] max-w-4xl max-h-[80vh] overflow-y-auto">
+    <div id="eq-picker-popup" class="hidden fixed left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl z-[1200] w-[90%] max-w-3xl overflow-hidden" style="top: 8vh; max-height: 85vh;">
         <div id="eq-picker-content"></div>
     </div>
 
@@ -244,11 +260,13 @@
 function openUnitDetail() {
     document.getElementById('unit-detail-overlay').classList.remove('hidden');
     document.getElementById('unit-detail-popup').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
 }
 function closeUnitDetail() {
     document.getElementById('unit-detail-overlay').classList.add('hidden');
     document.getElementById('unit-detail-popup').classList.add('hidden');
     closeEqPicker();
+    document.body.style.overflow = '';
 }
 function openEqPicker() {
     document.getElementById('eq-picker-overlay').classList.remove('hidden');

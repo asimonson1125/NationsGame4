@@ -3,6 +3,11 @@ Set a user to admin.
 Usage: python3 adhoc/set_admin.py <username>
 """
 import sys
+import os
+
+# Add the project root to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from run import app
 from app.models import User
 from app import db

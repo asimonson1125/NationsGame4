@@ -1,7 +1,7 @@
 {% from 'shared/_macros.html' import res_icon %}
 {% set _rarity_cls = {'common': 'text-slate-400', 'uncommon': 'text-green-400', 'rare': 'text-blue-400', 'epic': 'text-purple-400', 'legendary': 'text-amber-400'} %}
 {# Division & Reserve Tabs #}
-<div class="flex flex-wrap gap-2 mb-4">
+<div class="flex flex-wrap gap-2 mb-4" x-data="{ creating: false, newDivName: '' }">
     {% for div in divisions %}
     <button @click="activeDiv = activeDiv === {{ div.id }} ? null : {{ div.id }}"
             :class="activeDiv === {{ div.id }} ? 'bg-amber-500 text-slate-900' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'"
@@ -28,13 +28,53 @@
         <i class="fas fa-warehouse mr-1"></i>Reserve
         <span class="ml-1 text-xs opacity-75">({{ reserve_units | length }})</span>
     </button>
+
+    {# New Division button #}
+    <button @click="creating = true; newDivName = ''"
+            class="px-4 py-2 rounded-lg border border-dashed border-slate-600 text-slate-400 hover:text-amber-400 hover:border-amber-500 text-sm font-medium transition-colors">
+        <i class="fas fa-plus mr-1"></i>New Division
+    </button>
+
+    {# Create Division Modal #}
+    <template x-teleport="body">
+    <div>
+        <div x-show="creating" x-cloak
+             @click="creating = false"
+             class="fixed inset-0 bg-black/60 z-[10000]"></div>
+        <div x-show="creating" x-cloak
+             @click.stop
+             class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl z-[10100] w-[90%] max-w-sm">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-700">
+                <h3 class="font-semibold text-slate-100 text-sm">
+                    <i class="fas fa-flag mr-2 text-amber-400"></i>New Division
+                </h3>
+                <button @click="creating = false" class="text-slate-400 hover:text-slate-200 text-lg leading-none">&times;</button>
+            </div>
+            <div class="p-5">
+                <form hx-post="{{ url_for('military.create_division') }}"
+                      hx-target="#division-content"
+                      hx-swap="innerHTML"
+                      @submit="creating = false"
+                      class="flex flex-col gap-3">
+                    <input type="text" name="name" x-model="newDivName" placeholder="Division name..."
+                           class="bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-2 text-sm placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50"
+                           @keydown.escape="creating = false">
+                    <button type="submit"
+                            class="bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
+                        <i class="fas fa-plus mr-1"></i>Create Division
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    </template>
 </div>
 
 {# Division Panels #}
 {% for div in divisions %}
 <div x-show="activeDiv === {{ div.id }}" x-cloak
      class="bg-slate-800 rounded-lg border border-slate-700 p-5 mb-4">
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
             <div class="flex items-center gap-2 mb-0.5">
                 <h2 class="text-lg font-semibold text-slate-100">{{ div.name }}</h2>
@@ -70,7 +110,7 @@
             </a>
             {% endif %}
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             {% if div.mobilization_state != 'mobilized' %}
             <form hx-post="{{ url_for('military.mobilize_division', div_id=div.id) }}"
                   hx-target="#division-content" hx-swap="innerHTML" class="inline">

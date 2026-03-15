@@ -17,7 +17,7 @@
                 <td class="px-4 py-2">
                     <div class="flex items-center">
                         {% if nation.flag_url %}
-                        <img src="{{ nation.flag_url }}" alt="Flag" class="w-6 h-auto mr-2 rounded-sm" onerror="this.style.display='none'">
+                        <img src="{{ nation.flag_url }}" alt="Flag" class="w-6 h-4 object-cover mr-2 rounded-sm" onerror="this.style.display='none'">
                         {% endif %}
                         <a href="{{ url_for('main.nation_view', nation_id=nation.id) }}" class="text-amber-500 hover:text-amber-400 font-medium">{{ nation.name }}</a>
                     </div>

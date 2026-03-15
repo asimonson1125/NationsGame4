@@ -739,7 +739,7 @@ def _get_or_create_npc_nation():
         return npc_user.nation
 
     if not npc_user:
-        npc_user = User(username='_system_npc', is_admin=False)
+        npc_user = User(username='_system_npc', is_admin=False, is_system=True, vacation_mode=True)
         npc_user.set_password(random.randbytes(32).hex())
         db.session.add(npc_user)
         db.session.flush()

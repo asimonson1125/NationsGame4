@@ -346,10 +346,12 @@ def update_growth_rate():
     nation.growth_rate = rate
     nation.growth_mode = mode
     db.session.commit()
+    
+    rateText = str(rate) + '%' if not mode == 'auto' else 'auto'
     resp = current_app.make_response(json.dumps(_pop_delta_payload(nation)))
     resp.headers['Content-Type'] = 'application/json'
     resp.headers['HX-Trigger'] = json.dumps(
-        {'showMessage': {'message': f'Growth rate set to {rate}%.', 'type': 'success'},
+        {'showMessage': {'message': f'Growth rate set to {rateText}.', 'type': 'success'},
          'refreshResourceFooter': True}
     )
     return resp
@@ -368,9 +370,10 @@ def leaderboard():
 @main.route('/leaderboard/table')
 @login_required
 def leaderboard_table():
+    from ..models import User
     continent = request.args.get('continent', 'all').strip()
     lb_type = request.args.get('type', 'nation').strip()
-    query = Nation.query.options(db.joinedload(Nation.alliance))
+    query = Nation.query.join(User).filter(User.is_system == False).options(db.joinedload(Nation.alliance))
     continent_label = 'Global'
     if continent in VALID_CONTINENTS:
         query = query.filter(Nation.continent == continent)
@@ -389,6 +392,7 @@ def leaderboard_table():
 def leaderboard_alliance_table():
     from sqlalchemy import func
     from sqlalchemy.orm import joinedload
+    from ..models import User
     results = (db.session.query(
         Alliance,
         func.count(Nation.id).label('member_count'),
@@ -398,6 +402,8 @@ def leaderboard_alliance_table():
         func.sum(Nation.factory_gp).label('factory_gp'),
         func.sum(Nation.military_gp).label('military_gp'),
     ).join(Nation, Nation.alliance_id == Alliance.id)
+     .join(User, User.id == Nation.user_id)
+     .filter(User.is_system == False)
      .group_by(Alliance.id)
      .order_by(func.sum(Nation.total_gp).desc())
      .limit(50).all())
@@ -413,6 +419,7 @@ def leaderboard_alliance_table():
 @login_required
 def leaderboard_alliance_search():
     from sqlalchemy import func
+    from ..models import User
     q = request.args.get('q', '').strip()
     if len(q) < 2:
         return render_template('main/partials/leaderboard_alliance_search.html', query='', results=[])
@@ -421,6 +428,8 @@ def leaderboard_alliance_search():
         func.count(Nation.id).label('member_count'),
         func.sum(Nation.total_gp).label('total_gp'),
     ).join(Nation, Nation.alliance_id == Alliance.id)
+     .join(User, User.id == Nation.user_id)
+     .filter(User.is_system == False)
      .filter(Alliance.name.ilike(f'%{q}%'))
      .group_by(Alliance.id)
      .order_by(func.sum(Nation.total_gp).desc())
@@ -465,7 +474,7 @@ def admin_search_nations():
     q = request.args.get('q', '').strip()
     if len(q) < 1:
         return jsonify([])
-    nations = nation_search_query(q).limit(20).all()
+    nations = nation_search_query(q, include_system=True).limit(20).all()
     return jsonify([{'id': n.id, 'name': n.name} for n in nations])
 
 

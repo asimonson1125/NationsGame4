@@ -8,8 +8,8 @@
     <meta name="description" content="{% block meta_description %}Build your nation from the ground up. Expand borders, develop industry, raise armies, and trade on the global market in this multiplayer strategy game.{% endblock %}">
     <meta name="robots" content="{% block meta_robots %}index, follow{% endblock %}">
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="Nations Simulator">
-    <meta property="og:title" content="{% block og_title %}{{ self.title() }} - Nations Simulator{% endblock %}">
+    <meta property="og:site_name" content="Nations Engine">
+    <meta property="og:title" content="{% block og_title %}{{ self.title() }} - Nations Engine{% endblock %}">
     <meta property="og:description" content="{% block og_description %}Build your nation from the ground up. Expand borders, develop industry, raise armies, and trade on the global market.{% endblock %}">
     <meta property="og:image" content="{{ url_for('static', filename='images/logo.svg', _external=True) }}">
     {% block og_url %}<meta property="og:url" content="{{ request.url }}">{% endblock %}
@@ -18,7 +18,7 @@
     <meta name="twitter:description" content="{{ self.og_description() }}">
     <meta name="twitter:image" content="{{ url_for('static', filename='images/logo.svg', _external=True) }}">
     {% block canonical %}<link rel="canonical" href="{{ request.url }}">{% endblock %}
-    <title>{% block title %}Nations{% endblock %} - Nations Simulator</title>
+    <title>{% block title %}Nations Engine{% endblock %} - Nations Engine</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,8 +36,8 @@
 
     {# Left: Brand #}
     <a href="{{ url_for('main.home') }}" class="flex items-center gap-2 mr-6 shrink-0">
-        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Nations Simulator" class="w-8 h-8">
-        <span class="text-lg font-bold text-amber-500 tracking-tight">NATIONS</span>
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Nations Engine" class="w-8 h-8">
+        <span class="text-xl text-amber-500 tracking-wider font-semibold" style="font-family: Palatino, 'Palatino Linotype', 'Palatino LT STD', 'Book Antiqua', Georgia, serif;">NATIONS ENGINE</span>
     </a>
 
     {# Center: Nav Links (desktop) #}
@@ -201,7 +201,7 @@
      class="hidden fixed inset-0 bg-black/60 z-[1050]"
      onclick="closeGPModal()"></div>
 <div id="gp-popup"
-     class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 p-5 rounded-lg shadow-2xl z-[1100] w-[90%] max-w-md">
+     class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 p-5 rounded-lg shadow-2xl z-[1100] w-[90%] max-w-md overflow-y-auto max-h-[80vh]">
     <button onclick="closeGPModal()"
             class="absolute top-2.5 right-3 text-slate-400 hover:text-slate-200 text-2xl leading-none cursor-pointer bg-transparent border-0 p-0">&times;</button>
     <h2 class="text-lg font-semibold text-slate-100 border-b border-slate-700 pb-2.5 mt-0">GP Breakdown</h2>

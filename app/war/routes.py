@@ -108,6 +108,8 @@ def declare_war(nation_id):
 
     if target.id == my_nation.id:
         return _declare_error('You cannot declare war on yourself.')
+    if target.user.is_system:
+        return _declare_error('You cannot declare war on a system nation.')
     if current_user.vacation_mode:
         return _declare_error('Vacation mode is active.')
     if (my_nation.tier or 1) < 2:
@@ -118,6 +120,27 @@ def declare_war(nation_id):
     existing = get_active_war(my_nation.id, target.id)
     if existing:
         return _declare_error('An active war already exists between these nations.')
+
+    now = datetime.now(timezone.utc)
+    cooldown_cutoff = now - timedelta(days=30)
+    recent = War.query.filter(
+        War.attacker_nation_id == my_nation.id,
+        War.defender_nation_id == target.id,
+        War.declared_at >= cooldown_cutoff,
+    ).first()
+    # Also block if a longer war only recently ended (declared outside the 30-day window
+    # but ended within it — e.g. declared 35 days ago, ended 5 days ago).
+    if not recent:
+        recent = War.query.filter(
+            War.attacker_nation_id == my_nation.id,
+            War.defender_nation_id == target.id,
+            War.ended_at >= cooldown_cutoff,
+        ).first()
+    if recent:
+        ref = recent.ended_at or recent.declared_at
+        ref = ref if ref.tzinfo else ref.replace(tzinfo=timezone.utc)
+        days_left = 30 - int((now - ref).total_seconds() // 86400)
+        return _declare_error(f'You cannot declare war on this nation again for {days_left} more day(s).')
 
     if request.method == 'GET':
         return render_template('war/declare.html', target=target, nation=my_nation)

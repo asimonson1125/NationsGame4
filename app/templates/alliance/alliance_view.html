@@ -191,7 +191,7 @@
                         <td class="px-4 py-2">
                             <div class="flex items-center gap-2">
                                 {% if app.nation.flag_url %}
-                                <img src="{{ app.nation.flag_url }}" alt="" class="w-5 h-auto rounded-sm" onerror="this.style.display='none'">
+                                <img src="{{ app.nation.flag_url }}" alt="" class="w-5 h-3 object-cover rounded-sm" onerror="this.style.display='none'">
                                 {% endif %}
                                 <a href="{{ url_for('main.nation_view', nation_id=app.nation.id) }}"
                                    class="text-amber-500 hover:text-amber-400 font-medium">{{ app.nation.name }}</a>

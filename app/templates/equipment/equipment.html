@@ -8,7 +8,7 @@
     <h1 class="text-2xl font-bold text-slate-100 mb-6"><i class="fas fa-tools mr-2"></i>Equipment</h1>
 
     {# Tab Bar #}
-    <div class="flex gap-1 border-b border-slate-700 mb-6">
+    <div class="flex gap-1 border-b border-slate-700 mb-6 overflow-x-auto">
         <button @click="tab = 'inventory'"
                 :class="tab === 'inventory' ? 'border-amber-500 text-amber-400 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
                 class="px-4 py-2 text-sm border-b-2 transition-colors -mb-px">
@@ -161,7 +161,7 @@
 
         {# Token balance #}
         <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-6 flex items-center gap-3">
-            <i class="fas fa-coins text-amber-500 text-xl"></i>
+            <img src="{{ url_for('static', filename='images/icons/loot_token_icon.png') }}" class="w-6 h-6" alt="Loot Token">
             <span class="text-slate-300 font-medium">Loot Tokens:</span>
             <span id="token-balance" class="text-xl font-bold text-amber-400">{{ '{:,.0f}'.format(nation.loot_tokens or 0) }}</span>
         </div>
@@ -201,7 +201,7 @@
                     <div class="flex items-center justify-between mb-2">
                         <h3 class="font-bold text-slate-100">{{ size_labels[size_key] }} Crate</h3>
                         <span class="text-sm font-medium text-amber-400">
-                            <i class="fas fa-coins mr-0.5"></i> {{ crate_cost }}
+                            <img src="{{ url_for('static', filename='images/icons/loot_token_icon.png') }}" class="w-3.5 h-3.5 inline mr-0.5" alt=""> {{ crate_cost }}
                         </span>
                     </div>
                     <div class="text-xs text-slate-400 space-y-1 mb-3">

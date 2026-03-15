@@ -20,7 +20,7 @@ from app.models import (
 @pytest.fixture()
 def npc_nation(app):
     """Create the _system_npc user and nation used as mission opponent."""
-    u = User(username='_system_npc', is_admin=False)
+    u = User(username='_system_npc', is_admin=False, is_system=True, vacation_mode=True)
     u.set_password('irrelevant')
     db.session.add(u)
     db.session.flush()

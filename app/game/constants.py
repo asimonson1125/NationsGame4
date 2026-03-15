@@ -27,5 +27,10 @@ TRADEABLE_NATURAL_RESOURCES = [
     'coal', 'iron', 'uraninite', 'petroleum', 'marble', 'copper', 'lead',
     'silver', 'gold', 'platinum', 'silicon', 'sulfur', 'rubber_tree',
     'cocoa', 'cow', 'sheep', 'goat', 'salmon', 'elephant',
-    'apple_tree', 'oak_tree', 'cactus',
+    'apple_tree', 'oak_tree', 'cactus', 'mulberry', 'coffea', 'herbs',
+    'tobacco_plant', 'cotton', 'christmas_tree', 'grapevine', 'hops',
+    'kingwood', 'hemp', 'beehive', 'boar', 'yak', 'buffalo', 'fox',
+    'panther', 'clam', 'shrimp', 'bass', 'cod', 'mackerel', 'piranha',
+    'dolphin', 'shark', 'whale', 'bauxite', 'saltpeter', 'gemstone',
+    'stonesilver', 'crude_deep_sea_oil',
 ]

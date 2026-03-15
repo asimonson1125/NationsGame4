@@ -1,4 +1,4 @@
-# NationsGame 4 (NG4)
+# NationsEngine (NationsGame 4 - NG4)
 
 A browser-based nation-building simulator. Players manage resources, industry, land, and military across five continents.
 
@@ -7,6 +7,7 @@ TODO:
 ___
 Start Beta Phase:
 - News (nation events)
+- War limits (1 month moratorium before declaring war again)
 - Events (a la 2.0)
 - Rate Limiting
 - Pushing calculations and displays to client JS

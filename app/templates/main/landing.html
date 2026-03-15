@@ -1,9 +1,9 @@
 {% extends layout %}
 
-{% block title %}Nations{% endblock %}
+{% block title %}About{% endblock %}
 
-{% block meta_description %}Nations Simulator — a free multiplayer strategy game. Build your nation, expand borders across five continents, develop industry, raise armies, and trade on a player-driven global market.{% endblock %}
-{% block og_title %}Nations Simulator — Build, Expand, Conquer{% endblock %}
+{% block meta_description %}Nations Engine — a free multiplayer strategy game. Build your nation, expand borders across five continents, develop industry, raise armies, and trade on a player-driven global market.{% endblock %}
+{% block og_title %}Nations Engine — Build, Expand, Conquer{% endblock %}
 {% block og_description %}A free multiplayer nation-building strategy game. Expand borders, develop industry, raise armies, and trade on the global market.{% endblock %}
 
 {% block head %}
@@ -29,7 +29,7 @@
 {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    "name": "Nations Simulator",
+    "name": "Nations Engine",
     "description": "A free multiplayer nation-building strategy game. Expand borders, develop industry, raise armies, and trade on a player-driven global market.",
     "applicationCategory": "Game",
     "genre": "Strategy",
@@ -80,8 +80,8 @@
 <div class="relative overflow-hidden">
     <div class="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-transparent"></div>
     <div class="relative max-w-5xl mx-auto px-6 pt-20 pb-16 text-center">
-        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Nations Simulator logo" class="w-20 h-20 mx-auto mb-6">
-        <h1 class="text-4xl sm:text-5xl font-bold mb-4">Nations Simulator</h1>
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Nations Engine logo" class="w-20 h-20 mx-auto mb-6">
+        <h1 class="text-4xl sm:text-5xl text-amber-500 mb-4 tracking-tight font-bold" style="font-family: Palatino, 'Palatino Linotype', 'Palatino LT STD', 'Book Antiqua', Georgia, serif;">Nations Engine</h1>
         <p class="text-lg text-slate-300 max-w-2xl mx-auto mb-8">
             Build your nation from the ground up. Expand your borders, develop industry,
             raise armies, and trade on the global market. Compete with players worldwide
@@ -122,8 +122,8 @@
             </ul>
         </div>
         <div class="flex-1 min-w-0">
-            <img src="{{ url_for('static', filename='sample_nationpage.png') }}"
-                 alt="Nations Simulator nation page"
+            <img src="{{ url_for('static', filename='sample_nationpage.avif') }}"
+                 alt="Nations Engine nation page"
                  class="rounded-xl border border-slate-700 shadow-2xl w-full">
         </div>
     </div>
@@ -145,8 +145,8 @@
             </ul>
         </div>
         <div class="flex-1 min-w-0">
-            <img src="{{ url_for('static', filename='sample_battle.png') }}"
-                 alt="Nations Simulator battle results"
+            <img src="{{ url_for('static', filename='sample_battle.avif') }}"
+                 alt="Nations Engine battle results"
                  class="rounded-xl border border-slate-700 shadow-2xl w-full">
         </div>
     </div>
@@ -168,8 +168,8 @@
             </ul>
         </div>
         <div class="flex-1 min-w-0">
-            <img src="{{ url_for('static', filename='sample_industry.png') }}"
-                 alt="Nations Simulator industry page"
+            <img src="{{ url_for('static', filename='sample_industry.avif') }}"
+                 alt="Nations Engine industry page"
                  class="rounded-xl border border-slate-700 shadow-2xl w-full">
         </div>
     </div>
@@ -191,8 +191,8 @@
             </ul>
         </div>
         <div class="flex-1 min-w-0">
-            <img src="{{ url_for('static', filename='sample_leaderboard.png') }}"
-                 alt="Nations Simulator leaderboards"
+            <img src="{{ url_for('static', filename='sample_leaderboard.avif') }}"
+                 alt="Nations Engine leaderboards"
                  class="rounded-xl border border-slate-700 shadow-2xl w-full">
         </div>
     </div>
@@ -280,7 +280,7 @@
                 <span class="text-xs font-semibold uppercase tracking-widest text-sky-400">Mobile-Ready</span>
                 <h2 class="text-2xl font-bold mt-2 mb-3">Play Anywhere, Anytime</h2>
                 <p class="text-slate-400 leading-relaxed mb-4">
-                    Nations Simulator is fully responsive. Monitor your nation's resources,
+                    Nations Engine is fully responsive. Monitor your nation's resources,
                     collect from factories, and review battle results straight from your phone —
                     no app download required.
                 </p>
@@ -291,11 +291,11 @@
                 </ul>
             </div>
             <div class="flex justify-center gap-6 lg:w-1/2">
-                <img src="{{ url_for('static', filename='sample_mobilenationpage.png') }}"
-                     alt="Nations Simulator mobile nation page"
+                <img src="{{ url_for('static', filename='sample_mobilenationpage.avif') }}"
+                     alt="Nations Engine mobile nation page"
                      class="w-36 sm:w-44 rounded-2xl border border-slate-700 shadow-xl object-contain">
-                <img src="{{ url_for('static', filename='sample_mobilebattle.png') }}"
-                     alt="Nations Simulator mobile battle view"
+                <img src="{{ url_for('static', filename='sample_mobilebattle.avif') }}"
+                     alt="Nations Engine mobile battle view"
                      class="w-36 sm:w-44 rounded-2xl border border-slate-700 shadow-xl object-contain">
             </div>
         </div>
@@ -304,7 +304,7 @@
 
 {# ===== FOOTER ===== #}
 <div class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
-    Nations Simulator{% if latest_update %} &mdash; <a href="{{ url_for('main.changelog_page') }}" class="text-slate-400 hover:text-slate-300 transition-colors">v{{ latest_update.version }}</a>{% endif %}
+    Nations Engine{% if latest_update %} &mdash; <a href="{{ url_for('main.changelog_page') }}" class="text-slate-400 hover:text-slate-300 transition-colors">v{{ latest_update.version }}</a>{% endif %}
 </div>
 
 {% endblock %}

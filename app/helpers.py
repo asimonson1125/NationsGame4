@@ -7,7 +7,7 @@ from flask import current_app
 
 # ── Nation search ────────────────────────────────────────────────────────
 
-def nation_search_query(q, *, exclude_id=None, search_leader=False):
+def nation_search_query(q, *, exclude_id=None, search_leader=False, include_system=False):
     """Return a filtered Nation.query for the given search string.
 
     Callers apply .limit(), .order_by(), .options() etc. themselves.
@@ -16,14 +16,17 @@ def nation_search_query(q, *, exclude_id=None, search_leader=False):
         q: search string (caller is responsible for min-length guard)
         exclude_id: omit this nation ID from results (e.g. current user's nation)
         search_leader: also match against Nation.leader column
+        include_system: if True, include system nations (default False)
     """
-    from .models import Nation
+    from .models import Nation, User
     from . import db
     if search_leader:
         name_filter = db.or_(Nation.name.ilike(f'%{q}%'), Nation.leader.ilike(f'%{q}%'))
     else:
         name_filter = Nation.name.ilike(f'%{q}%')
-    query = Nation.query.filter(name_filter)
+    query = Nation.query.join(User).filter(name_filter)
+    if not include_system:
+        query = query.filter(User.is_system == False)
     if exclude_id is not None:
         query = query.filter(Nation.id != exclude_id)
     return query

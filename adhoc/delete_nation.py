@@ -3,6 +3,11 @@ Delete a nation and its user account, removing all related records.
 Usage: python3 adhoc/delete_nation.py <nation_name>
 """
 import sys
+import os
+
+# Add the project root to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from run import app
 from app.models import (
     Nation, User, NaturalResource, NationFactory, Division, Unit,

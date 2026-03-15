@@ -125,7 +125,7 @@ def process_hourly_tick():
     from .models import Nation, NationFactory, User
     from . import db
     with scheduler.app.app_context():
-        npc_user = User.query.filter_by(username='_system_npc').first()
+        npc_user = User.query.filter_by(is_system=True).first()
         npc_nation_id = npc_user.nation.id if npc_user and npc_user.nation else None
 
         vacation_nation_ids = (

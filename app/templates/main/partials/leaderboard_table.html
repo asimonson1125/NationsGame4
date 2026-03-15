@@ -4,9 +4,9 @@
             <tr class="bg-slate-700/50 text-left text-slate-400">
                 <th class="px-4 py-3 w-16">Rank</th>
                 <th class="px-4 py-3">Nation</th>
-                <th class="px-4 py-3">Alliance</th>
-                <th class="px-4 py-3">Leader</th>
-                <th class="px-4 py-3">Continent</th>
+                <th class="px-4 py-3 lb-hide">Alliance</th>
+                <th class="px-4 py-3 lb-hide">Leader</th>
+                <th class="px-4 py-3 lb-hide">Continent</th>
                 <th class="px-4 py-3 text-right">Population</th>
                 <th class="px-4 py-3 text-right">{{ 'Military GP' if lb_type == 'military' else 'GP' }}</th>
             </tr>
@@ -31,20 +31,20 @@
                 <td class="px-4 py-3">
                     <div class="flex items-center">
                         {% if nation.flag_url %}
-                        <img src="{{ nation.flag_url }}" alt="Flag" class="w-8 h-auto mr-2 rounded-sm" onerror="this.style.display='none'">
+                        <img src="{{ nation.flag_url }}" alt="Flag" class="w-8 h-5 object-cover mr-2 rounded-sm" onerror="this.style.display='none'">
                         {% endif %}
                         <a href="{{ url_for('main.nation_view', nation_id=nation.id) }}" class="text-amber-500 hover:text-amber-400 font-medium">{{ nation.name }}</a>
                     </div>
                 </td>
-                <td class="px-4 py-3">
+                <td class="px-4 py-3 lb-hide">
                     {% if nation.alliance %}
                         <a href="{{ url_for('alliance.alliance_view', id=nation.alliance.id) }}" class="text-amber-500 hover:text-amber-400">{{ nation.alliance.name }}</a>
                     {% else %}
                         <span class="text-slate-500 italic">Unallied</span>
                     {% endif %}
                 </td>
-                <td class="px-4 py-3 text-slate-300">{{ nation.leader or '—' }}</td>
-                <td class="px-4 py-3 text-slate-500">{{ nation.continent or '—' }}</td>
+                <td class="px-4 py-3 text-slate-300 lb-hide">{{ nation.leader or '—' }}</td>
+                <td class="px-4 py-3 text-slate-500 lb-hide">{{ nation.continent or '—' }}</td>
                 <td class="px-4 py-3 text-right text-slate-300">{{ '{:,}'.format(nation.population | int) }}</td>
                 <td class="px-4 py-3 text-right font-semibold text-amber-400">{{ '{:,}'.format((nation.military_gp if lb_type == 'military' else nation.total_gp) | int) }}</td>
             </tr>

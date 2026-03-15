@@ -24,6 +24,7 @@ MIGRATIONS = [
     'add_division_defensive',
     'add_ban_columns',
     'add_battle_name',
+    'add_user_system_flag',
 ]
 
 

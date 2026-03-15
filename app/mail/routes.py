@@ -116,6 +116,8 @@ def send_message():
         return error_response(f'Nation "{escape(recipient_name)}" not found.')
     if recipient.id == nation.id:
         return error_response('You cannot send a message to yourself.')
+    if recipient.user.is_system:
+        return error_response('You cannot send messages to a system nation.')
 
     msg = Message(
         sender_id=nation.id,

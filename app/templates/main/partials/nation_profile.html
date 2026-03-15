@@ -1,4 +1,9 @@
 {% from 'shared/_macros.html' import res_icon %}
+<style>
+@media (max-width: 639px) {
+    .nation-stats-panel { border-left: none !important; padding-left: 0 !important; }
+}
+</style>
 {# ===== NATION HEADER BANNER ===== #}
 {% set continent_bg = {
     'Tind':          'tind.png',
@@ -12,7 +17,7 @@
      {% if is_owner %}x-data="{ flagModal: false }"{% endif %}
      style="background-image: url('{{ bg_image }}'); padding: 100px 20px;">
     <div class="absolute inset-0 bg-slate-950/60"></div>
-    <div class="relative max-w-5xl mx-auto flex items-center text-white"
+    <div class="relative max-w-5xl mx-auto flex flex-col sm:flex-row items-center text-white"
          style="text-shadow: 1px 1px 4px rgba(0,0,0,.7)">
 
         {# Left: flag + nation name #}
@@ -22,9 +27,9 @@
                  class="relative cursor-pointer mb-4 group">
                 {% if nation.flag_url %}
                 <img src="{{ nation.flag_url }}" alt="{{ nation.name }} Flag"
-                     class="w-48 h-28 object-cover border-2 border-white/50 group-hover:border-amber-400 transition-colors duration-200">
+                     class="w-32 sm:w-44 h-28 object-cover border-2 border-white/50 group-hover:border-amber-400 transition-colors duration-200">
                 {% else %}
-                <div class="w-48 h-28 bg-white/20 border-2 border-white/50 group-hover:border-amber-400 flex items-center justify-center text-white/60 group-hover:text-amber-300 text-sm transition-colors duration-200">
+                <div class="w-32 sm:w-44 h-28 bg-white/20 border-2 border-white/50 group-hover:border-amber-400 flex items-center justify-center text-white/60 group-hover:text-amber-300 text-sm transition-colors duration-200">
                     Click to set flag
                 </div>
                 {% endif %}
@@ -35,9 +40,9 @@
             {% else %}
                 {% if nation.flag_url %}
                 <img src="{{ nation.flag_url }}" alt="{{ nation.name }} Flag"
-                     class="w-48 h-28 object-cover border-2 border-white/50 mb-4">
+                     class="w-32 sm:w-44 h-28 object-cover border-2 border-white/50 mb-4">
                 {% else %}
-                <div class="w-48 h-28 bg-white/20 border-2 border-white/50 mb-4 flex items-center justify-center text-white/60 text-sm">
+                <div class="w-32 sm:w-44 h-28 bg-white/20 border-2 border-white/50 mb-4 flex items-center justify-center text-white/60 text-sm">
                     No Flag Set
                 </div>
                 {% endif %}
@@ -77,7 +82,7 @@
         </div>
 
         {# Right: stats #}
-        <div class="flex-1 pl-5 border-l-2 border-white/50 flex flex-col justify-center gap-4">
+        <div class="nation-stats-panel flex-1 pl-5 border-l-2 border-white/50 flex flex-col justify-center gap-4 pt-4">
             <div class="text-center">
                 <div class="text-sm opacity-80 mb-0.5">Leader</div>
                 <div class="text-2xl font-bold">{{ nation.leader or 'Unknown' }}</div>
@@ -200,7 +205,7 @@
                         </span>
                     </template>
                 </div>
-                <div class="mt-2">
+                <div class="mt-2 relative">
                     <button @click="open = !open"
                             class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-colors"
                             :class="mode === 'off'
@@ -213,7 +218,7 @@
                         <i class="fas fa-caret-down text-[10px]"></i>
                     </button>
                     <div x-show="open" @click.outside="open = false" x-cloak
-                         class="absolute z-30 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl overflow-hidden"
+                         class="absolute z-30 mt-1 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-600 rounded-lg shadow-xl overflow-hidden min-w-[200px]"
                          style="text-shadow: none;">
                         <button @click="mode = 'off'; save(0); open = false"
                                 class="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-700 transition-colors"
