@@ -241,6 +241,7 @@ def process_war_deployments():
                 atk_nation = db.session.get(Nation, deploying_id)
                 def_nation = db.session.get(Nation, opponent_id)
 
+                def_name = def_nation.name if def_nation else str(opponent_id)
                 battle = Battle(
                     attacker_division_id=atk_div.id,
                     defender_division_id=None,
@@ -249,9 +250,10 @@ def process_war_deployments():
                     attacker_nation_id=deploying_id,
                     defender_nation_id=opponent_id,
                     attacker_nation_name=atk_nation.name if atk_nation else str(deploying_id),
-                    defender_nation_name=def_nation.name if def_nation else str(opponent_id),
+                    defender_nation_name=def_name,
+                    name=f'{war.name} \u2014 Assault on {def_name} (Unopposed)',
                     battle_type='pvp',
-                    location=None,
+                    location=def_nation.continent if def_nation else None,
                     status='finished',
                     winner='attacker',
                     finished_at=now,
@@ -282,7 +284,7 @@ def process_war_deployments():
                     sender_id=None,
                     recipient_id=opponent_id,
                     subject=f'Overrun — {war.name}',
-                    body=f'{deploying_name} attacked with no defensive division set. An unopposed victory was awarded to them.\n\n{link}',
+                    body=f'{deploying_name} attacked our nation while we had no defensive division set to coordinate a response. An unopposed victory was awarded to them.\n\n{link}',
                     message_type='system',
                 ))
                 entry.status = 'arrived'
@@ -293,6 +295,7 @@ def process_war_deployments():
             # Create the battle
             atk_nation = db.session.get(Nation, deploying_id)
             def_nation = db.session.get(Nation, opponent_id)
+            def_name = def_nation.name if def_nation else str(opponent_id)
             battle = Battle(
                 attacker_division_id=atk_div.id,
                 defender_division_id=def_div.id,
@@ -301,9 +304,10 @@ def process_war_deployments():
                 attacker_nation_id=deploying_id,
                 defender_nation_id=opponent_id,
                 attacker_nation_name=atk_nation.name if atk_nation else str(deploying_id),
-                defender_nation_name=def_nation.name if def_nation else str(opponent_id),
+                defender_nation_name=def_name,
+                name=f'{war.name} \u2014 Assault on {def_name}',
                 battle_type='pvp',
-                location=None,
+                location=def_nation.continent if def_nation else None,
             )
             db.session.add(battle)
             db.session.flush()

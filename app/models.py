@@ -307,6 +307,7 @@ class Battle(db.Model):
     defender_division_name = db.Column(db.String(120), nullable=True)
     attacker_nation_name = db.Column(db.String(120), nullable=True)
     defender_nation_name = db.Column(db.String(120), nullable=True)
+    name = db.Column(db.String(300), nullable=True)  # set for war PvP battles
     status = db.Column(db.String(20), default='active')  # active|finished
     winner = db.Column(db.String(20), nullable=True)      # attacker|defender|null
     battle_type = db.Column(db.String(20), default='pvp')  # pvp|peacekeeping|pve_mission

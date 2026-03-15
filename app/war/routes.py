@@ -84,11 +84,14 @@ def wars_list():
     active = [w for w in my_wars if w.status == 'active']
     history = [w for w in my_wars if w.status != 'active']
 
+    war_scores = {w.id: compute_war_scores(w) for w in my_wars}
+
     return render_template(
         'war/partials/wars_list.html',
         active_wars=active,
         war_history=history,
         nation=nation,
+        war_scores=war_scores,
     )
 
 
@@ -100,18 +103,21 @@ def declare_war(nation_id):
     my_nation = current_user.nation
     target = Nation.query.get_or_404(nation_id)
 
+    def _declare_error(msg):
+        return render_template('war/declare.html', target=target, nation=my_nation, error=msg), 422
+
     if target.id == my_nation.id:
-        return _error_response('You cannot declare war on yourself.')
+        return _declare_error('You cannot declare war on yourself.')
     if current_user.vacation_mode:
-        return _error_response('Vacation mode is active.')
+        return _declare_error('Vacation mode is active.')
     if (my_nation.tier or 1) < 2:
-        return _error_response('War is unlocked at Tier 2.')
+        return _declare_error('War is unlocked at Tier 2.')
     if (target.tier or 1) < (my_nation.tier or 1):
-        return _error_response('You cannot declare war on a nation of lower tier than yours.')
+        return _declare_error('You cannot declare war on a nation of lower tier than yours.')
 
     existing = get_active_war(my_nation.id, target.id)
     if existing:
-        return _error_response('An active war already exists between these nations.')
+        return _declare_error('An active war already exists between these nations.')
 
     if request.method == 'GET':
         return render_template('war/declare.html', target=target, nation=my_nation)
@@ -121,13 +127,13 @@ def declare_war(nation_id):
     casus_belli = request.form.get('casus_belli', '').strip()
 
     if not name:
-        return _error_response('War name is required.')
+        return _declare_error('War name is required.')
     if len(name) > 200:
-        return _error_response('War name must be 200 characters or fewer.')
+        return _declare_error('War name must be 200 characters or fewer.')
     if not casus_belli:
-        return _error_response('Casus belli is required.')
+        return _declare_error('Casus belli is required.')
     if len(casus_belli) > 2000:
-        return _error_response('Casus belli must be 2000 characters or fewer.')
+        return _declare_error('Casus belli must be 2000 characters or fewer.')
 
     new_war = War(
         attacker_nation_id=my_nation.id,
@@ -286,7 +292,7 @@ def deploy_attack(war_id):
         war_id=war_obj.id,
         deploying_nation_id=my_nation_id,
         division_id=div.id,
-        arrives_at=now + timedelta(hours=24),
+        arrives_at=now + timedelta(hours=0),
     )
     db.session.add(entry)
     db.session.commit()
@@ -436,17 +442,30 @@ def demand_compensation(war_id):
     if my_nation_id == war_obj.defender_nation_id and not scores['defender_can_demand']:
         return _error_response('You need a lead of 3+ victories to demand compensation.')
 
-    loser_id = (war_obj.defender_nation_id
-                if my_nation_id == war_obj.attacker_nation_id
-                else war_obj.attacker_nation_id)
     _rescind_peace_mail(war_obj)
-    resolve_war_compensation(war_obj, my_nation_id, db.session)
+    result = resolve_war_compensation(war_obj, my_nation_id, db.session)
+    winner_id = result['winner_id']
+    loser_id = result['loser_id']
+    transfers = result['transfers']
 
+    winner_nation = db.session.get(Nation, winner_id)
+    loser_nation = db.session.get(Nation, loser_id)
     link = f'<a href="/war/{war_obj.id}" class="text-amber-400 hover:text-amber-300 underline">View War</a>'
+
+    resource_lines = '\n'.join(
+        f'  \u2022 {key.replace("_", " ").title()}: {int(amt):,}'
+        for key, amt in transfers.items()
+    ) if transfers else '  (no resources transferred)'
+
+    _send_war_mail(
+        winner_id,
+        f'War Reparations Claimed \u2014 {war_obj.name}',
+        f'You have claimed reparations from {loser_nation.name}:\n\n{resource_lines}\n\n{link}',
+    )
     _send_war_mail(
         loser_id,
-        f'War Reparations Demanded — {war_obj.name}',
-        f'35% of your resource stockpiles have been taken as war reparations.\n\n{link}',
+        f'War Reparations Paid \u2014 {war_obj.name}',
+        f'{winner_nation.name} has claimed reparations from your nation:\n\n{resource_lines}\n\n{link}',
     )
     db.session.commit()
 
@@ -485,17 +504,31 @@ def demand_annexation(war_id):
             f'Annexation requires 3 offensive victories. You have {offensive_wins}.'
         )
 
-    loser_id = (war_obj.defender_nation_id
-                if my_nation_id == war_obj.attacker_nation_id
-                else war_obj.attacker_nation_id)
     _rescind_peace_mail(war_obj)
-    resolve_war_annexation(war_obj, my_nation_id, db.session)
+    result = resolve_war_annexation(war_obj, my_nation_id, db.session)
+    winner_id = result['winner_id']
+    loser_id = result['loser_id']
 
+    winner_nation = db.session.get(Nation, winner_id)
+    loser_nation = db.session.get(Nation, loser_id)
     link = f'<a href="/war/{war_obj.id}" class="text-amber-400 hover:text-amber-300 underline">View War</a>'
+
+    detail_lines = []
+    if result['population']:
+        detail_lines.append(f'  \u2022 Population: {result["population"]:,}')
+    for key, amt in result['land'].items():
+        detail_lines.append(f'  \u2022 {key.replace("_", " ").title()}: {amt:,} tiles')
+    detail_block = '\n'.join(detail_lines) if detail_lines else '  (nothing transferred)'
+
+    _send_war_mail(
+        winner_id,
+        f'Annexation Complete \u2014 {war_obj.name}',
+        f'You have annexed territory from {loser_nation.name}:\n\n{detail_block}\n\n{link}',
+    )
     _send_war_mail(
         loser_id,
-        f'Annexed — {war_obj.name}',
-        f'20% of your land and population have been annexed as a result of the war.\n\n{link}',
+        f'Annexed \u2014 {war_obj.name}',
+        f'{winner_nation.name} has annexed part of your nation:\n\n{detail_block}\n\n{link}',
     )
     db.session.commit()
 

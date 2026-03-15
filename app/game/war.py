@@ -14,9 +14,33 @@ LAND_KEYS = [
 
 
 def compute_war_scores(war):
-    """Return dict describing score state and what each side can demand."""
-    atk_v = war.attacker_victories
-    def_v = war.defender_victories
+    """Return dict describing score state and what each side can demand.
+
+    Computed from live WarBattle + Battle records to stay accurate even if
+    cached War.attacker_victories / defender_victories drift out of sync.
+    """
+    from ..models import WarBattle, Battle
+
+    war_battles = WarBattle.query.filter_by(war_id=war.id).all()
+    atk_v = 0
+    def_v = 0
+    for wb in war_battles:
+        battle = Battle.query.filter_by(
+            id=wb.battle_id, attacker_nation_id=wb.attacker_nation_id
+        ).first()
+        if not battle or battle.status != 'finished':
+            continue
+        if wb.side == 'attacker':
+            if battle.winner == 'attacker':
+                atk_v += 1
+            else:
+                def_v += 1
+        else:
+            if battle.winner == 'attacker':
+                def_v += 1
+            else:
+                atk_v += 1
+
     atk_lead = atk_v - def_v
     def_lead = def_v - atk_v
     return {
@@ -45,7 +69,11 @@ def count_offensive_victories(war, nation_id):
 
 
 def resolve_war_compensation(war, demanding_nation_id, db_session):
-    """Transfer 35% of the losing nation's resource stockpiles to the winner."""
+    """Transfer 35% of the losing nation's resource stockpiles to the winner.
+
+    Returns {'winner_id': int, 'loser_id': int, 'transfers': {key: amount}}
+    with only non-zero transfers included.
+    """
     from ..models import Nation
     if demanding_nation_id == war.attacker_nation_id:
         winner_id, loser_id = war.attacker_nation_id, war.defender_nation_id
@@ -54,17 +82,25 @@ def resolve_war_compensation(war, demanding_nation_id, db_session):
 
     winner = db_session.get(Nation, winner_id)
     loser = db_session.get(Nation, loser_id)
+    transfers = {}
     for key in RESOURCE_KEYS:
         transfer = (getattr(loser, key) or 0.0) * 0.35
-        setattr(loser, key, max(0.0, (getattr(loser, key) or 0.0) - transfer))
-        setattr(winner, key, (getattr(winner, key) or 0.0) + transfer)
+        if transfer > 0:
+            setattr(loser, key, max(0.0, (getattr(loser, key) or 0.0) - transfer))
+            setattr(winner, key, (getattr(winner, key) or 0.0) + transfer)
+            transfers[key] = transfer
 
     war.status = 'compensated'
     war.ended_at = datetime.now(timezone.utc)
+    return {'winner_id': winner_id, 'loser_id': loser_id, 'transfers': transfers}
 
 
 def resolve_war_annexation(war, demanding_nation_id, db_session):
-    """Transfer 20% of the losing nation's land and population to the winner."""
+    """Transfer 20% of the losing nation's land and population to the winner.
+
+    Returns {'winner_id': int, 'loser_id': int,
+             'population': int, 'land': {key: amount}} with only non-zero values.
+    """
     from ..models import Nation
     if demanding_nation_id == war.attacker_nation_id:
         winner_id, loser_id = war.attacker_nation_id, war.defender_nation_id
@@ -78,14 +114,20 @@ def resolve_war_annexation(war, demanding_nation_id, db_session):
     loser.population = max(0, (loser.population or 0) - pop_transfer)
     winner.population = (winner.population or 0) + pop_transfer
 
+    land_transfers = {}
     for key in LAND_KEYS:
         transfer = int((getattr(loser, key) or 0) * 0.20)
         if transfer > 0:
             setattr(loser, key, max(0, (getattr(loser, key) or 0) - transfer))
             setattr(winner, key, (getattr(winner, key) or 0) + transfer)
+            land_transfers[key] = transfer
 
     war.status = 'annexed'
     war.ended_at = datetime.now(timezone.utc)
+    return {
+        'winner_id': winner_id, 'loser_id': loser_id,
+        'population': pop_transfer, 'land': land_transfers,
+    }
 
 
 def resolve_white_peace(war):

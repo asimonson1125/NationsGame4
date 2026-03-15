@@ -89,7 +89,9 @@
                     <tr class="border-t border-slate-700 hover:bg-slate-700/30 transition-colors">
                         <td class="px-4 py-3">
                             <a href="{{ url_for('military.battle_view', battle_id=b.id) }}"
-                               class="text-amber-400 hover:text-amber-300 font-medium">#{{ b.id }}</a>
+                               class="text-amber-400 hover:text-amber-300 font-medium">
+                                {{ b.name or ('#' ~ b.id) }}
+                            </a>
                         </td>
                         <td class="px-4 py-3 text-slate-300">
                             <a href="{{ url_for('main.nation_view', nation_id=b.attacker_nation_id) }}"

@@ -11,6 +11,12 @@
            class="text-amber-400 hover:text-amber-300 font-semibold">{{ target.name }}</a>
     </p>
 
+    {% if error %}
+    <div class="mb-4 px-4 py-3 bg-red-900/40 border border-red-600/50 rounded-lg text-red-300 text-sm">
+        <i class="fas fa-circle-exclamation mr-2 text-red-400"></i>{{ error }}
+    </div>
+    {% endif %}
+
     <form method="POST"
           action="{{ url_for('war.declare_war', nation_id=target.id) }}"
           class="space-y-5">

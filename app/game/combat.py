@@ -707,11 +707,12 @@ def _destroyed_unit_names(units):
 
 def _battle_message(div_name, enemy_name, battle_id, is_victory,
                     tokens=0, destroyed_names=None, mission_rewards=None,
-                    level_ups=None):
+                    level_ups=None, war_link=None):
     """Build the HTML body for a battle result system message."""
-    link = (f'<a href="/military/battle/{battle_id}" '
-            f'class="text-amber-400 hover:text-amber-300 underline">'
-            f'View Battle Details</a>')
+    battle_link_text = (f'<a href="/military/battle/{battle_id}" '
+                        f'class="text-amber-400 hover:text-amber-300 underline">'
+                        f'View Battle Details</a>')
+    link = f'{battle_link_text} | {war_link}' if war_link else battle_link_text
 
     if is_victory:
         lines = [
@@ -747,7 +748,7 @@ def _battle_message(div_name, enemy_name, battle_id, is_victory,
 
 
 def _send_battle_notifications(battle, atk_units, def_units, db_session,
-                               level_ups=None):
+                               level_ups=None, war=None):
     """Send system mail to battle participants and grant loot tokens to the winner."""
     from ..models import Message, Nation
 
@@ -797,20 +798,29 @@ def _send_battle_notifications(battle, atk_units, def_units, db_session,
                 mission_name = mdef.name
 
     # --- Attacker notification ---
+    war_link = (f'<a href="/war/{war.id}" class="text-amber-400 hover:text-amber-300 underline">'
+                f'View War</a>') if war else None
     if winner_side == 'attacker':
         tokens = math.ceil(def_strength / 25)
         atk_nation.loot_tokens = (atk_nation.loot_tokens or 0) + tokens
-        subject = f'Victory \u2014 {mission_name}' if mission_name else f'Victory \u2014 {atk_div_name}'
+        if war:
+            subject = f'Battle Victory \u2014 {war.name}'
+        elif mission_name:
+            subject = f'Victory \u2014 {mission_name}'
+        else:
+            subject = f'Victory \u2014 {atk_div_name}'
         body = _battle_message(atk_div_name, def_nation_display, battle.id,
                                is_victory=True, tokens=tokens,
                                destroyed_names=atk_destroyed,
                                mission_rewards=mission_rewards,
-                               level_ups=atk_level_ups or None)
+                               level_ups=atk_level_ups or None,
+                               war_link=war_link)
     else:
-        subject = f'Defeat \u2014 {atk_div_name}'
+        subject = f'Battle Defeat \u2014 {war.name}' if war else f'Defeat \u2014 {atk_div_name}'
         body = _battle_message(atk_div_name, def_nation_display, battle.id,
                                is_victory=False,
-                               destroyed_names=atk_destroyed)
+                               destroyed_names=atk_destroyed,
+                               war_link=war_link)
 
     db_session.add(Message(
         sender_id=None,
@@ -825,16 +835,18 @@ def _send_battle_notifications(battle, atk_units, def_units, db_session,
         if winner_side == 'defender':
             tokens = math.ceil(atk_strength / 5)
             def_nation.loot_tokens = (def_nation.loot_tokens or 0) + tokens
-            subject = f'Victory \u2014 {def_div_name}'
+            subject = f'Battle Victory \u2014 {war.name}' if war else f'Victory \u2014 {def_div_name}'
             body = _battle_message(def_div_name, atk_nation_display, battle.id,
                                    is_victory=True, tokens=tokens,
                                    destroyed_names=def_destroyed,
-                                   level_ups=def_level_ups or None)
+                                   level_ups=def_level_ups or None,
+                                   war_link=war_link)
         else:
-            subject = f'Defeat \u2014 {def_div_name}'
+            subject = f'Battle Defeat \u2014 {war.name}' if war else f'Defeat \u2014 {def_div_name}'
             body = _battle_message(def_div_name, atk_nation_display, battle.id,
                                    is_victory=False,
-                                   destroyed_names=def_destroyed)
+                                   destroyed_names=def_destroyed,
+                                   war_link=war_link)
 
         db_session.add(Message(
             sender_id=None,
@@ -876,9 +888,21 @@ def _end_battle(battle, db_session):
             if ups:
                 level_ups[unit.id] = ups
 
+    # For PvP war battles, look up the war so the notification mail can reference it
+    war_obj = None
+    if battle.battle_type == 'pvp' and battle.winner:
+        from ..models import WarBattle, War
+        wb_lookup = WarBattle.query.filter_by(
+            battle_id=battle.id, attacker_nation_id=battle.attacker_nation_id
+        ).first()
+        if wb_lookup:
+            _w = db_session.get(War, wb_lookup.war_id)
+            if _w and _w.status == 'active':
+                war_obj = _w
+
     # Send notifications and grant loot tokens (before units are deleted)
     _send_battle_notifications(battle, atk_units, def_units, db_session,
-                               level_ups=level_ups or None)
+                               level_ups=level_ups or None, war=war_obj)
 
     # Resolve mission rewards before NPC cleanup
     if battle.battle_type == 'pve_mission' and battle.mission_offer_id:
@@ -927,7 +951,7 @@ def _end_battle(battle, db_session):
 
 
 def _credit_war_victory(battle, db_session):
-    """If this pvp battle is part of a war, credit the victory and notify participants."""
+    """If this pvp battle is part of a war, credit the score and notify on threshold."""
     from ..models import WarBattle, War, Message
     from .war import credit_war_victory, compute_war_scores
 
@@ -943,33 +967,11 @@ def _credit_war_victory(battle, db_session):
 
     credit_war_victory(war, wb, battle.winner)
 
+    # Notify when a side first reaches a 3-victory lead
+    scores = compute_war_scores(war)
     link = (f'<a href="/war/{war.id}" class="text-amber-400 hover:text-amber-300 underline">'
             f'View War</a>')
-    winner_nation_id = (battle.attacker_nation_id if battle.winner == 'attacker'
-                        else battle.defender_nation_id)
-    loser_nation_id = (battle.defender_nation_id if battle.winner == 'attacker'
-                       else battle.attacker_nation_id)
-    battle_link = (f'<a href="/military/battle/{battle.id}" '
-                   f'class="text-amber-400 hover:text-amber-300 underline">View Battle</a>')
-
-    db_session.add(Message(
-        sender_id=None,
-        recipient_id=winner_nation_id,
-        subject=f'Battle Victory — {war.name}',
-        body=f'You won a battle in the war "{war.name}".\n\n{battle_link} | {link}',
-        message_type='system',
-    ))
-    db_session.add(Message(
-        sender_id=None,
-        recipient_id=loser_nation_id,
-        subject=f'Battle Defeat — {war.name}',
-        body=f'You lost a battle in the war "{war.name}".\n\n{battle_link} | {link}',
-        message_type='system',
-    ))
-
-    # Notify if a settlement threshold has been crossed
-    scores = compute_war_scores(war)
-    if scores['attacker_can_demand'] and war.attacker_victories == 3 and war.defender_victories == 0:
+    if scores['attacker_lead'] == 3:
         db_session.add(Message(
             sender_id=None,
             recipient_id=war.attacker_nation_id,
@@ -977,7 +979,7 @@ def _credit_war_victory(battle, db_session):
             body=f'You now lead by 3+ victories and may demand war compensation or annexation.\n\n{link}',
             message_type='system',
         ))
-    if scores['defender_can_demand'] and war.defender_victories == 3 and war.attacker_victories == 0:
+    if scores['defender_lead'] == 3:
         db_session.add(Message(
             sender_id=None,
             recipient_id=war.defender_nation_id,

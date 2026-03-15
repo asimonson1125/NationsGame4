@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Battle #{{ battle.id }}{% endblock %}
+{% block title %}{{ battle.name or ('Battle #' ~ battle.id) }}{% endblock %}
 
 {% if battle.location %}
 {% set continent_slug = battle.location | lower | replace(' ', '_') %}

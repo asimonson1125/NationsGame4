@@ -19,7 +19,11 @@
             {% for b in battles %}
             <tr class="border-t border-slate-700 {% if loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %} hover:bg-slate-700/50 transition-colors">
                 <td class="px-4 py-3">
+                    {% if b.name %}
+                    <a href="{{ url_for('military.battle_view', battle_id=b.id) }}" class="text-amber-400 hover:text-amber-300 font-medium">{{ b.name }}</a>
+                    {% else %}
                     <a href="{{ url_for('military.battle_view', battle_id=b.id) }}" class="text-amber-500 hover:text-amber-400 font-medium">#{{ b.id }}</a>
+                    {% endif %}
                 </td>
                 <td class="px-4 py-3"><a href="{{ url_for('main.nation_view', nation_id=b.attacker_nation_id) }}" class="text-amber-500 hover:text-amber-400">{{ b.attacker_nation_name or b.attacker_nation.name }}</a></td>
                 <td class="px-4 py-3">

@@ -6,7 +6,7 @@ from flask import redirect, render_template, request, url_for, current_app
 from flask_login import login_required, current_user
 from .. import db
 from sqlalchemy import or_, and_
-from ..models import Division, Unit, RecruitmentQueue, Battle, CombatReport, Nation, User, Equipment, MissionOffer, MissionRecord
+from ..models import Division, Unit, RecruitmentQueue, Battle, CombatReport, Nation, User, Equipment, MissionOffer, MissionRecord, War
 from ..helpers import error_response as _error_response, can_afford as _can_afford, deduct_cost as _deduct_cost, compute_total_upkeep
 from ..game.units import UNIT_DEFS
 from ..game.missions import MISSION_DEFS, roll_two_missions
@@ -57,6 +57,8 @@ def overview():
         div_battles=_get_div_battles(nation.id),
         div_traveling=_get_div_traveling(nation.id),
         building_lock_map=_building_lock_map(nation.id, player_unit_defs),
+        active_wars=_get_active_wars(nation.id),
+        mission_offers=_get_available_missions(nation.id),
     )
 
 
@@ -216,6 +218,14 @@ def _get_div_battles(nation_id):
     return div_battles
 
 
+def _get_active_wars(nation_id):
+    """Return active Wars where this nation is a participant."""
+    return War.query.filter(
+        War.status == 'active',
+        or_(War.attacker_nation_id == nation_id, War.defender_nation_id == nation_id)
+    ).order_by(War.declared_at.desc()).all()
+
+
 def _get_div_traveling(nation_id):
     """Return dict mapping division_id -> WarDeploymentQueue for traveling deployments."""
     from ..models import WarDeploymentQueue
@@ -223,6 +233,13 @@ def _get_div_traveling(nation_id):
         deploying_nation_id=nation_id, status='traveling'
     ).all()
     return {e.division_id: e for e in entries}
+
+
+def _get_available_missions(nation_id):
+    """Return list of {offer, mdef} for available mission offers."""
+    offers = MissionOffer.query.filter_by(nation_id=nation_id, status='available').all()
+    return [{'offer': o, 'mdef': MISSION_DEFS[o.mission_key]}
+            for o in offers if o.mission_key in MISSION_DEFS]
 
 
 def _division_list_response(nation, message):
@@ -236,6 +253,8 @@ def _division_list_response(nation, message):
         unit_defs=UNIT_DEFS,
         div_battles=_get_div_battles(nation.id),
         div_traveling=_get_div_traveling(nation.id),
+        active_wars=_get_active_wars(nation.id),
+        mission_offers=_get_available_missions(nation.id),
     )
     resp = current_app.response_class(resp_html, status=200, mimetype='text/html')
     resp.headers['HX-Trigger'] = json.dumps(
@@ -260,6 +279,8 @@ def division_list():
         unit_defs=UNIT_DEFS,
         div_battles=_get_div_battles(nation.id),
         div_traveling=_get_div_traveling(nation.id),
+        active_wars=_get_active_wars(nation.id),
+        mission_offers=_get_available_missions(nation.id),
     )
 
 
@@ -381,6 +402,8 @@ def render_unit_detail(unit, nation):
                 'equipped': equipped_map.get(sname),
             })
 
+    upkeep = udef.upkeep if udef else {}
+
     return render_template(
         'military/partials/_unit_detail_popup.html',
         unit=unit,
@@ -392,6 +415,7 @@ def render_unit_detail(unit, nation):
         eq_abilities=eq_abilities,
         slots_info=slots_info,
         rarity_colors=RARITY_COLORS,
+        upkeep=upkeep,
     )
 
 
@@ -647,8 +671,12 @@ def _get_battle_units(battle):
     if battle.status == 'finished' and battle.attacker_snapshot:
         return (_snapshot_to_units(battle.attacker_snapshot),
                 _snapshot_to_units(battle.defender_snapshot))
-    return (Unit.query.filter_by(division_id=battle.attacker_division_id, nation_id=battle.attacker_nation_id).order_by(Unit.division_joined_at, Unit.id).all(),
-            Unit.query.filter_by(division_id=battle.defender_division_id, nation_id=battle.defender_nation_id).order_by(Unit.division_joined_at, Unit.id).all())
+    atk_units = Unit.query.filter_by(division_id=battle.attacker_division_id, nation_id=battle.attacker_nation_id).order_by(Unit.division_joined_at, Unit.id).all()
+    if battle.defender_division_id is None:
+        def_units = []
+    else:
+        def_units = Unit.query.filter_by(division_id=battle.defender_division_id, nation_id=battle.defender_nation_id).order_by(Unit.division_joined_at, Unit.id).all()
+    return (atk_units, def_units)
 
 
 @military.route('/military/battle/<int:battle_id>')
@@ -669,7 +697,7 @@ def battle_view(battle_id):
             if mdef:
                 battle_title = mdef.name
     elif battle.battle_type == 'pvp':
-        battle_title = 'Nation vs Nation'
+        battle_title = battle.name or 'Nation vs Nation'
 
     return render_template(
         'military/battle.html',

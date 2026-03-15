@@ -1,5 +1,6 @@
 {% from 'shared/_equipment_macros.html' import stat_icon, equipment_card %}
-{# Expects: unit, udef, equippable, bonuses, hp_bonus, hp_mult, eq_abilities, slots_info, rarity_colors #}
+{% from 'shared/_macros.html' import res_icon %}
+{# Expects: unit, udef, equippable, bonuses, hp_bonus, hp_mult, eq_abilities, slots_info, rarity_colors, upkeep #}
 <div class="p-6">
 
     {# ── HEADER ─────────────────────────────────────────────── #}
@@ -118,6 +119,23 @@
                 {% endif %}
             </div>
             </div>
+
+            {# ── Upkeep ─────────────────────────────────────── #}
+            {% if upkeep %}
+            <div class="bg-slate-700/50 rounded-lg border border-slate-700 p-3 mb-4">
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                    <i class="fas fa-coins mr-1 text-amber-500"></i>Hourly Upkeep
+                </div>
+                <div class="flex flex-wrap gap-x-3 gap-y-1.5">
+                    {% for res, amount in upkeep.items() %}
+                    <div class="flex items-center gap-1 text-sm">
+                        {{ res_icon(res, size='w-4 h-4') }}
+                        <span class="text-slate-300">{{ amount | format_resource }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
 
             {# ── Abilities ──────────────────────────────────── #}
             {% set has_innate = udef and udef.special_abilities %}

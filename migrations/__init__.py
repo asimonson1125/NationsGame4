@@ -23,6 +23,7 @@ MIGRATIONS = [
     'add_war_deployment_queue',
     'add_division_defensive',
     'add_ban_columns',
+    'add_battle_name',
 ]
 
 

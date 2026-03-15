@@ -1,4 +1,5 @@
 {% from 'shared/_equipment_macros.html' import stat_icon, unit_type_icon %}
+{% from 'shared/_macros.html' import res_icon %}
 {# Expects: unit, udef, divisions (from parent scope) #}
 <div class="bg-slate-700/50 rounded-lg border border-slate-700"
      x-data='{ showActions: false, renaming: false, moving: false, rname: {{ (unit.custom_name or "") | tojson }} }'>
@@ -92,14 +93,24 @@
             </div>
             {% endif %}
         </div>
-        <div class="flex items-center justify-end gap-2 text-[11px] text-slate-400">
-            <span>Lv.{{ unit.level }}</span>
-            {% set eq_count = (1 if unit.weapon_id else 0) + (1 if unit.accessory_id else 0) + (1 if unit.armour_eq_id else 0) %}
-            {% if eq_count > 0 %}
-            <span class="text-amber-400" title="{{ eq_count }} equipment equipped">
-                <i class="fas fa-toolbox text-[9px]"></i> {{ eq_count }}/3
-            </span>
-            {% endif %}
+        <div class="flex items-center justify-between gap-2 text-[11px] text-slate-400">
+            <div class="flex items-center gap-1.5">
+                {% if udef and udef.upkeep %}
+                <i class="fas fa-coins text-amber-500/70 text-[9px]"></i>
+                {% for res, amount in udef.upkeep.items() %}
+                <span class="flex items-center gap-0.5">{{ res_icon(res, size='w-3 h-3') }}{{ amount | format_resource }}</span>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="flex items-center gap-2">
+                <span>Lv.{{ unit.level }}</span>
+                {% set eq_count = (1 if unit.weapon_id else 0) + (1 if unit.accessory_id else 0) + (1 if unit.armour_eq_id else 0) %}
+                {% if eq_count > 0 %}
+                <span class="text-amber-400" title="{{ eq_count }} equipment equipped">
+                    <i class="fas fa-toolbox text-[9px]"></i> {{ eq_count }}/3
+                </span>
+                {% endif %}
+            </div>
         </div>
     </div>
 

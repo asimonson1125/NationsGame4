@@ -1,7 +1,8 @@
-{% macro war_row(w, nation) %}
+{% macro war_row(w, nation, war_scores) %}
 {% set is_atk = w.attacker_nation_id == nation.id %}
 {% set opponent = w.defender_nation if is_atk else w.attacker_nation %}
-{% set score = (w.attacker_victories | string) ~ ' – ' ~ (w.defender_victories | string) %}
+{% set _s = war_scores[w.id] %}
+{% set score = (_s.attacker_victories | string) ~ ' – ' ~ (_s.defender_victories | string) %}
 <tr class="border-t border-slate-700 hover:bg-slate-700/30 transition-colors">
     <td class="px-4 py-3">
         <a href="{{ url_for('war.war_detail', war_id=w.id) }}"
@@ -35,7 +36,7 @@
 </tr>
 {% endmacro %}
 
-{% macro war_table(wars, empty_msg) %}
+{% macro war_table(wars, empty_msg, war_scores) %}
 <div class="overflow-x-auto bg-slate-800 rounded-lg border border-slate-700">
     <table class="w-full text-sm">
         <thead>
@@ -50,7 +51,7 @@
         </thead>
         <tbody>
             {% for w in wars %}
-                {{ war_row(w, nation) }}
+                {{ war_row(w, nation, war_scores) }}
             {% else %}
             <tr>
                 <td colspan="6" class="px-4 py-8 text-center text-slate-500">{{ empty_msg }}</td>
@@ -66,14 +67,14 @@
         <h3 class="text-base font-semibold text-slate-200 mb-3">
             <i class="fas fa-crosshairs text-red-400 mr-1"></i> Active Wars
         </h3>
-        {{ war_table(active_wars, 'You are not involved in any active wars.') }}
+        {{ war_table(active_wars, 'You are not involved in any active wars.', war_scores) }}
     </div>
     {% if war_history %}
     <div>
         <h3 class="text-base font-semibold text-slate-400 mb-3">
             <i class="fas fa-history mr-1"></i> War History
         </h3>
-        {{ war_table(war_history, '') }}
+        {{ war_table(war_history, '', war_scores) }}
     </div>
     {% endif %}
 </div>
