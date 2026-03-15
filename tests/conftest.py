@@ -64,7 +64,7 @@ def client(app):
 @pytest.fixture()
 def nation(app):
     """Create a test user + nation and return the nation."""
-    u = User(username='tester', email='test@test.com')
+    u = User(username='tester', email='test@test.com', login_version=1)
     u.set_password('password')
     _db.session.add(u)
     _db.session.flush()
@@ -84,14 +84,14 @@ def nation(app):
 def auth_client(app, client, nation):
     """A test client already logged in as the test nation's user."""
     with client.session_transaction() as sess:
-        sess['_user_id'] = str(nation.user_id)
+        sess['_user_id'] = f"{nation.user_id}:1"
     return client
 
 
 @pytest.fixture()
 def admin_user(app):
     """Create an admin user + nation and return the user."""
-    u = User(username='admin', email='admin@test.com', is_admin=True)
+    u = User(username='admin', email='admin@test.com', is_admin=True, login_version=1)
     u.set_password('password')
     _db.session.add(u)
     _db.session.flush()
@@ -108,5 +108,5 @@ def admin_user(app):
 def admin_client(app, client, admin_user):
     """A test client logged in as an admin user."""
     with client.session_transaction() as sess:
-        sess['_user_id'] = str(admin_user.id)
+        sess['_user_id'] = f"{admin_user.id}:1"
     return client

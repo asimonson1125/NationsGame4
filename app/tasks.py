@@ -1,6 +1,10 @@
+import threading
 from datetime import datetime, timezone
 from flask_apscheduler import APScheduler
+
 scheduler = APScheduler()
+_register_lock = threading.Lock()
+_registered = False
 
 
 def process_recruitment_queue():
@@ -416,33 +420,40 @@ def cleanup_pve_battles():
 
 
 def register_tasks(app):
-    # If scheduler is already initialized/running, don't re-register
-    if scheduler.app is not None or scheduler.running:
-        return
+    global _registered
+    with _register_lock:
+        if _registered:
+            return
+        _registered = True
 
     scheduler.init_app(app)
 
     # ── Hourly tick (factory capacity + nation simulation) ──
     scheduler.add_job(id='hourly_tick', func=process_hourly_tick,
-                      trigger='cron', minute=0)
+                      trigger='cron', minute=0, replace_existing=True)
 
     # ── Frequent tasks (keep as interval) ──
     scheduler.add_job(id='process_recruitment', func=process_recruitment_queue,
-                      trigger='interval', seconds=60)
+                      trigger='interval', seconds=60, replace_existing=True)
     scheduler.add_job(id='process_factory_build', func=process_factory_queue,
-                      trigger='interval', seconds=60)
+                      trigger='interval', seconds=60, replace_existing=True)
     scheduler.add_job(id='process_building_upgrades', func=process_building_upgrades,
-                      trigger='interval', seconds=60)
+                      trigger='interval', seconds=60, replace_existing=True)
     scheduler.add_job(id='process_war_deployments', func=process_war_deployments,
-                      trigger='interval', seconds=60)
+                      trigger='interval', seconds=60, replace_existing=True)
     scheduler.add_job(id='process_combat', func=process_combat_rounds,
-                      trigger='interval', seconds=10)
+                      trigger='interval', seconds=10, replace_existing=True,
+                      max_instances=1, coalesce=True)
 
     # ── Daily tasks (midnight UTC) ──
     scheduler.add_job(id='reset_daily', func=reset_daily_counters,
-                      trigger='cron', hour=0, minute=0)
+                      trigger='cron', hour=0, minute=0, replace_existing=True)
     scheduler.add_job(id='cleanup_pve', func=cleanup_pve_battles,
-                      trigger='cron', hour=0, minute=0)
+                      trigger='cron', hour=0, minute=0, replace_existing=True)
 
     if not scheduler.running:
-        scheduler.start()
+        try:
+            scheduler.start()
+        except Exception:
+            # Already started in another context
+            pass

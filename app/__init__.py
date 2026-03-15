@@ -136,9 +136,4 @@ def create_app(config_name='default'):
     def internal_server_error(e):
         return render_template('errors/500.html'), 500
 
-    import os
-    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        from .tasks import register_tasks
-        register_tasks(app)
-
     return app

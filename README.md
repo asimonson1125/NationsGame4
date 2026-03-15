@@ -3,8 +3,6 @@
 A browser-based nation-building simulator. Players manage resources, industry, land, and military across five continents.
 
 TODO:
-- Wars
-- Custom 500 page
 - Mobile readiness
 ___
 Start Beta Phase:

@@ -5,6 +5,12 @@ from app import create_app, db
 
 app = create_app(os.environ.get('FLASK_ENV', 'default'))
 
+# Start scheduler only in the actual serving process.
+# Werkzeug child (WERKZEUG_RUN_MAIN='true') in debug mode, or production (not debug).
+if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or (not app.debug and not app.testing):
+    from app.tasks import register_tasks
+    register_tasks(app)
+
 PARTITIONED_TABLES = [
     'natural_resources', 'nation_factories', 'divisions', 'units',
     'recruitment_queue', 'factory_build_queue', 'equipment',

@@ -292,7 +292,7 @@ def deploy_attack(war_id):
         war_id=war_obj.id,
         deploying_nation_id=my_nation_id,
         division_id=div.id,
-        arrives_at=now + timedelta(hours=0),
+        arrives_at=now + timedelta(hours=24),
     )
     db.session.add(entry)
     db.session.commit()

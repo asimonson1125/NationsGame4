@@ -88,7 +88,7 @@ def _make_unit(nation_id, division_id, *, hp=50):
 
 class TestComputeWarScores:
     def _war(self, atk, dfn):
-        return SimpleNamespace(attacker_victories=atk, defender_victories=dfn)
+        return SimpleNamespace(id=1, attacker_victories=atk, defender_victories=dfn)
 
     def test_tied_at_zero(self):
         s = compute_war_scores(self._war(0, 0))
