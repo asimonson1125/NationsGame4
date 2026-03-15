@@ -158,7 +158,20 @@ class User(UserMixin, db.Model):
     notifications_enabled = db.Column(db.Boolean, default=True)
     vacation_mode = db.Column(db.Boolean, default=False)
     vacation_disabled_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    banned_until = db.Column(db.DateTime(timezone=True), nullable=True)
+    ban_message = db.Column(db.String(500), nullable=True)
+    login_version = db.Column(db.Integer, default=1, nullable=False)
     nation = db.relationship('Nation', backref='user', uselist=False, lazy=True)
+
+    def get_id(self):
+        return f'{self.id}:{self.login_version or 1}'
+
+    @property
+    def is_banned(self):
+        from datetime import datetime, timezone
+        if self.banned_until is None:
+            return False
+        return datetime.now(timezone.utc) < self.banned_until
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -497,4 +510,13 @@ class WarDeploymentQueue(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    try:
+        uid, version = user_id.split(':', 1)
+        user = db.session.get(User, int(uid))
+        if user is None:
+            return None
+        if str(user.login_version or 1) != version:
+            return None
+        return user
+    except (ValueError, AttributeError):
+        return None

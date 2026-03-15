@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 from flask import render_template, url_for, request, current_app, abort, jsonify, make_response
 from flask_login import login_required, current_user
 from .. import db, cache
-from ..models import Nation, NationFactory, NaturalResource, Alliance, Division, Unit, RecruitmentQueue, FactoryBuildQueue, BuildingUpgradeQueue, NationBuilding
+from ..models import Nation, NationFactory, NaturalResource, Alliance, Division, Unit, RecruitmentQueue, FactoryBuildQueue, BuildingUpgradeQueue, NationBuilding, User
 from ..helpers import error_response as _error_response, compute_total_upkeep
 from ..game.population import (get_population_effects, estimate_pop_delta, FOOD_PER_CITIZEN,
                                 food_abundance_multiplier, get_food_days,
@@ -492,8 +492,9 @@ def _admin_panel_context(nation):
     factory_queue = FactoryBuildQueue.query.filter_by(nation_id=nation.id).order_by(FactoryBuildQueue.completes_at).all()
     building_queue = BuildingUpgradeQueue.query.filter_by(nation_id=nation.id).order_by(BuildingUpgradeQueue.completes_at).all()
     res_values = {r: getattr(nation, r, 0) or 0 for r in ADMIN_RESOURCES}
-    return dict(target=nation, queue=queue, factory_queue=factory_queue, building_queue=building_queue,
-                resource_groups=_ADMIN_RESOURCE_GROUPS, res_values=res_values)
+    target_user = db.session.get(User, nation.user_id) if nation.user_id else None
+    return dict(target=nation, target_user=target_user, queue=queue, factory_queue=factory_queue,
+                building_queue=building_queue, resource_groups=_ADMIN_RESOURCE_GROUPS, res_values=res_values)
 
 
 @main.route('/admin/nation/<int:nation_id>')
@@ -686,5 +687,68 @@ def admin_apply_tick(nation_id):
     resp.headers['HX-Trigger'] = json.dumps(
         {'showMessage': {'message': summary, 'type': 'success'},
          'refreshResourceFooter': True}
+    )
+    return resp
+
+
+@main.route('/admin/nation/<int:nation_id>/ban', methods=['POST'])
+@login_required
+@require_admin
+def admin_ban_user(nation_id):
+    nation = db.session.get(Nation, nation_id)
+    if not nation:
+        return _error_response('Nation not found.')
+    user = db.session.get(User, nation.user_id)
+    if not user:
+        return _error_response('User not found.')
+    if user.is_admin:
+        return _error_response('Cannot ban an admin account.')
+
+    banned_until_str = request.form.get('banned_until', '').strip()
+    ban_message = request.form.get('ban_message', '').strip()
+
+    try:
+        banned_until = datetime.fromisoformat(banned_until_str).replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        return _error_response('Invalid date/time format.')
+
+    if banned_until <= datetime.now(timezone.utc):
+        return _error_response('Ban expiry must be in the future.')
+
+    user.banned_until = banned_until
+    user.ban_message = ban_message or None
+    user.login_version = (user.login_version or 1) + 1
+    user.vacation_mode = True
+    db.session.commit()
+
+    resp = current_app.make_response(
+        render_template('main/partials/admin_panel.html', **_admin_panel_context(nation))
+    )
+    resp.headers['HX-Trigger'] = json.dumps(
+        {'showMessage': {'message': f'{user.username} banned until {banned_until.strftime("%Y-%m-%d %H:%M UTC")}.', 'type': 'success'}}
+    )
+    return resp
+
+
+@main.route('/admin/nation/<int:nation_id>/unban', methods=['POST'])
+@login_required
+@require_admin
+def admin_unban_user(nation_id):
+    nation = db.session.get(Nation, nation_id)
+    if not nation:
+        return _error_response('Nation not found.')
+    user = db.session.get(User, nation.user_id)
+    if not user:
+        return _error_response('User not found.')
+
+    user.banned_until = None
+    user.ban_message = None
+    db.session.commit()
+
+    resp = current_app.make_response(
+        render_template('main/partials/admin_panel.html', **_admin_panel_context(nation))
+    )
+    resp.headers['HX-Trigger'] = json.dumps(
+        {'showMessage': {'message': f'{user.username} has been unbanned.', 'type': 'success'}}
     )
     return resp

@@ -56,14 +56,16 @@
                         capacity: {{ nf.production_capacity }},
                         maxCollect: {{ fdef.max_collect_hours }},
                         count: {{ nf.count }},
+                        hrs: Math.min({{ fdef.max_collect_hours }}, {{ nf.production_capacity }}),
                         get cap() { return Math.min(this.maxCollect, this.capacity) },
+                        get displayHrs() { return Math.max(1, Math.min(this.hrs || 1, this.maxCollect, this.capacity)) },
                         get barPct() { return (this.capacity / 24 * 100).toFixed(1) },
                         get disabled() { return this.capacity === 0 },
                         fmt: window.fmt,
                         onCollect(evt) {
                             if (evt.detail.factoryKey !== '{{ key }}') return;
                             this.capacity = evt.detail.newCapacity;
-                            this.$refs.hours.value = this.cap;
+                            this.hrs = this.cap;
                         }
                      }"
                      @collect-success.window="onCollect($event)"
@@ -92,21 +94,21 @@
                         <div class="mb-4">
                             <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1">Hours to Collect</label>
                             <input type="number" name="hours" min="1"
-                                   :max="maxCollect" x-ref="hours"
-                                   :value="cap"
+                                   :max="maxCollect"
+                                   x-model.number="hrs"
                                    class="w-full bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
                         </div>
 
                         {% if fdef.inputs %}
                         <div class="mb-3">
                             <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-                                Input (<span x-text="cap"></span>h)
+                                Input (<span x-text="displayHrs"></span>h)
                             </div>
                             <div class="space-y-1">
                                 {% for res, rate in fdef.inputs.items() %}
                                 <div class="flex items-center gap-2 text-sm text-slate-300">
                                     {{ res_icon(res) }}
-                                    <span><span x-text="fmt(cap * {{ nf.count }} * {{ rate }})"></span></span>
+                                    <span><span x-text="fmt(displayHrs * {{ nf.count }} * {{ rate }})"></span></span>
                                 </div>
                                 {% endfor %}
                             </div>
@@ -115,13 +117,13 @@
 
                         <div class="mb-4">
                             <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-                                Output (<span x-text="cap"></span>h)
+                                Output (<span x-text="displayHrs"></span>h)
                             </div>
                             <div class="space-y-1">
                                 {% for res, rate in fdef.outputs.items() %}
                                 <div class="flex items-center gap-2 text-sm text-slate-300">
                                     {{ res_icon(res) }}
-                                    <span><span x-text="fmt(cap * {{ nf.count }} * {{ rate }})"></span></span>
+                                    <span><span x-text="fmt(displayHrs * {{ nf.count }} * {{ rate }})"></span></span>
                                 </div>
                                 {% endfor %}
                             </div>
@@ -246,7 +248,7 @@
                         <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Costs</div>
                         <div class="flex flex-wrap gap-x-3 gap-y-1">
                             {% for res, cost_per in fdef.build_cost.items() %}
-                            {% set stock = nation | attr(res) | default(0) or 0 %}
+                            {% set stock = stock_map.get(res, 0) %}
                             <div class="flex items-center gap-1.5 text-sm"
                                  :class="qty * {{ cost_per }} > {{ stock }} ? 'text-red-400 font-semibold' : 'text-slate-300'">
                                 {{ res_icon(res) }}
@@ -261,7 +263,8 @@
                         <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Input</div>
                         <div class="flex flex-wrap gap-x-3 gap-y-1">
                             {% for res, rate in fdef.inputs.items() %}
-                            <div class="flex items-center gap-1.5 text-sm {{ rate | cost_class(nation | attr(res)) }}">
+                            {% set stock = stock_map.get(res, 0) %}
+                            <div class="flex items-center gap-1.5 text-sm {{ rate | cost_class(stock) }}">
                                 {{ res_icon(res) }}
                                 <span>{{ rate | format_resource }}</span>
                             </div>
@@ -274,7 +277,8 @@
                         <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Output</div>
                         <div class="flex flex-wrap gap-x-3 gap-y-1">
                             {% for res, rate in fdef.outputs.items() %}
-                            <div class="flex items-center gap-1.5 text-sm {{ rate | cost_class(nation | attr(res)) }}">
+                            {% set stock = stock_map.get(res, 0) %}
+                            <div class="flex items-center gap-1.5 text-sm {{ rate | cost_class(stock) }}">
                                 {{ res_icon(res) }}
                                 <span>{{ rate | format_resource }}</span>
                             </div>

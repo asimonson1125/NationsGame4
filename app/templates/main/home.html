@@ -77,7 +77,7 @@
             </form>
 
             {# Vacation Mode #}
-            <form hx-post="{{ url_for('auth.toggle_vacation') }}" hx-swap="none"
+            <form hx-post="{{ url_for('auth.toggle_vacation') }}" hx-swap="none" hx-on::after-request="if(event.detail.successful) location.reload()"
                   class="p-4 flex items-center justify-between">
                 <div>
                     <label class="flex items-center gap-2 text-sm font-medium text-slate-300 cursor-pointer">

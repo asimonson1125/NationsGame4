@@ -78,20 +78,9 @@ flask shell
 docker exec -it ng-app flask shell
 ```
 
-**Example: Set a user to admin**
-```python
-from app.models import User
-from app import db
-
-# Find user by username and set is_admin to True
-user = User.query.filter_by(username='Cascadalyst').first()
-if user:
-    user.is_admin = True
-    db.session.commit()
-    print(f"User {user.username} is now an admin.")
-else:
-    print("User not found.")
-```
+See `adhoc/` for one-off admin scripts:
+- `adhoc/set_admin.py <username>` — promote a user to admin
+- `adhoc/delete_nation.py <nation_name>` — delete a nation and its user account
 
 ---
 

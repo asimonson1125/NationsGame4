@@ -412,6 +412,59 @@ class TestDeclareWarRoute:
         trigger = json.loads(resp.headers.get('HX-Trigger', '{}'))
         assert trigger['showMessage']['type'] == 'error'
 
+    def test_blocked_below_tier_2(self, app, auth_client, nation, enemy):
+        nation.tier = 1
+        db.session.commit()
+
+        resp = auth_client.post(f'/war/declare/{enemy.id}', data={
+            'war_name': 'Tier 1 War', 'casus_belli': 'Too soon.',
+        })
+        trigger = json.loads(resp.headers.get('HX-Trigger', '{}'))
+        assert trigger['showMessage']['type'] == 'error'
+        assert War.query.count() == 0
+
+    def test_allowed_at_tier_2(self, app, auth_client, nation, enemy):
+        nation.tier = 2
+        enemy.tier = 2
+        db.session.commit()
+
+        resp = auth_client.post(f'/war/declare/{enemy.id}', data={
+            'war_name': 'Tier 2 War', 'casus_belli': 'Fair fight.',
+        }, follow_redirects=False)
+        assert resp.status_code == 302
+
+    def test_blocked_attacking_lower_tier(self, app, auth_client, nation, enemy):
+        nation.tier = 3
+        enemy.tier = 2
+        db.session.commit()
+
+        resp = auth_client.post(f'/war/declare/{enemy.id}', data={
+            'war_name': 'Bully War', 'casus_belli': 'Easy target.',
+        })
+        trigger = json.loads(resp.headers.get('HX-Trigger', '{}'))
+        assert trigger['showMessage']['type'] == 'error'
+        assert War.query.count() == 0
+
+    def test_allowed_attacking_equal_tier(self, app, auth_client, nation, enemy):
+        nation.tier = 3
+        enemy.tier = 3
+        db.session.commit()
+
+        resp = auth_client.post(f'/war/declare/{enemy.id}', data={
+            'war_name': 'Equal War', 'casus_belli': 'Even odds.',
+        }, follow_redirects=False)
+        assert resp.status_code == 302
+
+    def test_allowed_attacking_higher_tier(self, app, auth_client, nation, enemy):
+        nation.tier = 2
+        enemy.tier = 4
+        db.session.commit()
+
+        resp = auth_client.post(f'/war/declare/{enemy.id}', data={
+            'war_name': 'Brave War', 'casus_belli': 'Punching up.',
+        }, follow_redirects=False)
+        assert resp.status_code == 302
+
 
 # ── Deploy attack route ───────────────────────────────────────────────────────
 
@@ -592,6 +645,17 @@ class TestPeaceRoutes:
         trigger = json.loads(resp.headers.get('HX-Trigger', '{}'))
         assert trigger['showMessage']['type'] == 'error'
 
+    def test_cancel_peace_sends_rescission_mail(self, app, auth_client, nation, enemy, active_war):
+        active_war.peace_offered_by = nation.id
+        db.session.commit()
+        Message.query.delete()
+        db.session.commit()
+
+        auth_client.post(f'/war/{active_war.id}/cancel-peace')
+        mail = Message.query.filter_by(recipient_id=enemy.id).first()
+        assert mail is not None
+        assert 'Rescinded' in mail.subject
+
 
 # ── Settlement routes ─────────────────────────────────────────────────────────
 
@@ -680,6 +744,44 @@ class TestSettlementRoutes:
         resp = auth_client.post(f'/war/{active_war.id}/demand-compensation')
         trigger = json.loads(resp.headers.get('HX-Trigger', '{}'))
         assert trigger['showMessage']['type'] == 'error'
+
+    def test_compensation_rescinds_pending_peace_offer(self, app, auth_client, nation, enemy, active_war):
+        active_war.attacker_victories = 3
+        active_war.peace_offered_by = nation.id
+        db.session.commit()
+        Message.query.delete()
+        db.session.commit()
+
+        auth_client.post(f'/war/{active_war.id}/demand-compensation')
+        mail = Message.query.filter_by(recipient_id=enemy.id).first()
+        assert mail is not None
+        assert 'Rescinded' in mail.subject
+
+    def test_annexation_rescinds_pending_peace_offer(self, app, auth_client, nation, enemy, active_war):
+        active_war.attacker_victories = 3
+        active_war.peace_offered_by = nation.id
+        db.session.commit()
+        for _ in range(3):
+            b = Battle(
+                attacker_nation_id=nation.id, defender_nation_id=enemy.id,
+                attacker_division_name='A', defender_division_name='B',
+                attacker_nation_name='A', defender_nation_name='B',
+                battle_type='pvp', status='finished', winner='attacker',
+            )
+            db.session.add(b)
+            db.session.flush()
+            db.session.add(WarBattle(
+                war_id=active_war.id, battle_id=b.id,
+                attacker_nation_id=nation.id, side='attacker',
+            ))
+        db.session.commit()
+        Message.query.delete()
+        db.session.commit()
+
+        auth_client.post(f'/war/{active_war.id}/demand-annexation')
+        mail = Message.query.filter_by(recipient_id=enemy.id).first()
+        assert mail is not None
+        assert 'Rescinded' in mail.subject
 
 
 # ── process_war_deployments task ──────────────────────────────────────────────

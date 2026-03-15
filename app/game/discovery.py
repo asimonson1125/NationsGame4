@@ -43,26 +43,30 @@ def _pick_weighted(weights):
     return random.choices(keys, weights=wts, k=1)[0]
 
 
+def _apply_variance(amounts, sigma=0.1):
+    """Apply gaussian variance (σ=10%) to each value, ensuring non-negative ints."""
+    return {k: max(0, int(v * random.gauss(1.0, sigma))) for k, v in amounts.items() if v > 0}
+
+
 def roll_expansion(continent, population):
-    """Returns (new_land: dict, discovered: dict)."""
+    """Returns (new_land: dict, discovered: dict, total_gained: int)."""
     land_weights = LAND_WEIGHTS.get(continent, DEFAULT_LAND_WEIGHTS)
-    total_gained = max(1, population // 100)
-    new_land = _weighted_distribute(land_weights, total_gained)
+    new_land = _apply_variance(_weighted_distribute(land_weights, max(1, population // 100)))
+    total_gained = sum(new_land.values())
 
     resource_weights = RESOURCE_WEIGHTS.get(continent, DEFAULT_RESOURCE_WEIGHTS)
-    discovered = {res: amt for res, amt in resource_weights.items() if amt > 0}
+    discovered = _apply_variance({res: amt for res, amt in resource_weights.items() if amt > 0})
 
     return new_land, discovered, total_gained
 
 
 def roll_colonization(target_continent, population):
-    """Returns (new_land: dict, discovered: dict) — 5x land, more discoveries."""
+    """Returns (new_land: dict, discovered: dict, total_gained: int) — 5x land, more discoveries."""
     land_weights = LAND_WEIGHTS.get(target_continent, DEFAULT_LAND_WEIGHTS)
-    # Colonization gives 5x the land of a normal expansion
-    total_gained = max(1, (population // 100) * 5)
-    new_land = _weighted_distribute(land_weights, total_gained)
+    new_land = _apply_variance(_weighted_distribute(land_weights, max(1, (population // 100) * 5)))
+    total_gained = sum(new_land.values())
 
     resource_weights = RESOURCE_WEIGHTS.get(target_continent, DEFAULT_RESOURCE_WEIGHTS)
-    discovered = {res: amt * 5 for res, amt in resource_weights.items() if amt > 0}
+    discovered = _apply_variance({res: amt * 5 for res, amt in resource_weights.items() if amt > 0})
 
     return new_land, discovered, total_gained

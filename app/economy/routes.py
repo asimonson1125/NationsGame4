@@ -334,6 +334,16 @@ def _industry_context(nation):
             if nb_levels.get(bkey, 0) < req_lvl:
                 factory_lock_map[fkey] = {'name': BUILDING_DEFS[bkey].name, 'level': req_lvl}
 
+    # Unified resource lookup: Nation columns + NaturalResource rows
+    _NATION_RES_COLS = ('money', 'food', 'power', 'building_materials', 'consumer_goods',
+                        'metal', 'ammunition', 'fuel', 'uranium', 'whz')
+    stock_map = {}
+    if nation:
+        for col in _NATION_RES_COLS:
+            stock_map[col] = getattr(nation, col, 0) or 0
+        for nr in NaturalResource.query.filter_by(nation_id=nation.id).all():
+            stock_map[nr.resource_key] = nr.amount
+
     return dict(
         factory_defs=FACTORY_DEFS,
         factory_map=factory_map,
@@ -344,6 +354,7 @@ def _industry_context(nation):
         upgrade_map=upgrade_map,
         building_units=building_units,
         factory_lock_map=factory_lock_map,
+        stock_map=stock_map,
     )
 
 

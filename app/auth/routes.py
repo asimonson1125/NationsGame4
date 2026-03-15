@@ -22,6 +22,11 @@ def login():
         remember = 'remember' in request.form
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
+            if user.is_banned:
+                msg = user.ban_message or 'Your account has been temporarily suspended.'
+                until = user.banned_until.strftime('%Y-%m-%d %H:%M UTC')
+                flash(f'Account suspended until {until}: {msg}', 'error')
+                return render_template('auth/login.html')
             from flask import session
             session.permanent = remember
             login_user(user, remember=remember)

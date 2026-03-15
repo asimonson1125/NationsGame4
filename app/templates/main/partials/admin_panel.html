@@ -100,6 +100,49 @@
     <p class="text-sm text-slate-500 italic mb-6">No items in queue.</p>
     {% endif %}
 
+    {# ── Ban management ── #}
+    {% if target_user %}
+    <h4 class="font-semibold text-slate-300 mb-2 border-b border-slate-700 pb-1 mt-4">Account Ban</h4>
+    <div class="mb-6">
+        {% if target_user.is_banned %}
+        <div class="bg-red-900/40 border border-red-700 rounded px-3 py-2 mb-3 text-sm">
+            <p class="text-red-300 font-semibold">Currently banned until {{ target_user.banned_until.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+            {% if target_user.ban_message %}
+            <p class="text-slate-400 mt-1">{{ target_user.ban_message }}</p>
+            {% endif %}
+        </div>
+        <form hx-post="{{ url_for('main.admin_unban_user', nation_id=target.id) }}"
+              hx-target="#admin-panel-content" hx-swap="outerHTML"
+              hx-confirm="Remove ban for {{ target_user.username }}?">
+            <button type="submit"
+                    class="px-4 py-2 bg-emerald-600 text-white rounded text-sm font-semibold hover:bg-emerald-500 transition-colors">
+                <i class="fas fa-unlock mr-1"></i>Unban User
+            </button>
+        </form>
+        {% else %}
+        <p class="text-xs text-slate-500 mb-3">Set a temporary ban. The user will be logged out immediately and blocked from logging in until the ban expires.</p>
+        <form hx-post="{{ url_for('main.admin_ban_user', nation_id=target.id) }}"
+              hx-target="#admin-panel-content" hx-swap="outerHTML"
+              class="space-y-2">
+            <div class="flex items-center gap-2">
+                <label class="text-xs text-slate-400 w-28 shrink-0">Ban expires (UTC)</label>
+                <input type="datetime-local" name="banned_until" required
+                       class="bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1 text-xs font-mono flex-1">
+            </div>
+            <div class="flex items-center gap-2">
+                <label class="text-xs text-slate-400 w-28 shrink-0">Message</label>
+                <input type="text" name="ban_message" placeholder="Reason shown to user on login…" maxlength="500"
+                       class="bg-slate-700 border border-slate-600 text-slate-100 rounded px-2 py-1 text-xs flex-1">
+            </div>
+            <button type="submit"
+                    class="px-4 py-2 bg-red-700 text-white rounded text-sm font-semibold hover:bg-red-600 transition-colors">
+                <i class="fas fa-ban mr-1"></i>Ban User
+            </button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {# ── Building upgrade queue ── #}
     <h4 class="font-semibold text-slate-300 mb-2 border-b border-slate-700 pb-1">Building Upgrade Queue</h4>
     {% if building_queue %}
