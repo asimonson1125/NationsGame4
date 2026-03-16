@@ -18,6 +18,11 @@ class Config:
     CACHE_DEFAULT_TIMEOUT = 300
     CACHE_KEY_PREFIX = f'ng4_{_version}_'
     
+    # Upload configuration
+    _basedir = os.path.abspath(os.path.dirname(__file__))
+    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', os.path.join(_basedir, 'uploads'))
+    MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5MB
+    
     # Session and Cookie configuration
     REMEMBER_COOKIE_DURATION = timedelta(days=30)
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)

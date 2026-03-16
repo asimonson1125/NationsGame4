@@ -5,7 +5,7 @@ from flask import render_template, url_for, request, current_app, abort, jsonify
 from flask_login import login_required, current_user
 from .. import db, cache
 from ..models import Nation, NationFactory, NaturalResource, Alliance, Division, Unit, RecruitmentQueue, FactoryBuildQueue, BuildingUpgradeQueue, NationBuilding, User
-from ..helpers import error_response as _error_response, compute_total_upkeep
+from ..helpers import error_response as _error_response, compute_total_upkeep, htmx_response
 from ..game.population import (get_population_effects, estimate_pop_delta, FOOD_PER_CITIZEN,
                                 food_abundance_multiplier, get_food_days,
                                 FOOD_STOCKPILE_MIN_DAYS, FOOD_STOCKPILE_MAX_DAYS)
@@ -82,6 +82,15 @@ ADMIN_RESOURCES = {
 def service_worker():
     """Serve the service worker from the root for maximum scope."""
     return current_app.send_static_file('sw.js')
+
+
+@main.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    """Serve uploaded files (flags/banners) from the configured upload folder."""
+    from flask import send_from_directory
+    folder = current_app.config['UPLOAD_FOLDER']
+    current_app.logger.info(f"Serving upload: {filename} from {folder}")
+    return send_from_directory(folder, filename)
 
 
 @main.route('/robots.txt')
@@ -279,47 +288,46 @@ def resource_footer():
 @main.route('/update-flag', methods=['POST'])
 @login_required
 def update_flag():
-    new_flag = request.form.get('new_flag', '').strip()
-    IMAGE_EXTS = ('.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.svg',
-                  '.tiff', '.tif', '.ico', '.avif', '.apng', '.jfif')
-    # Strip query strings / fragments before checking extension
-    path = new_flag.split('?')[0].split('#')[0].lower()
-    if not new_flag or not any(path.endswith(ext) for ext in IMAGE_EXTS):
-        resp = current_app.response_class(status=422)
-        resp.headers['HX-Trigger'] = json.dumps(
-            {'showMessage': {'message': 'Invalid flag URL. Must link to an image file.', 'type': 'error'}}
-        )
-        return resp
-    current_user.nation.flag_url = new_flag
+    from ..image_service import process_and_save_image, delete_old_image
+    nation = current_user.nation
+    
+    file = request.files.get('flag_file')
+    if not file or not file.filename:
+        return _error_response('No image file provided.')
+        
+    # Delete old internal image if it exists
+    if nation.flag_url and nation.flag_url.startswith('/uploads/'):
+        delete_old_image(nation.flag_url)
+        
+    relative_path = process_and_save_image(file, 'flag')
+    if not relative_path:
+        return _error_response('Failed to process uploaded image.')
+        
+    nation.flag_url = relative_path
     db.session.commit()
-    resp = current_app.response_class(status=204)
-    resp.headers['HX-Trigger'] = json.dumps(
-        {'showMessage': {'message': 'Flag updated successfully.', 'type': 'success'}}
-    )
-    return resp
+    return htmx_response(message='Flag uploaded successfully.', status=200)
 
 
 @main.route('/update-banner', methods=['POST'])
 @login_required
 def update_banner():
-    new_banner = request.form.get('new_banner', '').strip()
-    if new_banner:
-        IMAGE_EXTS = ('.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.svg',
-                      '.tiff', '.tif', '.ico', '.avif', '.apng', '.jfif')
-        path = new_banner.split('?')[0].split('#')[0].lower()
-        if not any(path.endswith(ext) for ext in IMAGE_EXTS):
-            resp = current_app.response_class(status=422)
-            resp.headers['HX-Trigger'] = json.dumps(
-                {'showMessage': {'message': 'Invalid banner URL. Must link to an image file.', 'type': 'error'}}
-            )
-            return resp
-    current_user.nation.banner_url = new_banner
+    from ..image_service import process_and_save_image, delete_old_image
+    nation = current_user.nation
+    
+    file = request.files.get('banner_file')
+    if not file or not file.filename:
+        return _error_response('No banner file provided.')
+        
+    if nation.banner_url and nation.banner_url.startswith('/uploads/'):
+        delete_old_image(nation.banner_url)
+        
+    relative_path = process_and_save_image(file, 'banner')
+    if not relative_path:
+        return _error_response('Failed to process uploaded banner.')
+        
+    nation.banner_url = relative_path
     db.session.commit()
-    resp = current_app.response_class(status=204)
-    resp.headers['HX-Trigger'] = json.dumps(
-        {'showMessage': {'message': 'Banner updated successfully.', 'type': 'success'}}
-    )
-    return resp
+    return htmx_response(message='Banner uploaded successfully.', status=200)
 
 
 @main.route('/update-description', methods=['POST'])

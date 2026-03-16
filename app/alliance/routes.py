@@ -3,12 +3,8 @@ from flask import render_template, request, redirect, url_for, jsonify
 from flask_login import login_required, current_user
 from .. import db
 from ..models import Alliance, AllianceApplication, Message, Nation
-from ..helpers import error_response as _error_response
+from ..helpers import error_response as _error_response, htmx_response
 from . import alliance
-
-
-IMAGE_EXTS = ('.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.svg',
-              '.tiff', '.tif', '.ico', '.avif', '.apng', '.jfif')
 
 
 def _notify_founder_of_application(ally, applicant_nation):
@@ -90,6 +86,7 @@ def alliance_view(id):
 @alliance.route('/alliance/create', methods=['POST'])
 @login_required
 def create_alliance():
+    from ..image_service import process_and_save_image
     nation = current_user.nation
     if not nation:
         return _error_response('No nation found.')
@@ -103,7 +100,16 @@ def create_alliance():
     existing = Alliance.query.filter(db.func.lower(Alliance.name) == name.lower()).first()
     if existing:
         return _error_response('An alliance with that name already exists.')
+    
     ally = Alliance(name=name, founder_id=nation.id)
+    
+    # Handle optional flag upload on creation
+    file = request.files.get('flag_file')
+    if file and file.filename:
+        relative_path = process_and_save_image(file, 'alliance_flag')
+        if relative_path:
+            ally.flag_url = relative_path
+
     db.session.add(ally)
     db.session.flush()
     nation.alliance_id = ally.id
@@ -261,6 +267,7 @@ def leave_alliance():
 @alliance.route('/alliance/disband', methods=['POST'])
 @login_required
 def disband_alliance():
+    from ..image_service import delete_old_image
     nation = current_user.nation
     if not nation or not nation.alliance_id:
         return _error_response('You are not in an alliance.')
@@ -269,6 +276,11 @@ def disband_alliance():
         return _error_response('Alliance not found.')
     if ally.founder_id != nation.id:
         return _error_response('Only the founder can disband the alliance.')
+    
+    # Clean up flag if it's an internal upload
+    if ally.flag_url and ally.flag_url.startswith('/uploads/'):
+        delete_old_image(ally.flag_url)
+
     Nation.query.filter_by(alliance_id=ally.id).update({'alliance_id': None})
     AllianceApplication.query.filter_by(alliance_id=ally.id).delete()
     db.session.delete(ally)
@@ -279,24 +291,29 @@ def disband_alliance():
 @alliance.route('/alliance/update-flag', methods=['POST'])
 @login_required
 def update_flag():
+    from ..image_service import process_and_save_image, delete_old_image
     nation = current_user.nation
     if not nation or not nation.alliance_id:
         return _error_response('You are not in an alliance.')
     ally = db.session.get(Alliance, nation.alliance_id)
     if not ally or ally.founder_id != nation.id:
         return _error_response('Only the founder can update the flag.')
-    new_flag = request.form.get('new_flag', '').strip()
-    path = new_flag.split('?')[0].split('#')[0].lower()
-    if not new_flag or not any(path.endswith(ext) for ext in IMAGE_EXTS):
-        return _error_response('Invalid flag URL. Must link to an image file.')
-    ally.flag_url = new_flag
+
+    file = request.files.get('flag_file')
+    if not file or not file.filename:
+        return _error_response('No image file provided.')
+        
+    # Delete old internal image if it exists
+    if ally.flag_url and ally.flag_url.startswith('/uploads/'):
+        delete_old_image(ally.flag_url)
+        
+    relative_path = process_and_save_image(file, 'alliance_flag')
+    if not relative_path:
+        return _error_response('Failed to process uploaded image.')
+        
+    ally.flag_url = relative_path
     db.session.commit()
-    from flask import current_app
-    resp = current_app.response_class(status=204)
-    resp.headers['HX-Trigger'] = json.dumps(
-        {'showMessage': {'message': 'Alliance flag updated.', 'type': 'success'}}
-    )
-    return resp
+    return htmx_response(message='Alliance flag uploaded successfully.', status=200)
 
 
 @alliance.route('/alliance/update-description', methods=['POST'])
