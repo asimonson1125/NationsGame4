@@ -72,6 +72,12 @@ ADMIN_RESOURCES = {
 }
 
 
+@main.route('/sw.js')
+def service_worker():
+    """Serve the service worker from the root for maximum scope."""
+    return current_app.send_static_file('sw.js')
+
+
 @main.route('/robots.txt')
 @cache.cached(timeout=86400)
 def robots_txt():
