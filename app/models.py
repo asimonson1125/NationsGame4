@@ -103,8 +103,8 @@ class Nation(db.Model):
     # Mission skip counter (reset each hourly tick)
     mission_skips_today = db.Column(db.Integer, default=0)
 
-    natural_resources = db.relationship('NaturalResource', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
-    factories = db.relationship('NationFactory', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
+    natural_resources = db.relationship('NaturalResource', backref='nation_ref', lazy='selectin', overlaps="nation_ref")
+    factories = db.relationship('NationFactory', backref='nation_ref', lazy='selectin', overlaps="nation_ref")
     divisions = db.relationship('Division', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
     units = db.relationship('Unit', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
     recruitment_queue = db.relationship('RecruitmentQueue', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
@@ -112,8 +112,12 @@ class Nation(db.Model):
     equipment = db.relationship('Equipment', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
     trade_orders = db.relationship('TradeOrder', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
     messages_received = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient_nation', lazy='dynamic', overlaps="recipient,recipient_nation")
-    buildings = db.relationship('NationBuilding', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
+    buildings = db.relationship('NationBuilding', backref='nation_ref', lazy='selectin', overlaps="nation_ref")
     building_upgrades = db.relationship('BuildingUpgradeQueue', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
+
+    __table_args__ = (
+        db.Index('idx_nation_name', 'name'),
+    )
 
     def get_resource(self, key):
         return getattr(self, key, 0) or 0
@@ -377,7 +381,10 @@ class TradeOrder(db.Model):
     quantity_filled = db.Column(db.Integer, default=0)
     status = db.Column(db.String(10), default='open')          # open | filled | cancelled
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    __table_args__ = ({'postgresql_partition_by': 'HASH (nation_id)'},)
+    __table_args__ = (
+        db.Index('idx_trade_orders_resource_status_type', 'resource_key', 'status', 'order_type', 'price_per_unit'),
+        {'postgresql_partition_by': 'HASH (nation_id)'}
+    )
 
 
 class TradeExecution(db.Model):
@@ -392,7 +399,10 @@ class TradeExecution(db.Model):
     total_cost = db.Column(db.Float, nullable=False)
     fee = db.Column(db.Float, nullable=False)
     executed_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    __table_args__ = ({'postgresql_partition_by': 'HASH (buyer_nation_id)'},)
+    __table_args__ = (
+        db.Index('idx_trade_executions_resource_date', 'resource_key', 'executed_at'),
+        {'postgresql_partition_by': 'HASH (buyer_nation_id)'}
+    )
 
     buyer_nation = db.relationship('Nation', foreign_keys=[buyer_nation_id])
     seller_nation = db.relationship('Nation', foreign_keys=[seller_nation_id])
@@ -408,7 +418,10 @@ class Message(db.Model):
     message_type = db.Column(db.String(20), default='player')  # 'system' | 'player'
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    __table_args__ = ({'postgresql_partition_by': 'HASH (recipient_id)'},)
+    __table_args__ = (
+        db.Index('idx_messages_recipient_unread', 'recipient_id', 'is_read'),
+        {'postgresql_partition_by': 'HASH (recipient_id)'}
+    )
 
     sender = db.relationship('Nation', foreign_keys=[sender_id])
     recipient = db.relationship('Nation', foreign_keys=[recipient_id], overlaps='messages_received,recipient_nation')

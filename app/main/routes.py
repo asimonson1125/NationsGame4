@@ -16,31 +16,35 @@ from . import main
 
 def _nation_summary(nation):
     """Build summary data dict for nation profile display."""
-    # Optimization: Use a single query for counts and use eager loading if possible
+    # Optimization: Use pre-loaded relationships (selectin) where possible
+    
     # Factory summary: list of (display_name, count) for factories with count > 0
-    factories = NationFactory.query.filter_by(nation_id=nation.id).filter(NationFactory.count > 0).all()
     factory_summary = []
     total_factories = 0
-    for f in factories:
-        fdef = FACTORY_DEFS.get(f.factory_key)
-        name = fdef.name if fdef else f.factory_key.replace('_', ' ').title()
-        factory_summary.append((name, f.count))
-        total_factories += f.count
+    for f in nation.factories:
+        if f.count > 0:
+            fdef = FACTORY_DEFS.get(f.factory_key)
+            name = fdef.name if fdef else f.factory_key.replace('_', ' ').title()
+            factory_summary.append((name, f.count))
+            total_factories += f.count
     factory_summary.sort(key=lambda x: x[0])
 
     # Buildings
     from ..game.buildings import BUILDING_DEFS
-    nation_buildings = NationBuilding.query.filter_by(nation_id=nation.id).all()
     building_summary = sorted(
-        [(BUILDING_DEFS[nb.building_key].name, nb.level) for nb in nation_buildings if nb.building_key in BUILDING_DEFS],
+        [(BUILDING_DEFS[nb.building_key].name, nb.level) for nb in nation.buildings if nb.building_key in BUILDING_DEFS],
         key=lambda x: x[0]
     )
 
     # Natural resources
-    natural_resources = NaturalResource.query.filter_by(nation_id=nation.id).filter(NaturalResource.amount > 0).order_by(NaturalResource.amount.desc()).all()
+    natural_resources = sorted(
+        [nr for nr in nation.natural_resources if nr.amount > 0],
+        key=lambda x: x.amount, reverse=True
+    )
 
     # Military counts with type breakdown for preamble
-    units_list = Unit.query.filter_by(nation_id=nation.id).with_entities(Unit.unit_key).all()
+    # Unit remains dynamic as it can be a very large collection
+    units_list = nation.units.with_entities(Unit.unit_key).all()
     total_units = len(units_list)
     unit_type_counts = {}
     for (unit_key,) in units_list:
@@ -48,7 +52,9 @@ def _nation_summary(nation):
         if udef and not udef.npc_only:
             unit_type_counts[udef.unit_type] = unit_type_counts.get(udef.unit_type, 0) + 1
     top_unit_type = max(unit_type_counts, key=unit_type_counts.get) if unit_type_counts else None
-    total_divisions = Division.query.filter_by(nation_id=nation.id).count()
+    
+    # Division remains dynamic
+    total_divisions = nation.divisions.count()
 
     return dict(
         total_factories=total_factories,

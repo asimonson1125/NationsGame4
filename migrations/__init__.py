@@ -25,6 +25,7 @@ MIGRATIONS = [
     'add_ban_columns',
     'add_battle_name',
     'add_user_system_flag',
+    'add_performance_indices',
 ]
 
 
