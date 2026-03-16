@@ -33,9 +33,10 @@
 
 <div id="battle-status"
      {% if battle.status == 'active' %}
+     hx-ext="morph"
      hx-get="{{ url_for('military.battle_status', battle_id=battle.id) }}"
-     hx-trigger="every 2s"
-     hx-swap="outerHTML"
+     hx-trigger="every 5s"
+     hx-swap="morph:outerHTML"
      hx-indicator="#battle-spin"
      {% endif %}>
 

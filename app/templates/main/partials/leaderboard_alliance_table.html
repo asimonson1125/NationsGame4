@@ -33,7 +33,7 @@
                 <td class="px-4 py-3">
                     <div class="flex items-center">
                         {% if alliance.flag_url %}
-                        <img src="{{ alliance.flag_url }}" alt="Flag" class="w-8 h-5 object-cover mr-2 rounded-sm" onerror="this.style.display='none'">
+                        <img src="{{ alliance.flag_url }}" alt="Flag" class="w-8 h-5 object-contain mr-2 rounded-sm" onerror="this.style.display='none'">
                         {% endif %}
                         <a href="{{ url_for('alliance.alliance_view', id=alliance.id) }}" class="text-amber-400 hover:text-amber-300 font-medium">{{ alliance.name }}</a>
                     </div>

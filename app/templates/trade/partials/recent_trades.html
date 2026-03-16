@@ -28,7 +28,7 @@
                        class="flex items-center gap-2 group truncate max-w-[120px]"
                        title="{{ ex.buyer_nation.name }}">
                         {% if ex.buyer_nation.flag_url %}
-                        <img src="{{ ex.buyer_nation.flag_url }}" class="w-3.5 h-2.5 object-cover rounded-sm shadow-sm" alt="">
+                        <img src="{{ ex.buyer_nation.flag_url }}" class="w-3.5 h-2.5 object-contain rounded-sm shadow-sm" alt="">
                         {% endif %}
                         <span class="text-[11px] text-emerald-400 group-hover:text-emerald-300 font-medium truncate">{{ ex.buyer_nation.name }}</span>
                     </a>
@@ -38,7 +38,7 @@
                        class="flex items-center gap-2 group truncate max-w-[120px]"
                        title="{{ ex.seller_nation.name }}">
                         {% if ex.seller_nation.flag_url %}
-                        <img src="{{ ex.seller_nation.flag_url }}" class="w-3.5 h-2.5 object-cover rounded-sm shadow-sm" alt="">
+                        <img src="{{ ex.seller_nation.flag_url }}" class="w-3.5 h-2.5 object-contain rounded-sm shadow-sm" alt="">
                         {% endif %}
                         <span class="text-[11px] text-red-400 group-hover:text-red-300 font-medium truncate">{{ ex.seller_nation.name }}</span>
                     </a>

@@ -20,7 +20,7 @@
                 <td class="py-3">
                     <div class="flex items-center gap-2">
                         {% if order.nation_ref.flag_url %}
-                        <img src="{{ order.nation_ref.flag_url }}" class="w-4 h-3 object-cover rounded-sm shadow-sm" alt="">
+                        <img src="{{ order.nation_ref.flag_url }}" class="w-4 h-3 object-contain rounded-sm shadow-sm" alt="">
                         {% endif %}
                         <span class="text-slate-200 font-medium">{{ order.nation_ref.name }}</span>
                     </div>

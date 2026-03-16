@@ -37,7 +37,7 @@
                  class="relative cursor-pointer mb-4 group">
                 {% if nation.flag_url %}
                 <img src="{{ nation.flag_url }}" alt="{{ nation.name }} Flag"
-                     class="w-32 sm:w-44 h-28 object-cover border-2 border-white/50 group-hover:border-amber-400 transition-colors duration-200">
+                     class="w-32 sm:w-44 border-2 border-white/50 group-hover:border-amber-400 transition-colors duration-200">
                 {% else %}
                 <div class="w-32 sm:w-44 h-28 bg-white/20 border-2 border-white/50 group-hover:border-amber-400 flex items-center justify-center text-white/60 group-hover:text-amber-300 text-sm transition-colors duration-200">
                     Click to set flag
@@ -50,7 +50,7 @@
             {% else %}
                 {% if nation.flag_url %}
                 <img src="{{ nation.flag_url }}" alt="{{ nation.name }} Flag"
-                     class="w-32 sm:w-44 h-28 object-cover border-2 border-white/50 mb-4">
+                     class="w-32 sm:w-44 border-2 border-white/50 mb-4">
                 {% else %}
                 <div class="w-32 sm:w-44 h-28 bg-white/20 border-2 border-white/50 mb-4 flex items-center justify-center text-white/60 text-sm">
                     No Flag Set

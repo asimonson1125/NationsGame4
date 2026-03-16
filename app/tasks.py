@@ -1,5 +1,6 @@
 import threading
-from datetime import datetime, timezone
+import random
+from datetime import datetime, timezone, timedelta
 from flask_apscheduler import APScheduler
 
 scheduler = APScheduler()
@@ -32,16 +33,35 @@ def process_recruitment_queue():
 
 
 def process_combat_rounds():
-    """Runs every 10s. Processes one combat round for each active battle."""
+    """Processes one combat round for each active battle, then schedules the next run with a random delay."""
     from .models import Battle
     from .game.combat import process_battle_round
     from . import db
-    with scheduler.app.app_context():
-        active_battles = Battle.query.filter_by(status='active').all()
-        for battle in active_battles:
-            process_battle_round(battle, db.session)
-        if active_battles:
-            db.session.commit()
+
+    start_time = datetime.now(timezone.utc)
+
+    try:
+        with scheduler.app.app_context():
+            active_battles = Battle.query.filter_by(status='active').all()
+            for battle in active_battles:
+                process_battle_round(battle, db.session)
+            if active_battles:
+                db.session.commit()
+    except Exception:
+        scheduler.app.logger.exception('process_combat_rounds error')
+
+    # Mean 60s, Std Dev 10s. Minimum 1s, Maximum 120s.
+    delay = min(120, max(1, int(random.gauss(60, 10))))
+    next_run = start_time + timedelta(seconds=delay)
+
+    # Ensure next_run is in the future
+    now = datetime.now(timezone.utc)
+    if next_run <= now:
+        next_run = now + timedelta(seconds=1)
+
+    scheduler.add_job(id='process_combat', func=process_combat_rounds,
+                      trigger='date', run_date=next_run, replace_existing=True,
+                      max_instances=1, coalesce=True)
 
 
 def tick_nation(nation, *, skip_military=False):
@@ -442,7 +462,7 @@ def register_tasks(app):
     scheduler.add_job(id='process_war_deployments', func=process_war_deployments,
                       trigger='interval', seconds=60, replace_existing=True)
     scheduler.add_job(id='process_combat', func=process_combat_rounds,
-                      trigger='interval', seconds=10, replace_existing=True,
+                      trigger='interval', seconds=60, replace_existing=True,
                       max_instances=1, coalesce=True)
 
     # ── Daily tasks (midnight UTC) ──

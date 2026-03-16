@@ -751,7 +751,7 @@ def _get_or_create_npc_nation():
 
 
 def _generate_peacekeeping_opponent(player_division, npc_nation_id):
-    """Create a half-strength NPC division of infantry units."""
+    """Create a half-strength NPC division using a weighted composition."""
     alive_units = Unit.query.filter_by(division_id=player_division.id, nation_id=player_division.nation_id).filter(Unit.hp > 0).all()
 
     total_strength = sum(u.effective_firepower + u.effective_armour + u.effective_maneuver for u in alive_units)
@@ -764,19 +764,14 @@ def _generate_peacekeeping_opponent(player_division, npc_nation_id):
     db.session.add(npc_div)
     db.session.flush()
 
-    # Build pool of infantry-only unit keys from the player's division
-    infantry_keys = [u.unit_key for u in alive_units
-                     if UNIT_DEFS.get(u.unit_key) and UNIT_DEFS[u.unit_key].unit_type == 'Infantry']
-    if not infantry_keys:
-        infantry_keys = ['infantry']
-    random.shuffle(infantry_keys)
+    _PK_POOL = [('medic', 10), ('infantry', 75), ('m1a1_abrahms', 15)]
+    _PK_KEYS  = [k for k, _ in _PK_POOL]
+    _PK_WEIGHTS = [w for _, w in _PK_POOL]
 
     current_strength = 0
     created = 0
-    idx = 0
     while current_strength < target or created < 1:
-        key = infantry_keys[idx % len(infantry_keys)]
-        idx += 1
+        key, = random.choices(_PK_KEYS, weights=_PK_WEIGHTS)
         udef = UNIT_DEFS.get(key)
         if not udef:
             continue
@@ -784,7 +779,6 @@ def _generate_peacekeeping_opponent(player_division, npc_nation_id):
         db.session.add(unit)
         current_strength += udef.firepower + udef.armour + udef.maneuver
         created += 1
-        # Safety cap: don't spawn more units than the player has × 2
         if created >= len(alive_units) * 2:
             break
 

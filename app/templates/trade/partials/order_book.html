@@ -15,7 +15,7 @@
                 </div>
                 <div class="flex items-center gap-2 mt-1">
                     {% if best_sell.nation_ref.flag_url %}
-                    <img src="{{ best_sell.nation_ref.flag_url }}" class="w-4 h-3 object-cover rounded-sm shadow-sm" alt="">
+                    <img src="{{ best_sell.nation_ref.flag_url }}" class="w-4 h-3 object-contain rounded-sm shadow-sm" alt="">
                     {% endif %}
                     <span class="text-[11px] text-slate-300 font-medium">{{ best_sell.nation_ref.name }}</span>
                 </div>
@@ -43,7 +43,7 @@
                 </div>
                 <div class="flex items-center gap-2 mt-1">
                     {% if best_buy.nation_ref.flag_url %}
-                    <img src="{{ best_buy.nation_ref.flag_url }}" class="w-4 h-3 object-cover rounded-sm shadow-sm" alt="">
+                    <img src="{{ best_buy.nation_ref.flag_url }}" class="w-4 h-3 object-contain rounded-sm shadow-sm" alt="">
                     {% endif %}
                     <span class="text-[11px] text-slate-300 font-medium">{{ best_buy.nation_ref.name }}</span>
                 </div>
@@ -112,7 +112,7 @@
                             <td class="py-2">
                                 <div class="flex items-center gap-2">
                                     {% if order.nation_ref.flag_url %}
-                                    <img src="{{ order.nation_ref.flag_url }}" class="w-3.5 h-2.5 object-cover rounded-sm" alt="">
+                                    <img src="{{ order.nation_ref.flag_url }}" class="w-3.5 h-2.5 object-contain rounded-sm" alt="">
                                     {% endif %}
                                     <span class="text-slate-300 truncate max-w-[80px]">{{ order.nation_ref.name }}</span>
                                 </div>
@@ -153,7 +153,7 @@
                             <td class="py-2">
                                 <div class="flex items-center gap-2">
                                     {% if order.nation_ref.flag_url %}
-                                    <img src="{{ order.nation_ref.flag_url }}" class="w-3.5 h-2.5 object-cover rounded-sm" alt="">
+                                    <img src="{{ order.nation_ref.flag_url }}" class="w-3.5 h-2.5 object-contain rounded-sm" alt="">
                                     {% endif %}
                                     <span class="text-slate-300 truncate max-w-[80px]">{{ order.nation_ref.name }}</span>
                                 </div>

@@ -4,40 +4,56 @@ from PIL import Image
 import pillow_avif  # registers the plugin automatically
 from flask import current_app
 
+_FLAG_RATIO_MIN = 1 / 3  # tallest allowed (1:3)
+_FLAG_RATIO_MAX = 3      # widest allowed (3:1)
+_FLAG_MAX_DIM   = 600    # cap longest side for file-size
+
+# Fixed output sizes for non-flag image types
+_FIXED_SIZES = {
+    'banner': (1200, 400),
+}
+
+def _flag_output_size(w, h):
+    """Return (w, h) preserving the original ratio, clamped to 1:3..3:1, capped at _FLAG_MAX_DIM."""
+    ratio = w / h
+    if ratio > _FLAG_RATIO_MAX:
+        w = round(h * _FLAG_RATIO_MAX)
+    elif ratio < _FLAG_RATIO_MIN:
+        h = round(w / _FLAG_RATIO_MIN)
+    if w > _FLAG_MAX_DIM:
+        h = round(h * _FLAG_MAX_DIM / w)
+        w = _FLAG_MAX_DIM
+    if h > _FLAG_MAX_DIM:
+        w = round(w * _FLAG_MAX_DIM / h)
+        h = _FLAG_MAX_DIM
+    return (w, h)
+
 def process_and_save_image(file_storage, image_type='flag'):
     """
     Process an uploaded image: normalize, resize, and convert to AVIF.
-    image_type: 'flag' (320x200) or 'banner' (1200x400)
+    Flags and alliance_flag preserve original dimensions, clamped to a 1:3..3:1 ratio.
+    Banners are resized to a fixed 1200x400.
     Returns: relative path to the saved file or None if failed.
     """
     if not file_storage:
         return None
 
-    # Configurable dimensions
-    SIZES = {
-        'flag': (320, 200),
-        'banner': (1200, 400),
-        'alliance_flag': (320, 200),
-    }
-    
-    target_size = SIZES.get(image_type, (320, 200))
-    
     try:
         # Open image
         img = Image.open(file_storage)
-        
-        # Convert to RGB (strips alpha if needed, prevents issues with some AVIF encoders)
-        # Note: If you want to keep transparency for flags, use 'RGBA'
+
+        # Convert to RGB (strips alpha, prevents issues with some AVIF encoders)
         img = img.convert('RGB')
-        
-        # Resize using Lanczos for high quality
-        # Maintain aspect ratio? For flags/banners, usually better to force or crop.
-        # Here we'll use thumbnail + padding or just resize. 
-        # For simple gaming flags, forcing dimensions is often expected.
+
+        if image_type in _FIXED_SIZES:
+            target_size = _FIXED_SIZES[image_type]
+        else:
+            target_size = _flag_output_size(*img.size)
+
         img = img.resize(target_size, Image.Resampling.LANCZOS)
         
         # Ensure upload directories exist
-        subfolder = 'flags' if image_type == 'flag' else 'banners'
+        subfolder = 'banners' if image_type == 'banner' else 'flags'
         upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], subfolder)
         os.makedirs(upload_dir, exist_ok=True)
         

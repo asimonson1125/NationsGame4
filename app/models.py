@@ -120,10 +120,21 @@ class Nation(db.Model):
     )
 
     def get_resource(self, key):
-        return getattr(self, key, 0) or 0
+        if hasattr(self.__class__, key):
+            return getattr(self, key, 0) or 0
+        for nr in self.natural_resources:
+            if nr.resource_key == key:
+                return nr.amount or 0
+        return 0
 
     def add_resource(self, key, amount):
-        setattr(self, key, self.get_resource(key) + amount)
+        if hasattr(self.__class__, key):
+            setattr(self, key, self.get_resource(key) + amount)
+        else:
+            for nr in self.natural_resources:
+                if nr.resource_key == key:
+                    nr.amount = (nr.amount or 0) + amount
+                    return
 
 
 class NaturalResource(db.Model):

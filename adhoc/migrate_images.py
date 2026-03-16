@@ -53,8 +53,7 @@ def migrate():
                     else:
                         print("  Failed to process image.")
         
-        print("
---- Migrating Nation Banners ---")
+        print("--- Migrating Nation Banners ---")
         for nation in nations:
             if is_external(nation.banner_url):
                 print(f"Processing banner for {nation.name} ({nation.banner_url})...")
@@ -67,8 +66,7 @@ def migrate():
                     else:
                         print("  Failed to process image.")
 
-        print("
---- Migrating Alliance Flags ---")
+        print("--- Migrating Alliance Flags ---")
         alliances = Alliance.query.all()
         for alliance in alliances:
             if is_external(alliance.flag_url):
@@ -83,8 +81,7 @@ def migrate():
                         print("  Failed to process image.")
 
         db.session.commit()
-        print("
-Migration complete.")
+        print("Migration complete.")
 
 if __name__ == '__main__':
     migrate()

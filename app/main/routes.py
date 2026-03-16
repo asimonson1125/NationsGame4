@@ -99,13 +99,15 @@ def robots_txt():
     """Serve robots.txt for search engine crawlers."""
     lines = [
         'User-agent: *',
-        'Allow: /',
-        'Disallow: /home',
-        'Disallow: /admin/',
-        'Disallow: /gp-breakdown',
-        'Disallow: /resource-footer',
-        'Disallow: /population-delta',
-        'Disallow: /leaderboard/',
+        'Allow: /$',
+        'Allow: /changelog',
+        'Allow: /login',
+        'Allow: /register',
+        'Allow: /nation/',
+        'Allow: /alliance/',
+        'Allow: /leaderboard$',
+        'Disallow: /',
+        '',
         f'Sitemap: {url_for("main.sitemap_xml", _external=True)}',
     ]
     resp = current_app.response_class('\n'.join(lines) + '\n', mimetype='text/plain')

@@ -38,7 +38,7 @@
 
     {# Left: Brand #}
     <a href="{{ url_for('main.home') }}" class="flex items-center gap-2 mr-6 shrink-0">
-        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Nations Engine" class="w-8 h-8">
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Nations Engine Logo" class="w-8 h-8">
         <span class="text-xl text-amber-500 tracking-wider font-semibold" style="font-family: Palatino, 'Palatino Linotype', 'Palatino LT STD', 'Book Antiqua', Georgia, serif;">NATIONS ENGINE</span>
     </a>
 
@@ -129,7 +129,7 @@
     </div>
 
     {# Mobile hamburger #}
-    <button @click="mobileMenu = !mobileMenu" class="lg:hidden ml-auto text-slate-300 hover:text-slate-100 p-2">
+    <button name="menu" @click="mobileMenu = !mobileMenu" class="lg:hidden ml-auto text-slate-300 hover:text-slate-100 p-2">
         <i class="fas fa-bars text-lg"></i>
     </button>
 </nav>
@@ -376,7 +376,6 @@
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('Service Worker registered', reg))
                 .catch(err => console.error('Service Worker registration failed', err));
         });
     }
