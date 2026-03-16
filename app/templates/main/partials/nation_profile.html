@@ -6,13 +6,13 @@
 </style>
 {# ===== NATION HEADER BANNER ===== #}
 {% set continent_bg = {
-    'Tind':          'tind.png',
-    'Zaheria':       'zaheria.jpeg',
-    'Westberg':      'westberg.jpeg',
-    'Amarino':       'amarino.jpeg',
-    'San Sebastian': 'san_sebastian.jpeg',
+    'Tind':          'tind.avif',
+    'Zaheria':       'zaheria.avif',
+    'Westberg':      'westberg.avif',
+    'Amarino':       'amarino.avif',
+    'San Sebastian': 'san_sebastian.avif',
 } %}
-{% set bg_image = nation.banner_url if nation.banner_url else url_for('static', filename='images/continents/' ~ continent_bg.get(nation.continent, 'tind.png')) %}
+{% set bg_image = nation.banner_url if nation.banner_url else url_for('static', filename='images/continents/' ~ continent_bg.get(nation.continent, 'tind.avif')) %}
 <div class="relative bg-cover bg-center"
      {% if is_owner %}x-data="{ flagModal: false }"{% endif %}
      style="background-image: url('{{ bg_image }}'); padding: 100px 20px;">

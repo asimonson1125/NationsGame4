@@ -4,7 +4,7 @@
 
 {% if battle.location %}
 {% set continent_slug = battle.location | lower | replace(' ', '_') %}
-{% set continent_ext = 'png' if continent_slug == 'tind' else 'jpeg' %}
+{% set continent_ext = 'avif' %}
 {% block head %}
 <style>
     body { background-color: transparent !important; }
