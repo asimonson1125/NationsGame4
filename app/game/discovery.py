@@ -98,60 +98,27 @@ RESOURCE_TYPES = {
     'crude_deep_sea_oil': 'mined'
 }
 
-RESOURCE_LEVELS = {
-    'apple_tree': 1, 'cactus': 1, 'mulberry': 1, 'beehive': 1, 'goat': 1, 'clam': 1, 'shrimp': 1, 'coal': 1, 'iron': 1, 'marble': 1,
-    'coffea': 2, 'herbs': 2, 'tobacco_plant': 2, 'cow': 2, 'sheep': 2, 'bass': 2, 'cod': 2, 'bauxite': 2, 'copper': 2, 'lead': 2,
-    'cotton': 3, 'oak_tree': 3, 'rubber_tree': 3, 'boar': 3, 'yak': 3, 'mackerel': 3, 'salmon': 3, 'gold': 3, 'platinum': 3, 'silver': 3,
-    'christmas_tree': 4, 'cocoa': 4, 'grapevine': 4, 'buffalo': 4, 'elephant': 4, 'piranha': 4, 'dolphin': 4, 'saltpeter': 4, 'sulfur': 4, 'uraninite': 4, 'petroleum': 4,
-    'hops': 5, 'kingwood': 5, 'hemp': 5, 'fox': 5, 'panther': 5, 'shark': 5, 'whale': 5, 'gemstone': 5, 'stonesilver': 5, 'silicon': 5, 'crude_deep_sea_oil': 5
-}
 
 
-def _get_building_level(buildings, resource_key):
-    """Return the level of the prerequisite building for a given resource."""
-    cat = RESOURCE_TYPES.get(resource_key)
-    if cat == 'flora':
-        return buildings.get('botanical_research_station', 1)
-    if cat == 'fauna':
-        return buildings.get('wildlife_ranch', 1)
-    if cat == 'mined':
-        return buildings.get('mining_bureau', 1)
-    return 1
-
-
-def roll_expansion(continent, population, buildings=None):
+def roll_expansion(continent, population):
     """Returns (new_land: dict, discovered: dict, total_gained: int)."""
-    buildings = buildings or {}
     land_weights = LAND_WEIGHTS.get(continent, DEFAULT_LAND_WEIGHTS)
     new_land = _apply_variance(_weighted_distribute(land_weights, max(1, population // 100)))
     total_gained = sum(new_land.values())
 
     resource_weights = RESOURCE_WEIGHTS.get(continent, DEFAULT_RESOURCE_WEIGHTS)
-    # Filter resources by building level
-    eligible_weights = {
-        res: weight for res, weight in resource_weights.items()
-        if weight > 0 and _get_building_level(buildings, res) >= RESOURCE_LEVELS.get(res, 1)
-    }
-    
-    discovered = _apply_variance(_weighted_distribute(eligible_weights, total_gained // 10))
+    discovered = _apply_variance(_weighted_distribute(resource_weights, total_gained // 10))
 
     return new_land, discovered, total_gained
 
 
-def roll_colonization(target_continent, population, buildings=None):
+def roll_colonization(target_continent, population):
     """Returns (new_land: dict, discovered: dict, total_gained: int) — 5x land, more discoveries."""
-    buildings = buildings or {}
     land_weights = LAND_WEIGHTS.get(target_continent, DEFAULT_LAND_WEIGHTS)
     new_land = _apply_variance(_weighted_distribute(land_weights, max(1, (population // 100) * 5)))
     total_gained = sum(new_land.values())
 
     resource_weights = RESOURCE_WEIGHTS.get(target_continent, DEFAULT_RESOURCE_WEIGHTS)
-    # Filter resources by building level
-    eligible_weights = {
-        res: weight for res, weight in resource_weights.items()
-        if weight > 0 and _get_building_level(buildings, res) >= RESOURCE_LEVELS.get(res, 1)
-    }
-
-    discovered = _apply_variance(_weighted_distribute(eligible_weights, total_gained // 2))
+    discovered = _apply_variance(_weighted_distribute(resource_weights, total_gained // 2))
 
     return new_land, discovered, total_gained

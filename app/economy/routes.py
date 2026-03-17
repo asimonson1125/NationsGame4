@@ -111,8 +111,7 @@ def expand_borders():
     _deduct_cost(nation, cost)
     nation.last_expanded_at = datetime.utcnow()
     continent = nation.continent or 'Westberg'
-    buildings = {nb.building_key: nb.level for nb in nation.buildings}
-    new_land, discovered, total_gained = roll_expansion(continent, nation.population, buildings=buildings)
+    new_land, discovered, total_gained = roll_expansion(continent, nation.population)
     _apply_land(nation, new_land, total_gained)
     _upsert_resources(nation, discovered)
     db.session.commit()
@@ -156,8 +155,7 @@ def colonize():
 
     _deduct_cost(nation, cost)
     nation.last_colonized_at = datetime.utcnow()
-    buildings = {nb.building_key: nb.level for nb in nation.buildings}
-    new_land, discovered, total_gained = roll_colonization(target_continent, nation.population, buildings=buildings)
+    new_land, discovered, total_gained = roll_colonization(target_continent, nation.population)
     _apply_land(nation, new_land, total_gained)
     _upsert_resources(nation, discovered)
     db.session.commit()
