@@ -79,7 +79,7 @@
     </div>
 
     {# Market Content #}
-    <div x-show="view === 'market'" x-cloak:false class="space-y-8">
+    <div x-show="view === 'market'" class="space-y-8">
         
         {# Resource Focus Hero #}
         <div class="bg-gradient-to-r from-slate-800 to-slate-800/50 border border-slate-700 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6">
@@ -173,10 +173,10 @@
                             </button>
                         </div>
 
-                        <form hx-post="{{ url_for('trade.place_order') }}"
+                        <form id="place-order-form"
+                              hx-post="{{ url_for('trade.place_order') }}"
                               hx-target="#order-book"
-                              hx-swap="innerHTML"
-                              @submit="qty = 0; price = 0">
+                              hx-swap="innerHTML">
                             <input type="hidden" name="resource" :value="resource">
                             <input type="hidden" name="order_type" :value="side">
 
@@ -361,8 +361,8 @@ function tradePageData() {
         view: '{{ request.args.get("view", "market") }}',
         resource: '{{ selected_resource }}',
         side: 'buy',
-        qty: 0,
-        price: 0,
+        qty: '',
+        price: '',
         fee_pct: {{ fee_pct }},
         balances: {{ balances|tojson }},
 
@@ -370,6 +370,12 @@ function tradePageData() {
             if (this.view === 'analytics') {
                 this.$nextTick(() => this.loadAnalytics());
             }
+            document.getElementById('place-order-form').addEventListener('htmx:afterRequest', (e) => {
+                if (e.detail.successful) {
+                    this.qty = '';
+                    this.price = '';
+                }
+            });
         },
 
         // Analytics state
