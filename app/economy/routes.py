@@ -15,8 +15,6 @@ from ..game.buildings import (BUILDING_DEFS, units_unlocked_at_level,
 from ..game.units import UNIT_DEFS
 from . import economy
 
-_EXPAND_COOLDOWN = 60       # seconds between expand attempts
-_COLONIZE_COOLDOWN = 60    # seconds between colonize attempts
 _MAX_LAND_TX = 10_000      # tiles per buy/build transaction
 _MAX_BUILD_QTY = 100       # factories per build transaction
 
@@ -55,6 +53,19 @@ def _upsert_resources(nation, discovered):
             db.session.add(nr)
 
 
+def _current_day_tick():
+    """Returns midnight UTC for today (start of current day tick)."""
+    now = datetime.utcnow()
+    return now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def _current_week_tick():
+    """Returns midnight UTC of the most recent Monday (start of current week tick)."""
+    now = datetime.utcnow()
+    monday = now - timedelta(days=now.weekday())
+    return monday.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
 def _apply_land(nation, new_land, total_gained):
     for land_type, amount in new_land.items():
         nation.add_resource(land_type, amount)
@@ -67,6 +78,10 @@ def _apply_land(nation, new_land, total_gained):
 def land():
     nation = current_user.nation
     natural_resources = NaturalResource.query.filter_by(nation_id=nation.id).order_by(NaturalResource.amount.desc()).all()
+    day_tick = _current_day_tick()
+    week_tick = _current_week_tick()
+    expand_on_cooldown = bool(nation.last_expanded_at and nation.last_expanded_at >= day_tick)
+    colonize_on_cooldown = bool(nation.last_colonized_at and nation.last_colonized_at >= week_tick)
     return render_template(
         'economy/land.html',
         nation=nation,
@@ -74,6 +89,8 @@ def land():
         colonize_cost=get_colonize_cost(nation.population),
         continents=CONTINENTS,
         natural_resources=natural_resources,
+        expand_on_cooldown=expand_on_cooldown,
+        colonize_on_cooldown=colonize_on_cooldown,
     )
 
 
@@ -84,11 +101,8 @@ def expand_borders():
     if not nation:
         return _error_response('No nation found.')
 
-    if nation.last_expanded_at:
-        elapsed = (datetime.utcnow() - nation.last_expanded_at).total_seconds()
-        if elapsed < _EXPAND_COOLDOWN:
-            remaining = int(_EXPAND_COOLDOWN - elapsed)
-            return _error_response(f'Please wait {remaining}s before expanding again.')
+    if nation.last_expanded_at and nation.last_expanded_at >= _current_day_tick():
+        return _error_response('You have already expanded your borders today. Come back tomorrow!')
 
     cost = get_expand_cost(nation.population)
     if not _can_afford(nation, cost):
@@ -129,11 +143,8 @@ def colonize():
     if (nation.tier or 1) < 6:
         return _error_response('Colonization requires Tier 6 or higher.')
 
-    if nation.last_colonized_at:
-        elapsed = (datetime.utcnow() - nation.last_colonized_at).total_seconds()
-        if elapsed < _COLONIZE_COOLDOWN:
-            remaining = int(_COLONIZE_COOLDOWN - elapsed)
-            return _error_response(f'Please wait {remaining}s before colonizing again.')
+    if nation.last_colonized_at and nation.last_colonized_at >= _current_week_tick():
+        return _error_response('You have already sent colonists this week. Come back next Monday!')
 
     cost = get_colonize_cost(nation.population)
     if not _can_afford(nation, cost):
@@ -434,7 +445,7 @@ def build_factory():
     _deduct_cost(nation, total_cost)
 
     # Queue the build instead of instant completion
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     new_completes_at = now + timedelta(minutes=fdef.build_time)
 
     # Check for existing queue entry of same type completing within 5 min

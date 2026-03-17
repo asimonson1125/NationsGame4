@@ -3,15 +3,13 @@
 A browser-based nation-building simulator. Players manage resources, industry, land, and military across five continents.
 
 TODO:
-Start Beta Phase:
-- News (nation events)
-- War limits (1 month moratorium before declaring war again)
 - Events (a la 2.0)
 - Rate Limiting
 - Pushing calculations and displays to client JS
 - DB-compulted columns (like land_gp)
 - Economics balancing
 - Email verification on registration and "Forgot password?"
+- Daily Missions
 - 1.0 release
 
 **Stack:** Flask · SQLAlchemy (PostgreSQL with Partitioning) · HTMX · Alpine.js · Tailwind CSS · Flask-Caching (SimpleCache dev / Redis prod)

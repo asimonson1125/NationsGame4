@@ -16,7 +16,7 @@
         <i class="fas fa-umbrella-beach text-amber-400 text-lg"></i>
         <div>
             <span class="text-amber-300 font-semibold">Vacation Mode Active</span>
-            <span class="text-slate-400 text-sm ml-2">Your nation is frozen — no ticks, collection, or deployments until you disable it in settings below.</span>
+            <span class="text-slate-400 text-sm ml-2">Your nation is frozen — no ticks, collection, or deployments until you disable it in <a href="{{ url_for('main.account') }}" class="underline hover:text-amber-300">settings</a>.</span>
         </div>
     </div>
 </div>
@@ -25,84 +25,5 @@
 {# ===== NATION PROFILE ===== #}
 {% include 'main/partials/nation_profile.html' %}
 
-{# ===== SETTINGS SECTION (owner only) ===== #}
-<div class="p-5 space-y-5" x-data="{ settingsOpen: false }">
-
-    <div class="bg-slate-800 rounded-lg border border-slate-700 max-w-4xl mx-auto">
-        {# Toggle button #}
-        <button @click="settingsOpen = !settingsOpen"
-                class="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-750 transition-colors"
-                :class="settingsOpen ? 'border-b border-slate-700' : ''">
-            <span class="text-lg font-semibold text-slate-100">
-                <i class="fas fa-cog mr-2 text-slate-400"></i>Nation Settings
-            </span>
-            <i class="fas fa-chevron-down text-slate-400 transition-transform duration-200"
-               :class="settingsOpen ? 'rotate-180' : ''"></i>
-        </button>
-
-        <div x-show="settingsOpen" x-cloak class="divide-y divide-slate-700">
-
-            {# Email #}
-            <form hx-post="{{ url_for('auth.update_email') }}" hx-swap="none"
-                  class="p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                <label class="text-sm font-medium text-slate-300 sm:w-28 shrink-0">Email
-                    <span class="text-xs text-slate-500 block font-normal">Private</span>
-                </label>
-                <input type="email" name="new_email"
-                       value="{{ current_user.email or '' }}"
-                       placeholder="Enter new email address"
-                       class="flex-1 w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm"
-                       required>
-                <button type="submit"
-                        class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md transition-colors font-semibold text-sm shrink-0">
-                    Save
-                </button>
-            </form>
-
-            {# Vacation Mode #}
-            <form hx-post="{{ url_for('auth.toggle_vacation') }}" hx-swap="none" hx-on::after-request="if(event.detail.successful) location.reload()"
-                  class="p-4 flex items-center justify-between">
-                <div>
-                    <label class="flex items-center gap-2 text-sm font-medium text-slate-300 cursor-pointer">
-                        <input type="checkbox" name="vacation_mode"
-                               class="w-4 h-4 cursor-pointer rounded"
-                               {% if current_user.vacation_mode %}checked{% endif %}
-                               {% if vac_cooldown_remaining %}disabled{% endif %}>
-                        Vacation Mode
-                    </label>
-                    <p class="text-xs text-slate-400 mt-1 ml-6">Freezes your nation — no ticks, collection, or deployments. 48-hour cooldown after disabling.</p>
-                    {% if vac_cooldown_remaining %}
-                    <p class="text-xs text-amber-400 mt-1 ml-6">Cooldown active — can re-enable in {{ vac_cooldown_remaining[0] }}h {{ vac_cooldown_remaining[1] }}m.</p>
-                    {% endif %}
-                </div>
-                <button type="submit"
-                        class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md transition-colors font-semibold text-sm shrink-0"
-                        {% if vac_cooldown_remaining %}disabled{% endif %}>
-                    Save
-                </button>
-            </form>
-
-        </div>
-    </div>{# /settingsOpen #}
-
-    {% if current_user.is_admin %}
-    {# ===== ADMIN PANEL ===== #}
-    <div class="bg-slate-800 rounded-lg border-2 border-red-500 p-5 max-w-4xl mx-auto"
-         x-data="nationAutocomplete('{{ url_for('main.admin_search_nations') }}', 1, function(n) {
-             htmx.ajax('GET', '/admin/nation/' + n.id, {target: '#admin-panel-content', swap: 'outerHTML'});
-         })">
-        <h2 class="text-xl font-semibold mb-4 text-red-400">Admin Panel</h2>
-
-        {# Nation search #}
-        {{ nation_autocomplete_input(placeholder='Search nations by name...', accent='red', show_id=true, wrapper_class='mb-4') }}
-
-        {# Panel content (loaded via HTMX) #}
-        <div id="admin-panel-content">
-            <p class="text-sm text-slate-500 italic">Search for a nation above to manage it.</p>
-        </div>
-    </div>
-    {% endif %}
-
-</div>
 {% endif %}
 {% endblock %}

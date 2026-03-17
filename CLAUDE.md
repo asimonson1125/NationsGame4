@@ -42,25 +42,57 @@ Migrations must be idempotent — use `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE
 - `auth` — `/login`, `/logout`, `/register`
 - `main` — `/` (home), `/gp-breakdown`, `/resource-footer`, `/update-flag`, `/update-description`
 - `economy` — `/land`, `/expand-borders`, `/colonize`, `/buy-cleared-land`, `/build-urban-areas`, `/industry`, `/industry/build`, `/industry/collect/<key>`
+- `military` — division management, unit recruitment, mobilization, peacekeeping missions
+- `equipment` — equipment inventory, loot crates, equip/unequip
+- `trade` — trade orders (buy/sell)
+- `alliance` — create/join/manage alliances
+- `mail` — nation-to-nation messaging
+- `war` — declare war, deploy divisions, settlement/peace
 
 **Models** (`app/models.py`):
-- `User` — auth only
-- `Nation` — resource columns (money, food, power, building_materials, consumer_goods, metal, ammunition, fuel, uranium, whz), land columns (cleared_land, urban_areas, forested_land, mountainous_land, coastal_land, fertile_land, arid_land, tundra_land, swamp_land, volcanic_land, used_land, total_land), GP columns (land_gp, factory_gp), tier, continent, flag_url, description
-- `NaturalResource` — nation_id + resource_key + amount
-- `NationFactory` — nation_id + factory_key + count + production_capacity (0–24)
-- `NationBuilding` — nation_id + building_key + level (unique per nation+key)
-- `BuildingUpgradeQueue` — nation_id + building_key + target_level + completes_at (unique per nation+key)
-- `Alliance` — basic group
+- `User` — auth; `is_admin`, `is_system`, `vacation_mode`, `login_version` (used in session token `id:version`)
+- `Nation` — resources (money, food, power, building_materials, consumer_goods, metal, ammunition, fuel, uranium, whz), land (total_land, cleared_land, urban_areas, used_land, forest, grassland, jungle, desert, mountain, tundra, river, lake), GP columns (population_gp, land_gp, factory_gp, building_gp, military_gp), computed `total_gp`, tier, continent, population, `loot_tokens`
+- `NaturalResource` — nation_id + resource_key + amount (hash-partitioned)
+- `NationFactory` — nation_id + factory_key + count + production_capacity 0–24 (hash-partitioned)
+- `FactoryBuildQueue` — nation_id + factory_key + quantity + completes_at
+- `NationBuilding` — nation_id + building_key + level
+- `BuildingUpgradeQueue` — nation_id + building_key + target_level + completes_at
+- `Alliance` / `AllianceApplication` — groups + pending membership requests
+- `Division` — nation_id + name + mobilization_state (demobilized|mobilizing|mobilized) + in_combat + is_defensive (hash-partitioned)
+- `Unit` — nation_id + division_id + unit_key + level/xp + stats (firepower/armour/maneuver/hp/max_hp) + equipment FKs weapon_id/accessory_id/armour_eq_id (hash-partitioned)
+- `RecruitmentQueue` — nation_id + unit_key + completes_at
+- `Equipment` — nation_id + equipment_type + rarity + foil + buff_json + unit slots (hash-partitioned)
+- `TradeOrder` — nation_id + resource_key + order_type (buy/sell) + quantity + price
+- `Message` — sender_id + recipient_id + subject + body + is_read + message_type
+- `Battle` — attacker/defender nation + division IDs/names, battle_type (pvp|peacekeeping|pve_mission), status (active|finished), winner
+- `WarBattle` — links War to Battle with side (attacker|defender)
+- `War` — attacker_nation_id + defender_nation_id + status (active|peace) + war score tracking
+- `WarDeploymentQueue` — pending division deployments in a war (status: traveling|arrived)
+- `NationEvent` — event_type + description + occurred_at (for nation timeline)
+- `CombatReport` — battle_id + attacker_nation_id + log_json
 
-**Background task** (`app/tasks.py`): `increment_production_capacity` runs hourly, adds 1 to every `NationFactory.production_capacity` (capped at 24). Guarded with `WERKZEUG_RUN_MAIN` to avoid double-start in debug mode.
+**Background tasks** (`app/tasks.py`) — registered via `register_tasks(app)` with Flask-APScheduler:
+- **Hourly** (`process_hourly_tick`): increments `production_capacity` (+1 capped at 24) for all NationFactory rows with count > 0, then runs `tick_nation()` on every nation (population effects → food → growth/starvation → tier update → military upkeep → attrition or healing). Skips vacation-mode nations.
+- **Every 60s**: `process_recruitment_queue`, `process_factory_queue`, `process_building_upgrades`, `process_war_deployments`, `process_combat_rounds` (randomized ~60s mean delay between rounds)
+- **Daily midnight UTC**: `reset_daily_counters` (resets `mission_skips_today`), `cleanup_pve_battles` (deletes PvE battles older than 2 weeks)
+
+## Testing
+
+```bash
+python3 -m pytest                    # run all tests
+python3 -m pytest tests/test_war.py  # run a single test file
+python3 -m pytest -k test_name       # run a specific test by name
+```
+
+Tests use a real PostgreSQL database (`ng4_test`). `conftest.py` creates the DB if missing, runs `db.create_all()` + `create_partitions()` before each test, and drops the public schema after each test (full isolation). Key fixtures: `nation`, `auth_client`, `admin_user`, `admin_client`.
 
 ## HTMX Patterns
 
 - **Partials return HTML fragments**, not full pages. Routes swap a specific `#id` target.
-- **Error responses:** `_error_response(message)` returns an empty response with `HX-Trigger: {"showMessage": {...}}` — the toast system in `base.html` listens for this event.
-- **Success triggers:** Routes set `HX-Trigger` with `showMessage` and/or `refreshResourceFooter` headers.
+- **Error/success helpers** are in `app/helpers.py`: `error_response(message)` and `success_response(message, html)` both set `HX-Trigger` with `showMessage`. `htmx_response()` is the lower-level builder; also always adds `refreshResourceFooter`.
 - **`hx-swap="none"`** for collect (no DOM update needed, just toast).
 - **`hx-swap="outerHTML"` on `#industry-content`** for build (re-renders the two-tab partial).
+- `can_afford(nation, cost_dict)` and `deduct_cost(nation, cost_dict)` in `app/helpers.py` are the standard affordability check + deduction pattern used across all blueprints.
 
 ## Alpine.js Patterns
 
@@ -110,7 +142,7 @@ Resource key aliases used in definitions: `_M=money`, `_P=power`, `_F=food`, `_B
 
 **Starter factories** seeded on registration (in `auth/routes.py`).
 
-**Natural resource inputs** (coal, iron, uranium as raw ore, etc.) are on `NationFactory` definitions but the `NaturalResource` collection system isn't wired — `getattr(nation, 'coal', 0)` returns 0, so affected factories will always fail the input check until that system is built.
+**Natural resource inputs** (coal, iron, uranium as raw ore, etc.) are stored in `NaturalResource` rows and included in factory input validation via `stock_map` in `_industry_context()` (`economy/routes.py`). The collection system is wired.
 
 ## Discovery Engine
 
@@ -121,7 +153,33 @@ Resource key aliases used in definitions: `_M=money`, `_P=power`, `_F=food`, `_B
 - `economy/partials/industry_content.html` — the `<div id="industry-content">` wrapper; included in `industry.html` and also returned directly by `build_factory` route.
 - Jinja filter `format_resource` (defined in `app/__init__.py`) — formats large numbers with k/m/b suffixes; use this for static display values. Alpine `fmt(n)` JS function does the same for reactive values.
 - Icons: `url_for('static', filename='images/<resource>_icon.png')` with `onerror="this.style.display='none'"` fallback.
+- `static_url(filename)` Jinja global returns a cache-busted URL using mtime hash — use instead of `url_for('static', ...)` for versioned assets.
+- `cost_class(cost, stockpile)` Jinja filter — returns `text-red-500 font-semibold` if unaffordable, else `text-slate-400`.
 
-## Progress Reference
+## Military System
 
-See `PROGRESS.md` for phase completion status. Phases 3–5 (military engine, market/alliance, optimization) are not yet started.
+Units live in `Division` containers. Division `mobilization_state`: `demobilized` → `mobilizing` → `mobilized`. Only mobilized divisions can be deployed to war. `is_defensive=True` marks the division that auto-engages incoming war deployments.
+
+**Unit stats:** `firepower`, `armour`, `maneuver`, `hp`/`max_hp`, `level` (1–15), `xp`. Level-ups grant random stat buffs (`+1 fp/arm/man` or `+10% max_hp`) via `process_xp_gain()` in `app/game/levels.py`. `Unit.effective_max_hp` property factors in equipped armour buffs.
+
+**Recruitment:** costs deducted immediately, unit appears in `RecruitmentQueue` until timer expires, then `process_recruitment_queue` creates the `Unit` row and credits `military_gp`.
+
+**Upkeep:** demobilized units pay money-only; mobilized units pay full resource upkeep. Computed by `compute_total_upkeep(nation_id)` in `app/helpers.py`.
+
+**Combat** (`app/game/combat.py`): round-based simulation. Ability strings on `UnitDef.special_abilities` are parsed by regex functions (`_parse_fp_multiplier`, `_parse_armour_multiplier`, etc.) into live modifiers each round.
+
+## War System
+
+`War` ties two nations. A nation deploys a division via `WarDeploymentQueue` (travel delay). `process_war_deployments` fires a `Battle` on arrival, matched against the defender's `is_defensive` division. Settlement is available when a side reaches 3+ net victories (`compute_war_scores` in `app/game/war.py`). Outcomes: compensation (resource transfer) or annexation (land transfer).
+
+## Equipment System
+
+Equipment has 3 slots per unit category (weapon, accessory, armour) defined in `EQUIPMENT_SLOTS` (`app/game/equipment.py`). Rarities: Common → Uncommon → Rare → Epic → Legendary with buff points 1/2/4/7/10. Drop rates sum to 1. 5% foil chance per drop. Rare requires unit level 5, Epic level 10, Legendary level 15 (`RARITY_LEVEL_REQ` in `app/game/levels.py`). Loot crates cost `loot_tokens`; tokens are earned from battle victories and missions.
+
+## Missions System
+
+`MissionDef` (`app/game/missions.py`) defines PvE encounters: enemy_count range, enemy_composition (unit_key → percent), rewards dict, rarity, cooldown, and optional `chapter_requires` dependency. Rarity weights: common 50 / uncommon 30 / rare 12 / epic 6 / legendary 2. Daily `mission_skips_today` counter resets at midnight.
+
+## GP & Population System
+
+`total_gp` is a PostgreSQL computed column: sum of `population_gp + land_gp + factory_gp + building_gp + military_gp`. Each component is updated at its event (factory built, unit recruited, building upgraded, land expanded). Population drives tier (`compute_tier` in `app/game/population.py`). Tier determines which units/factories/buildings are accessible.

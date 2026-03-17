@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Privacy Policy{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-10">
+
+    <div class="flex items-center gap-3 mb-8">
+        <i class="fas fa-shield-alt text-amber-500 text-xl"></i>
+        <h1 class="text-2xl font-bold text-slate-100">Privacy Policy</h1>
+        <span class="ml-auto text-xs text-slate-500">Last updated: March 2026</span>
+    </div>
+
+    {% macro section(num, title) %}
+    <div class="mb-8">
+        <h2 class="text-base font-semibold text-slate-200 mb-3 flex items-center gap-2">
+            <span class="w-6 h-6 bg-amber-500/15 text-amber-500 rounded text-xs font-bold flex items-center justify-center shrink-0">{{ num }}</span>
+            {{ title }}
+        </h2>
+        <div class="text-sm text-slate-400 leading-relaxed space-y-2 pl-8">
+            {{ caller() }}
+        </div>
+    </div>
+    {% endmacro %}
+
+    <p class="text-sm text-slate-400 leading-relaxed mb-8 p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
+        At NationsEngine, we believe in radical transparency and minimal data collection. This policy
+        outlines what little information we collect and how it is used to provide the game service.
+    </p>
+
+    {% call section('1', 'Data Collection') %}
+    <p>We collect only the information necessary to operate your account and prevent abuse:</p>
+    <ul class="list-disc list-inside space-y-1 pl-2">
+        <li><span class="text-slate-300 font-medium">Account Info:</span> Your username, a hashed version of your password (we never see your actual password), and your email address.</li>
+        <li><span class="text-slate-300 font-medium">Game State:</span> All actions you take within the game (building, trading, messaging, etc.) are stored to maintain the persistent world.</li>
+        <li><span class="text-slate-300 font-medium">Connectivity:</span> We may log IP addresses temporarily for the purpose of preventing "multi-accounting" (one person running multiple nations) and protecting against DDoS attacks.</li>
+    </ul>
+    {% endcall %}
+
+    {% call section('2', 'Cookies and Local Storage') %}
+    <p>We use essential cookies and local storage to keep you logged in and to remember your UI
+    preferences (such as theme settings or tab selections). We do not use tracking or advertising
+    cookies.</p>
+    {% endcall %}
+
+    {% call section('3', 'How We Use Your Data') %}
+    <p><span class="text-slate-300 font-medium">3.1 Service Provision:</span> To manage your nation, process your turns, and facilitate
+    interactions with other players.</p>
+    <p><span class="text-slate-300 font-medium">3.2 Communication:</span> Your email is used for account recovery and occasional critical game
+    updates. We do not send marketing newsletters without explicit opt-in.</p>
+    <p><span class="text-slate-300 font-medium">3.3 Security:</span> To enforce our "one account per person" rule and to investigate bug reports or
+    violations of our Terms of Service.</p>
+    {% endcall %}
+
+    {% call section('4', 'Third-Party Sharing') %}
+    <p><span class="text-slate-300 font-medium">We do not sell your personal data.</span> We do not share your data with third parties except
+    when required by law or to protect the safety of our users.</p>
+    {% endcall %}
+
+    {% call section('5', 'Data Retention') %}
+    <p>Game data is retained as long as your account is active. If a nation is deleted or becomes
+    inactive for an extended period, we may purge its associated data to save server resources.
+    Log files containing IP addresses are typically rotated and deleted after 30 days.</p>
+    {% endcall %}
+
+    {% call section('6', 'Your Rights') %}
+    <p>Regardless of where you live, you have the following rights regarding your data:</p>
+    <ul class="list-disc list-inside space-y-1 pl-2">
+        <li><span class="text-slate-300 font-medium">Access:</span> You can view almost all data we have about you directly in the "Settings" and nation profile pages.</li>
+        <li><span class="text-slate-300 font-medium">Correction:</span> You can update your email or nation description at any time.</li>
+        <li><span class="text-slate-300 font-medium">Erasure:</span> You may request account deletion at any time. This action is permanent and removes your personal information from our active databases.</li>
+    </ul>
+    {% endcall %}
+
+    {% call section('7', "Children's Privacy") %}
+    <p>NationsEngine is not intended for children under the age of 13. If we become aware that we
+    have collected personal information from a child under 13, we are required to delete that 
+    information immediately.</p>
+    {% endcall %}
+
+    {% call section('8', 'Contact') %}
+    <p>For any privacy-related inquiries, please contact the development team through our official
+    Discord server or via the contact methods listed in the Terms of Service.</p>
+    {% endcall %}
+
+</div>
+{% endblock %}

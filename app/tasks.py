@@ -107,7 +107,16 @@ def tick_nation(nation, *, skip_military=False):
         grown = process_growth(nation)
 
     # 3. Tier update
-    nation.tier = compute_tier(nation.population)
+    from .models import NationEvent
+    old_tier = nation.tier or 1
+    new_tier = compute_tier(nation.population)
+    if new_tier != old_tier:
+        db.session.add(NationEvent(
+            nation_id=nation.id,
+            event_type='tier_promotion' if new_tier > old_tier else 'tier_demotion',
+            description=f'Reached Tier {new_tier}.' if new_tier > old_tier else f'Fell to Tier {new_tier}.',
+        ))
+    nation.tier = new_tier
     nation.population_gp = compute_population_gp(nation.population)
 
     if skip_military:

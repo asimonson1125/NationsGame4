@@ -32,6 +32,17 @@ class Config:
     REMEMBER_COOKIE_SECURE = True
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = 'Lax'
+    RATELIMIT_STORAGE_URI = 'memory://'
+    RATELIMIT_ENABLED = True
+    RATELIMIT_DEFAULT_LIMITS = ["300 per minute"]
+
+    # SMTP / Email
+    MAIL_SERVER         = os.environ.get('MAIL_SERVER', 'localhost')
+    MAIL_PORT           = int(os.environ.get('MAIL_PORT', 587))
+    MAIL_USE_TLS        = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
+    MAIL_USERNAME       = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD       = os.environ.get('MAIL_PASSWORD')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@example.com')
 
 class DevelopmentConfig(Config):
     DEBUG = True
@@ -61,12 +72,15 @@ class ProductionConfig(Config):
     )
     CACHE_TYPE = os.environ.get('CACHE_TYPE', 'RedisCache')
     CACHE_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    RATELIMIT_STORAGE_URI = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 
 class TestingConfig(Config):
     TESTING = True
     DEBUG = False
     WTF_CSRF_ENABLED = False
+    SESSION_COOKIE_SECURE = False
+    REMEMBER_COOKIE_SECURE = False
     # Use individual variables to construct test DB URI
     _user = os.environ.get('POSTGRES_USER', 'ng4')
     _pw = os.environ.get('POSTGRES_PASSWORD', 'ng4')
@@ -76,7 +90,10 @@ class TestingConfig(Config):
         f'postgresql://{_user}:{_pw}@localhost:{_port}/ng4_test'
     )
     CACHE_TYPE = 'SimpleCache'
-    
+    RATELIMIT_ENABLED = False
+    MAIL_SUPPRESS_SEND = True
+    MAIL_DEFAULT_SENDER = 'test@test.com'
+
     # Ensure DB_PARTITIONS is set for tests
     if 'DB_PARTITIONS' not in os.environ:
         os.environ['DB_PARTITIONS'] = '2'

@@ -2,7 +2,7 @@ import json
 from flask import render_template, request, current_app, jsonify
 from flask_login import login_required, current_user
 from markupsafe import escape
-from .. import db
+from .. import db, limiter
 from ..models import Message, Nation
 from ..helpers import error_response
 from . import mail
@@ -91,6 +91,7 @@ def compose():
 
 @mail.route('/mail/send', methods=['POST'])
 @login_required
+@limiter.limit("20 per hour")
 def send_message():
     nation = current_user.nation
 
@@ -158,11 +159,9 @@ def delete_all_notifications():
 @login_required
 def delete_message(message_id):
     nation = current_user.nation
-    msg = db.session.get(Message, (message_id, nation.id))
+    msg = Message.query.filter_by(id=message_id, recipient_id=nation.id).first()
 
     if not msg:
-        return error_response('Message not found.')
-    if msg.recipient_id != nation.id:
         return error_response('Message not found.')
 
     db.session.delete(msg)

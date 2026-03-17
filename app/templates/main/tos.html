@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}Terms of Service{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-10">
+
+    <div class="flex items-center gap-3 mb-8">
+        <i class="fas fa-file-contract text-amber-500 text-xl"></i>
+        <h1 class="text-2xl font-bold text-slate-100">Terms of Service</h1>
+        <span class="ml-auto text-xs text-slate-500">Last updated: March 2026</span>
+    </div>
+
+    {% macro section(num, title) %}
+    <div class="mb-8">
+        <h2 class="text-base font-semibold text-slate-200 mb-3 flex items-center gap-2">
+            <span class="w-6 h-6 bg-amber-500/15 text-amber-500 rounded text-xs font-bold flex items-center justify-center shrink-0">{{ num }}</span>
+            {{ title }}
+        </h2>
+        <div class="text-sm text-slate-400 leading-relaxed space-y-2 pl-8">
+            {{ caller() }}
+        </div>
+    </div>
+    {% endmacro %}
+
+    <p class="text-sm text-slate-400 leading-relaxed mb-8 p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
+        By creating an account or otherwise accessing NationsEngine ("the Service"), you agree to be
+        bound by these Terms. If you do not agree, do not use the Service.
+    </p>
+
+    {% call section('1', 'Eligibility') %}
+    <p>You must be at least 13 years old to use the Service. If you are under 16 and located in a
+    jurisdiction covered by the GDPR, you must have verifiable parental consent. By registering,
+    you represent that you meet these requirements.</p>
+    {% endcall %}
+
+    {% call section('2', 'Accounts') %}
+    <p><span class="text-slate-300 font-medium">2.1</span> One account per person. Operating more than one account — whether under your own name or
+    through a proxy — is prohibited.</p>
+    <p><span class="text-slate-300 font-medium">2.2</span> You are responsible for maintaining the security of your credentials and for all activity
+    that occurs under your account.</p>
+    <p><span class="text-slate-300 font-medium">2.3</span> We reserve the right to suspend or permanently delete any account at our sole discretion,
+    with or without notice, for any reason including violation of these Terms.</p>
+    {% endcall %}
+
+    {% call section('3', 'Fair Play') %}
+    <p><span class="text-slate-300 font-medium">3.1</span> You may not gain an unfair advantage by any means, including but not limited to:</p>
+    <ul class="list-disc list-inside space-y-1 pl-2">
+        <li>Using multiple accounts, shared accounts, or alt accounts to manipulate resources, battles, trade, alliances, or any in-game system.</li>
+        <li>Using automated scripts, bots, macros, or other tools to interact with the Service without human input.</li>
+        <li>Exploiting bugs, unintended mechanics, or server-side errors. Discovered exploits must be reported and not abused.</li>
+        <li>API abuse, credential stuffing, or unauthorized access to other users' accounts.</li>
+    </ul>
+    <p><span class="text-slate-300 font-medium">3.2</span> Violations may result in warnings, resource rollbacks, temporary bans, or permanent
+    account deletion depending on severity and recurrence. We reserve the right to take corrective
+    action on any in-game state affected by a violation.</p>
+    {% endcall %}
+
+    {% call section('4', 'User-Submitted Content') %}
+    <p><span class="text-slate-300 font-medium">4.1</span> You may submit nation names, descriptions, flags, and other content ("User Content").
+    You retain ownership of original content you create.</p>
+    <p><span class="text-slate-300 font-medium">4.2</span> By submitting User Content you grant us a non-exclusive, worldwide, royalty-free license
+    to display, reproduce, and distribute that content as part of operating the Service.</p>
+    <p><span class="text-slate-300 font-medium">4.3</span> User Content must not include:</p>
+    <ul class="list-disc list-inside space-y-1 pl-2">
+        <li>Sexually explicit imagery.</li>
+        <li>Content that impersonates real individuals or organizations in a misleading way.</li>
+        <li>Content that is otherwise illegal in the jurisdiction of the server or the user.</li>
+    </ul>
+    <p><span class="text-slate-300 font-medium">4.4</span> We may edit or remove any User Content at any time without prior notice.</p>
+    {% endcall %}
+
+    {% call section('5', 'Donations and Premium Subscriptions') %}
+    <p><span class="text-slate-300 font-medium">5.1</span> The Service is free to play. Donations and premium subscriptions are voluntary and are
+    used solely to support hosting and development.</p>
+    <p><span class="text-slate-300 font-medium">5.2</span> All payments are non-refundable except where required by applicable law.</p>
+    <p><span class="text-slate-300 font-medium">5.3</span> Premium status does not exempt you from these Terms. Violations may still result in
+    suspension or permanent ban without refund.</p>
+    <p><span class="text-slate-300 font-medium">5.4</span> We reserve the right to change, suspend, or discontinue premium features at any time.
+    Where a paid subscription is affected by a material change, we will provide reasonable advance notice.</p>
+    {% endcall %}
+
+    {% call section('6', 'Service Availability and Changes') %}
+    <p><span class="text-slate-300 font-medium">6.1</span> The Service is provided on a best-effort basis. We do not guarantee uninterrupted
+    uptime and are not liable for losses resulting from downtime, data loss, or service interruption.</p>
+    <p><span class="text-slate-300 font-medium">6.2</span> NationsEngine is a living game. We may alter game mechanics, resource balances, nation
+    stats, or any other in-game system at any time as part of ongoing development. No in-game asset
+    or balance is guaranteed to remain unchanged.</p>
+    <p><span class="text-slate-300 font-medium">6.3</span> We may discontinue the Service at any time. In the event of permanent shutdown, we will
+    make reasonable efforts to provide advance notice.</p>
+    {% endcall %}
+
+    {% call section('7', 'Intellectual Property') %}
+    <p>All software, artwork, game logic, and other materials comprising NationsEngine — excluding
+    User Content — are the property of the developers and are protected by applicable copyright
+    and intellectual property laws. You may not copy, redistribute, reverse-engineer, or create
+    derivative works from any part of the Service without express written permission.</p>
+    {% endcall %}
+
+    {% call section('8', 'Conduct') %}
+    <p>You agree not to:</p>
+    <ul class="list-disc list-inside space-y-1 pl-2">
+        <li>Harass, threaten, or abuse other players inside or outside of game mechanics.</li>
+        <li>Coordinate with other users to systematically target a single player in a manner designed to force them off the platform rather than as legitimate gameplay.</li>
+        <li>Share or post another user's personal information without their consent.</li>
+        <li>Use the Service for any commercial purpose without prior written approval.</li>
+    </ul>
+    {% endcall %}
+
+    {% call section('9', 'Data and Privacy') %}
+    <p><span class="text-slate-300 font-medium">9.1</span> We collect only the minimum data needed to operate the Service: your username, hashed
+    password, email, and gameplay state. We do not sell your data to third parties.</p>
+    <p><span class="text-slate-300 font-medium">9.2</span> You may request deletion of your account and associated data at any time by contacting
+    us. Account deletion is permanent and cannot be undone.</p>
+    <p><span class="text-slate-300 font-medium">9.3</span> For users in the European Economic Area or United Kingdom, you have the right to access,
+    correct, and erase your personal data under GDPR. Contact us to exercise these rights.</p>
+    {% endcall %}
+
+    {% call section('10', 'Disclaimer of Warranties') %}
+    <p class="uppercase text-xs tracking-wide">The Service is provided "as is" and "as available" without warranties of any kind, express
+    or implied, including warranties of merchantability, fitness for a particular purpose, or
+    non-infringement. Your use of the Service is at your own risk.</p>
+    {% endcall %}
+
+    {% call section('11', 'Limitation of Liability') %}
+    <p class="uppercase text-xs tracking-wide">To the maximum extent permitted by applicable law, the developers shall not be liable for
+    any indirect, incidental, special, consequential, or punitive damages arising out of or
+    related to your use of the Service, even if advised of the possibility of such damages. Our
+    total liability to you for any claim shall not exceed the amount you paid to us in the
+    twelve months preceding the claim.</p>
+    {% endcall %}
+
+    {% call section('12', 'Changes to These Terms') %}
+    <p>We may update these Terms at any time. Continued use of the Service after changes are posted
+    constitutes acceptance of the revised Terms. We will make reasonable efforts to notify
+    registered users of material changes.</p>
+    {% endcall %}
+
+    {% call section('13', 'Governing Law') %}
+    <p>These Terms are governed by the laws of the State of Minnesota, without regard to
+    conflict-of-law provisions. Any disputes shall be resolved in the competent courts of that state.</p>
+    {% endcall %}
+
+    {% call section('14', 'Contact') %}
+    <p>For questions, abuse reports, data requests, or other inquiries, contact the development
+    team through the official game discord server linked on the game page.</p>
+    {% endcall %}
+
+</div>
+{% endblock %}

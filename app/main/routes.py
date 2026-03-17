@@ -1,10 +1,11 @@
 import json
 from functools import wraps
 from datetime import datetime, timezone, timedelta
-from flask import render_template, url_for, request, current_app, abort, jsonify, make_response
+from flask import render_template, redirect, url_for, request, current_app, abort, jsonify, make_response
 from flask_login import login_required, current_user
+from sqlalchemy import func, text
 from .. import db, cache
-from ..models import Nation, NationFactory, NaturalResource, Alliance, Division, Unit, RecruitmentQueue, FactoryBuildQueue, BuildingUpgradeQueue, NationBuilding, User
+from ..models import Nation, NationFactory, NaturalResource, Alliance, Division, Unit, RecruitmentQueue, FactoryBuildQueue, BuildingUpgradeQueue, NationBuilding, User, NationEvent
 from ..helpers import error_response as _error_response, compute_total_upkeep, htmx_response
 from ..game.population import (get_population_effects, estimate_pop_delta, FOOD_PER_CITIZEN,
                                 food_abundance_multiplier, get_food_days,
@@ -14,10 +15,77 @@ from ..game.units import UNIT_DEFS
 from . import main
 
 
+@cache.memoize(timeout=300)
+def _global_nr_density():
+    """Return dict of resource_key -> avg(amount / total_land) across all nations."""
+    rows = db.session.execute(text(
+        """
+        SELECT nr.resource_key,
+               AVG(nr.amount::float / GREATEST(n.total_land, 1)) AS avg_density
+        FROM natural_resources nr
+        JOIN nations n ON n.id = nr.nation_id
+        WHERE nr.amount > 0
+        GROUP BY nr.resource_key
+        """
+    )).fetchall()
+    return {row.resource_key: row.avg_density for row in rows}
+
+
+_NR_DISPLAY_NOUNS = {
+    # Flora
+    'apple_tree': 'apple trees', 'cactus': 'cacti', 'christmas_tree': 'Christmas trees',
+    'cocoa': 'cocoa', 'coffea': 'coffea', 'cotton': 'cotton', 'grapevine': 'grapevines',
+    'hemp': 'hemp', 'herbs': 'herbs', 'hops': 'hops', 'kingwood': 'kingwood',
+    'mulberry': 'mulberry', 'oak_tree': 'oak trees', 'rubber_tree': 'rubber trees',
+    'tobacco_plant': 'tobacco plants',
+    # Fauna (land)
+    'beehive': 'beehives', 'boar': 'boar', 'buffalo': 'buffalo', 'cow': 'cattle',
+    'elephant': 'elephants', 'fox': 'foxes', 'goat': 'goats', 'panther': 'panthers',
+    'sheep': 'sheep', 'yak': 'yaks',
+    # Marine
+    'bass': 'bass', 'clam': 'clams', 'cod': 'cod', 'dolphin': 'dolphins',
+    'mackerel': 'mackerel', 'piranha': 'piranhas', 'salmon': 'salmon',
+    'shark': 'sharks', 'shrimp': 'shrimp', 'whale': 'whales',
+    # Mined
+    'bauxite': 'bauxite', 'coal': 'coal', 'copper': 'copper',
+    'crude_deep_sea_oil': 'crude oil', 'gemstone': 'gemstones', 'gold': 'gold',
+    'iron': 'iron', 'lead': 'lead', 'marble': 'marble', 'petroleum': 'petroleum',
+    'platinum': 'platinum', 'saltpeter': 'saltpeter', 'silicon': 'silicon',
+    'silver': 'silver', 'stonesilver': 'stonesilver', 'sulfur': 'sulfur',
+    'uraninite': 'uraninite',
+}
+
+_MARINE_RESOURCES = frozenset({
+    'bass', 'clam', 'cod', 'dolphin', 'mackerel', 'piranha',
+    'salmon', 'shark', 'shrimp', 'whale',
+})
+
+
+def _nr_qualifier(ratio):
+    """Map density ratio (nation vs global avg) to a qualifier word."""
+    if ratio >= 4.0:
+        return 'vast'
+    if ratio >= 2.0:
+        return 'abundant'
+    if ratio >= 0.6:
+        return 'notable'
+    if ratio >= 0.2:
+        return 'modest'
+    return 'meager'
+
+
+def _nr_category(resource_key):
+    """Return display category: flora, fauna, marine, or mined."""
+    from ..game.discovery import RESOURCE_TYPES
+    if resource_key in _MARINE_RESOURCES:
+        return 'marine'
+    return RESOURCE_TYPES.get(resource_key, 'mined')
+
+
 def _nation_summary(nation):
     """Build summary data dict for nation profile display."""
     # Optimization: Use pre-loaded relationships (selectin) where possible
-    
+
     # Factory summary: list of (display_name, count) for factories with count > 0
     factory_summary = []
     total_factories = 0
@@ -36,11 +104,34 @@ def _nation_summary(nation):
         key=lambda x: x[0]
     )
 
-    # Natural resources
+    # Natural resources — sorted by amount descending
     natural_resources = sorted(
         [nr for nr in nation.natural_resources if nr.amount > 0],
         key=lambda x: x.amount, reverse=True
     )
+
+    # Build per-category descriptors: (display_noun, qualifier), sorted by ratio desc, top 3 each
+    nr_by_category = {'flora': [], 'fauna': [], 'marine': [], 'mined': []}
+    if natural_resources:
+        nation_land = max(nation.total_land or 1, 1)
+        global_densities = _global_nr_density()
+        for nr in natural_resources:
+            cat = _nr_category(nr.resource_key)
+            if cat not in nr_by_category:
+                continue
+            nation_density = nr.amount / nation_land
+            global_avg = global_densities.get(nr.resource_key) or nation_density
+            ratio = nation_density / max(global_avg, 1e-9)
+            noun = _NR_DISPLAY_NOUNS.get(nr.resource_key, nr.resource_key.replace('_', ' '))
+            nr_by_category[cat].append((noun, _nr_qualifier(ratio), ratio))
+
+    def _top3(entries):
+        return [(noun, qual) for noun, qual, _ in sorted(entries, key=lambda x: -x[2])[:3]]
+
+    nr_flora    = _top3(nr_by_category['flora'])
+    nr_fauna    = _top3(nr_by_category['fauna'])
+    nr_marine   = _top3(nr_by_category['marine'])
+    nr_mined    = _top3(nr_by_category['mined'])
 
     # Military counts with type breakdown for preamble
     # Unit remains dynamic as it can be a very large collection
@@ -56,15 +147,23 @@ def _nation_summary(nation):
     # Division remains dynamic
     total_divisions = nation.divisions.count()
 
+    # Events — newest 15
+    nation_events = nation.events.limit(15).all()
+
     return dict(
         total_factories=total_factories,
         factory_summary=factory_summary,
         building_summary=building_summary,
         natural_resources=natural_resources,
+        nr_flora=nr_flora,
+        nr_fauna=nr_fauna,
+        nr_marine=nr_marine,
+        nr_mined=nr_mined,
         total_units=total_units,
         unit_type_counts=unit_type_counts,
         top_unit_type=top_unit_type,
         total_divisions=total_divisions,
+        nation_events=nation_events,
     )
 
 
@@ -151,23 +250,44 @@ def changelog_page():
     return render_template('main/changelog.html', layout='base.html')
 
 
+@main.route('/tos')
+def tos_page():
+    """Terms of Service — always accessible."""
+    return render_template('main/tos.html')
+
+
+@main.route('/privacy')
+def privacy_page():
+    """Privacy Policy — always accessible."""
+    return render_template('main/privacy.html')
+
+
+def _vac_cooldown(user):
+    """Return (hours, minutes) remaining on vacation cooldown, or None."""
+    if not user.vacation_mode and user.vacation_disabled_at:
+        cooldown_end = user.vacation_disabled_at + timedelta(hours=48)
+        remaining = (cooldown_end - datetime.now(timezone.utc)).total_seconds()
+        if remaining > 0:
+            return (int(remaining // 3600), int((remaining % 3600) // 60))
+    return None
+
+
 @main.route('/home')
 @login_required
 def home():
+    if not current_user.email_verified:
+        return redirect(url_for('auth.verify_email_sent'))
     nation = current_user.nation
     summary = _nation_summary(nation) if nation else {}
+    return render_template('main/home.html', nation=nation, is_owner=True, **summary)
 
-    # Vacation cooldown: hours + minutes remaining (None if not on cooldown)
-    vac_cooldown_remaining = None
-    if not current_user.vacation_mode and current_user.vacation_disabled_at:
-        cooldown_end = current_user.vacation_disabled_at + timedelta(hours=48)
-        remaining = (cooldown_end - datetime.now(timezone.utc)).total_seconds()
-        if remaining > 0:
-            vac_cooldown_remaining = (int(remaining // 3600), int((remaining % 3600) // 60))
 
-    return render_template('main/home.html', nation=nation, is_owner=True,
-                           vac_cooldown_remaining=vac_cooldown_remaining,
-                           **summary)
+@main.route('/account')
+@login_required
+def account():
+    nation = current_user.nation
+    return render_template('main/account.html', nation=nation,
+                           vac_cooldown_remaining=_vac_cooldown(current_user))
 
 
 @main.route('/nation/<int:nation_id>')

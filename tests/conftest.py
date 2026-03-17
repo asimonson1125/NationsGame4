@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy import text, create_engine
 from app import create_app, db as _db
-from app.models import User, Nation
+from app.models import User, Nation, NationBuilding
 from run import create_partitions
 
 
@@ -49,6 +49,17 @@ def setup_db(app):
         create_partitions()
         yield
         _db.session.remove()
+        # Dispose the connection pool so SQLAlchemy-held connections are
+        # released before DROP SCHEMA. Otherwise PostgreSQL locks hang forever.
+        _db.engine.dispose()
+        # Terminate any remaining connections to this DB (e.g. from previous
+        # test runs or leftover pool connections) so DROP SCHEMA doesn't block.
+        db_name = _db.engine.url.database
+        with _db.engine.connect().execution_options(isolation_level='AUTOCOMMIT') as conn:
+            conn.execute(text(
+                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                "WHERE datname = :db AND pid <> pg_backend_pid()"
+            ), {'db': db_name})
         # Use CASCADE to handle circular FKs (alliances <-> nations)
         with _db.engine.connect() as conn:
             conn.execute(text("DROP SCHEMA public CASCADE"))
@@ -76,6 +87,9 @@ def nation(app):
         uranium=1000,
     )
     _db.session.add(n)
+    _db.session.flush()
+    # Seed Barracks Lvl 1 — mirrors what auth/routes.py does on registration
+    _db.session.add(NationBuilding(nation_id=n.id, building_key='barracks', level=1))
     _db.session.commit()
     return n
 

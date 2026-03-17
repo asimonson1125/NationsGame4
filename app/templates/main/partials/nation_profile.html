@@ -14,126 +14,20 @@
 } %}
 {% set bg_image = nation.banner_url if nation.banner_url else url_for('static', filename='images/continents/' ~ continent_bg.get(nation.continent, 'tind.avif')) %}
 <div class="relative bg-cover bg-center"
-     {% if is_owner %}x-data="{ flagModal: false, bannerModal: false }"{% endif %}
      style="background-image: url('{{ bg_image }}'); padding: 100px 20px;">
     <div class="absolute inset-0 bg-slate-950/60"></div>
-    
-    {% if is_owner %}
-    {# Banner Edit Button #}
-    <button @click="bannerModal = true" 
-            class="absolute top-4 right-4 bg-slate-900/80 hover:bg-amber-500 text-white hover:text-slate-900 p-2 rounded-lg transition-all duration-200 border border-white/20 z-10 tt"
-            data-tooltip="Update Banner">
-        <i class="fas fa-image"></i>
-    </button>
-    {% endif %}
 
     <div class="relative max-w-5xl mx-auto flex flex-col sm:flex-row items-center text-white"
          style="text-shadow: 1px 1px 4px rgba(0,0,0,.7)">
 
         {# Left: flag + nation name #}
         <div class="flex-1 flex flex-col items-center pr-4">
-            {% if is_owner %}
-            <div @click="flagModal = true"
-                 class="relative cursor-pointer mb-4 group">
-                {% if nation.flag_url %}
-                <img src="{{ nation.flag_url }}" alt="{{ nation.name }} Flag"
-                     class="w-32 sm:w-44 border-2 border-white/50 group-hover:border-amber-400 transition-colors duration-200">
-                {% else %}
-                <div class="w-32 sm:w-44 h-28 bg-white/20 border-2 border-white/50 group-hover:border-amber-400 flex items-center justify-center text-white/60 group-hover:text-amber-300 text-sm transition-colors duration-200">
-                    Click to set flag
-                </div>
-                {% endif %}
-                <div class="absolute -bottom-1.5 -right-1.5 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg">
-                    <i class="fas fa-pencil text-[10px] text-slate-900"></i>
-                </div>
-            </div>
+            {% if nation.flag_url %}
+            <img src="{{ nation.flag_url }}" alt="{{ nation.name }} Flag"
+                 class="w-32 sm:w-44 border-2 border-white/50 mb-4">
             {% else %}
-                {% if nation.flag_url %}
-                <img src="{{ nation.flag_url }}" alt="{{ nation.name }} Flag"
-                     class="w-32 sm:w-44 border-2 border-white/50 mb-4">
-                {% else %}
-                <div class="w-32 sm:w-44 h-28 bg-white/20 border-2 border-white/50 mb-4 flex items-center justify-center text-white/60 text-sm">
-                    No Flag Set
-                </div>
-                {% endif %}
-            {% endif %}
-            <h1 class="text-3xl font-bold text-center">{{ nation.name }}</h1>
-
-            {% if is_owner %}
-            {# Flag Update Modal #}
-            <div x-show="flagModal" x-cloak
-                 class="fixed inset-0 z-50 flex items-center justify-center p-4" style="text-shadow: none;"
-                 @keydown.escape.window="flagModal = false">
-                <div class="absolute inset-0 bg-black/60" @click="flagModal = false"></div>
-                <div class="relative bg-slate-800 border border-slate-700 rounded-lg shadow-2xl w-full max-w-md p-6"
-                     @click.stop>
-                    <h3 class="text-xl font-bold text-slate-100 mb-1">Update Nation Flag</h3>
-                    <p class="text-slate-400 text-sm mb-6">Upload an image from your device.</p>
-                    
-                    <form hx-post="{{ url_for('main.update_flag') }}" 
-                          hx-encoding="multipart/form-data"
-                          hx-swap="none"
-                          @htmx:after-request="if ($event.detail.successful) { flagModal = false; location.reload(); }"
-                          class="space-y-6">
-                        
-                        {# File Upload #}
-                        <div>
-                            <label class="block text-sm font-semibold text-slate-300 mb-2">Select Image</label>
-                            <input type="file" name="flag_file" accept="image/*" required
-                                   class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 cursor-pointer">
-                            <p class="text-[10px] text-slate-500 mt-2 italic">Your image will be automatically optimized and converted to high-performance AVIF (320x200).</p>
-                        </div>
-
-                        <div class="flex justify-end gap-3 pt-2">
-                            <button type="button" @click="flagModal = false"
-                                    class="px-4 py-2 text-sm font-semibold text-slate-400 hover:text-slate-200 transition-colors">
-                                Cancel
-                            </button>
-                            <button type="submit"
-                                    class="px-6 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md transition-colors font-bold text-sm">
-                                Upload Flag
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            {# Banner Update Modal #}
-            <div x-show="bannerModal" x-cloak
-                 class="fixed inset-0 z-50 flex items-center justify-center p-4" style="text-shadow: none;"
-                 @keydown.escape.window="bannerModal = false">
-                <div class="absolute inset-0 bg-black/60" @click="bannerModal = false"></div>
-                <div class="relative bg-slate-800 border border-slate-700 rounded-lg shadow-2xl w-full max-w-md p-6"
-                     @click.stop>
-                    <h3 class="text-xl font-bold text-slate-100 mb-1">Update Nation Banner</h3>
-                    <p class="text-slate-400 text-sm mb-6">Upload an image from your device.</p>
-                    
-                    <form hx-post="{{ url_for('main.update_banner') }}" 
-                          hx-encoding="multipart/form-data"
-                          hx-swap="none"
-                          @htmx:after-request="if ($event.detail.successful) { bannerModal = false; location.reload(); }"
-                          class="space-y-6">
-                        
-                        {# File Upload #}
-                        <div>
-                            <label class="block text-sm font-semibold text-slate-300 mb-2">Select Image</label>
-                            <input type="file" name="banner_file" accept="image/*" required
-                                   class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 cursor-pointer">
-                            <p class="text-[10px] text-slate-500 mt-2 italic">Your image will be automatically optimized and converted to high-performance AVIF (1200x400).</p>
-                        </div>
-
-                        <div class="flex justify-end gap-3 pt-2">
-                            <button type="button" @click="bannerModal = false"
-                                    class="px-4 py-2 text-sm font-semibold text-slate-400 hover:text-slate-200 transition-colors">
-                                Cancel
-                            </button>
-                            <button type="submit"
-                                    class="px-6 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md transition-colors font-bold text-sm">
-                                Upload Banner
-                            </button>
-                        </div>
-                    </form>
-                </div>
+            <div class="w-32 sm:w-44 h-28 bg-white/20 border-2 border-white/50 mb-4 flex items-center justify-center text-white/60 text-sm">
+                No Flag Set
             </div>
             {% endif %}
         </div>
@@ -325,15 +219,18 @@
 </div>
 
 {# ===== NATION INFO PANELS ===== #}
-<div class="p-5 space-y-5">
+<div class="p-5 max-w-4xl mx-auto space-y-5">
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
 
     {# About — autogenerated preamble + user description #}
-    <div class="bg-slate-800 rounded-lg border border-slate-700 p-5 max-w-4xl mx-auto"
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-5"
          x-data="{ editingDesc: false }">
         <div class="flex items-center justify-between mb-3">
             <h2 class="text-lg font-semibold text-slate-100">About {{ nation.name }}</h2>
             {% if is_owner %}
             <button @click="editingDesc = !editingDesc"
+                    aria-label="Edit description"
                     class="text-slate-400 hover:text-amber-400 transition-colors">
                 <i class="fas fa-pencil text-xs"></i>
             </button>
@@ -378,19 +275,31 @@
         {% set preamble_alliance = alliance_blurb %}
         {% include 'shared/_preamble.html' %}
 
-        {# --- natural resources blurb --- #}
-        {% if natural_resources %}
-        {% set nr_max = natural_resources[0].amount %}
-        {% set nr_parts = [] %}
-        {% for nr in natural_resources[:3] %}
-            {% set q = 'many' if nr.amount >= nr_max * 0.6 else ('some' if nr.amount >= nr_max * 0.25 else 'a few') %}
-            {% set _ = nr_parts.append(q ~ ' ' ~ (nr.resource_key | replace('_', ' '))) %}
-        {% endfor %}
-        <p class="text-slate-300 mb-3">The region is home to
-            {%- if nr_parts | length == 1 %} {{ nr_parts[0] }}
-            {%- elif nr_parts | length == 2 %} {{ nr_parts[0] }} and {{ nr_parts[1] }}
-            {%- else %} {{ nr_parts[0] }}, {{ nr_parts[1] }} and {{ nr_parts[2] }}
-            {%- endif %}.</p>
+        {# --- natural resources blurbs, one paragraph per category --- #}
+        {# Macro: join a list of (noun, qualifier) pairs into a readable phrase #}
+        {%- macro nr_list(items) -%}
+            {%- if items | length == 1 -%}{{ items[0][1] }} {{ items[0][0] }}
+            {%- elif items | length == 2 -%}{{ items[0][1] }} {{ items[0][0] }} and {{ items[1][1] }} {{ items[1][0] }}
+            {%- else -%}{{ items[0][1] }} {{ items[0][0] }}, {{ items[1][1] }} {{ items[1][0] }} and {{ items[2][1] }} {{ items[2][0] }}
+            {%- endif -%}
+        {%- endmacro -%}
+        {%- macro nr_list_deposits(items) -%}
+            {%- if items | length == 1 -%}{{ items[0][1] }} deposits of {{ items[0][0] }}
+            {%- elif items | length == 2 -%}{{ items[0][1] }} deposits of {{ items[0][0] }} and {{ items[1][1] }} deposits of {{ items[1][0] }}
+            {%- else -%}{{ items[0][1] }} deposits of {{ items[0][0] }}, {{ items[1][1] }} deposits of {{ items[1][0] }} and {{ items[2][1] }} deposits of {{ items[2][0] }}
+            {%- endif -%}
+        {%- endmacro -%}
+        {% if nr_flora %}
+        <p class="text-slate-300 mb-3">The land supports {{ nr_list(nr_flora) }}.</p>
+        {% endif %}
+        {% if nr_fauna %}
+        <p class="text-slate-300 mb-3">Wildlife includes {{ nr_list(nr_fauna) }}.</p>
+        {% endif %}
+        {% if nr_marine %}
+        <p class="text-slate-300 mb-3">Coastal waters yield {{ nr_list(nr_marine) }}.</p>
+        {% endif %}
+        {% if nr_mined %}
+        <p class="text-slate-300 mb-3">The nation's territory holds {{ nr_list_deposits(nr_mined) }}.</p>
         {% endif %}
 
         {# --- military blurb --- #}
@@ -400,9 +309,7 @@
         {% set mil_conc = 'significant' if (unit_type_counts[top_unit_type] / total_units) > 0.5 else 'minor' %}
         <p class="text-slate-300 mb-3">Its {{ mil_size }} military is {{ mil_focus }}, with a {{ mil_conc }} concentration in {{ top_unit_type | lower }} units.</p>
         {% endif %}
-        <br />
-        <hr>
-        <br />
+        <hr class="border-slate-700 my-4">
         <div id="nation-description">
             {% if is_owner %}
             {% include 'main/partials/nation_description.html' %}
@@ -414,7 +321,52 @@
         </div>
     </div>
 
-    {# ===== LAND, BUILDINGS & NATURAL RESOURCES ===== #}
+    {# ===== Right column ===== #}
+    <div class="space-y-5">
+
+    {# Events #}
+    <div class="bg-slate-800 rounded-lg border border-slate-700">
+        <div class="px-5 py-4 border-b border-slate-700">
+            <h2 class="text-lg font-semibold text-slate-100">
+                <i class="fas fa-scroll mr-2 text-slate-400"></i>Milestones
+            </h2>
+        </div>
+        {% if nation_events %}
+        <ul class="divide-y divide-slate-700/60 max-h-72 overflow-y-auto">
+            {% for ev in nation_events %}
+            {%- if ev.event_type == 'founded' -%}
+                {%- set icon = 'fa-flag' -%}{%- set icon_color = 'text-emerald-400' -%}{%- set badge_bg = 'bg-emerald-900/40 border-emerald-700/50' -%}
+            {%- elif ev.event_type == 'tier_promotion' -%}
+                {%- set icon = 'fa-arrow-up' -%}{%- set icon_color = 'text-amber-400' -%}{%- set badge_bg = 'bg-amber-900/40 border-amber-700/50' -%}
+            {%- elif ev.event_type == 'tier_demotion' -%}
+                {%- set icon = 'fa-arrow-down' -%}{%- set icon_color = 'text-red-400' -%}{%- set badge_bg = 'bg-red-900/40 border-red-700/50' -%}
+            {%- elif ev.event_type in ('war_declared', 'war_received') -%}
+                {%- set icon = 'fa-skull-crossbones' -%}{%- set icon_color = 'text-red-400' -%}{%- set badge_bg = 'bg-red-900/40 border-red-700/50' -%}
+            {%- else -%}
+                {%- set icon = 'fa-handshake' -%}{%- set icon_color = 'text-sky-400' -%}{%- set badge_bg = 'bg-sky-900/40 border-sky-700/50' -%}
+            {%- endif %}
+            <li class="px-4 py-3 flex items-center gap-3">
+                <div class="flex-shrink-0 w-8 h-8 rounded-full border {{ badge_bg }} flex items-center justify-center">
+                    <i class="fas {{ icon }} {{ icon_color }} text-xs"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    {% if ev.reference_id and ev.event_type in ('war_declared', 'war_received', 'war_ended') %}
+                    <a href="/war/{{ ev.reference_id }}"
+                       class="text-sm text-slate-200 hover:text-amber-300 transition-colors leading-snug block">{{ ev.description }}</a>
+                    {% else %}
+                    <p class="text-sm text-slate-200 leading-snug">{{ ev.description }}</p>
+                    {% endif %}
+                    <p class="text-xs text-slate-500 mt-0.5">{{ ev.occurred_at.strftime('%b %-d, %Y') }}</p>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="px-5 py-6 text-center text-slate-500 text-sm italic">No events yet.</p>
+        {% endif %}
+    </div>
+
+    {# Land / Buildings / Natural Resources (tabbed) #}
     {% set land_types = [
         ('urban_areas',   'Urban Areas',   'urban_areas_icon.png',  'Urban areas are created automatically from cleared land for population growth'),
         ('used_land',     'Used Land',     'used_land_icon.png',    'Used land is land claimed by factories and buildings'),
@@ -428,134 +380,134 @@
         ('river',         'River',         'river_icon.png',        ''),
         ('lake',          'Lake',          'lake_icon.png',         ''),
     ] %}
-    <div class="max-w-4xl mx-auto" x-data="{ view: 'land' }">
-        <div class="flex items-center justify-between mb-3">
+    <div class="bg-slate-800 rounded-lg border border-slate-700"
+         x-data="{ tab: 'land' }">
+        <div class="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
             <h2 class="text-lg font-semibold text-slate-100"
-                x-text="view === 'land' ? 'Land' : view === 'buildings' ? 'Buildings' : 'Natural Resources'"></h2>
-            <select x-model="view" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded px-3 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                x-text="tab === 'land' ? 'Land' : tab === 'buildings' ? 'Buildings' : 'Natural Resources'"></h2>
+            <select x-model="tab"
+                    class="text-sm bg-slate-700 border border-slate-600 text-slate-300 rounded px-2 py-1 focus:outline-none focus:border-amber-500">
                 <option value="land">Land</option>
                 <option value="buildings">Buildings</option>
                 <option value="resources">Natural Resources</option>
             </select>
         </div>
 
-        <div x-show="view === 'land'">
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-3 mb-3 flex items-center justify-center gap-2 text-slate-300">
-                <i class="fas fa-globe text-emerald-500"></i>
-                <span class="text-sm font-medium">Total Land:</span>
-                <span class="text-lg font-bold text-slate-100">{{ nation.total_land | format_resource }}</span>
-            </div>
-            <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-visible">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="bg-slate-700/50 text-left text-slate-400">
-                            <th class="px-4 py-2">Type</th>
-                            <th class="px-4 py-2 text-right">Tiles</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for field, label, icon, tooltip in land_types %}
-                        {% set tile_amount = nation | attr(field) or 0 %}
-                        {% if tile_amount > 0 %}
-                        <tr class="border-t border-slate-700 {% if loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %}">
-                            <td class="px-4 py-2">
-                                <div class="flex items-center gap-2">
-                                    <img src="{{ url_for('static', filename='images/icons/' ~ icon) }}" alt="{{ label }}" class="w-5 h-5" onerror="this.style.display='none'">
-                                    <span class="text-slate-300">{{ label }}</span>
-                                    {% if tooltip %}
-                                    <span class="tt cursor-help text-slate-500 hover:text-slate-300 transition-colors" data-tooltip="{{ tooltip }}">
-                                        <i class="fas fa-question-circle text-[10px]"></i>
-                                    </span>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td class="px-4 py-2 text-right font-medium text-slate-100">{{ tile_amount | format_resource }}</td>
-                        </tr>
-                        {% endif %}
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        {# Land table #}
+        <table class="w-full text-sm" x-show="tab === 'land'">
+            <thead>
+                <tr class="bg-slate-700/50 text-left text-slate-400">
+                    <th class="px-4 py-2">Type</th>
+                    <th class="px-4 py-2 text-right">Tiles</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for field, label, icon, tooltip in land_types %}
+                {% set tile_amount = nation | attr(field) or 0 %}
+                {% if tile_amount > 0 %}
+                <tr class="border-t border-slate-700 {% if loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %}">
+                    <td class="px-4 py-2">
+                        <div class="flex items-center gap-2">
+                            <img src="{{ url_for('static', filename='images/icons/' ~ icon) }}" alt="{{ label }}" class="w-5 h-5" onerror="this.style.display='none'">
+                            <span class="text-slate-300">{{ label }}</span>
+                            {% if tooltip %}
+                            <span class="tt cursor-help text-slate-500 hover:text-slate-300 transition-colors" data-tooltip="{{ tooltip }}">
+                                <i class="fas fa-question-circle text-[10px]"></i>
+                            </span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-4 py-2 text-right font-medium text-slate-100">{{ tile_amount | format_resource }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+                <tr class="border-t-2 border-slate-600 bg-slate-700/40">
+                    <td class="px-4 py-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-globe text-emerald-500 w-5 text-center"></i>
+                            <span class="text-slate-200 font-semibold">Total</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-2 text-right font-bold text-slate-100">{{ nation.total_land | format_resource }}</td>
+                </tr>
+            </tbody>
+        </table>
 
-        <div x-show="view === 'buildings'">
+        {# Buildings table #}
+        <div x-show="tab === 'buildings'" x-cloak>
             {% if building_summary %}
-            <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="bg-slate-700/50 text-left text-slate-400">
-                            <th class="px-4 py-2">Building</th>
-                            <th class="px-4 py-2 text-right">Level</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for name, level in building_summary %}
-                        <tr class="border-t border-slate-700 {% if loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %}">
-                            <td class="px-4 py-2">
-                                <div class="flex items-center gap-2">
-                                    <i class="fas fa-building text-slate-500 w-4 text-center"></i>
-                                    <span class="text-slate-300">{{ name }}</span>
-                                </div>
-                            </td>
-                            <td class="px-4 py-2 text-right font-medium text-slate-100">{{ level }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-slate-700/50 text-left text-slate-400">
+                        <th class="px-4 py-2">Building</th>
+                        <th class="px-4 py-2 text-right">Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for name, level in building_summary %}
+                    <tr class="border-t border-slate-700 {% if loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %}">
+                        <td class="px-4 py-2">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-building text-slate-500 w-4 text-center"></i>
+                                <span class="text-slate-300">{{ name }}</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-2 text-right font-medium text-slate-100">{{ level }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
             {% else %}
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 text-center text-slate-500 text-sm">
-                No buildings constructed.
-            </div>
+            <p class="px-4 py-6 text-center text-slate-500 text-sm">No buildings constructed.</p>
             {% endif %}
         </div>
 
-        <div x-show="view === 'resources'">
+        {# Natural Resources table #}
+        <div x-show="tab === 'resources'" x-cloak>
             {% if natural_resources %}
-            <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="bg-slate-700/50 text-left text-slate-400">
-                            <th class="px-4 py-2">Resource</th>
-                            <th class="px-4 py-2 text-right">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for nr in natural_resources %}
-                        <tr class="border-t border-slate-700 {% if loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %}">
-                            <td class="px-4 py-2">
-                                <div class="flex items-center gap-2">
-                                    {{ res_icon(nr.resource_key, 'w-5 h-5') }}
-                                    <span class="text-slate-300 capitalize">{{ nr.resource_key | replace('_', ' ') }}</span>
-                                </div>
-                            </td>
-                            <td class="px-4 py-2 text-right font-medium text-slate-100">{{ nr.amount | format_resource }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-slate-700/50 text-left text-slate-400">
+                        <th class="px-4 py-2">Resource</th>
+                        <th class="px-4 py-2 text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for nr in natural_resources %}
+                    <tr class="border-t border-slate-700 {% if loop.index is odd %}bg-slate-800{% else %}bg-slate-800/50{% endif %}">
+                        <td class="px-4 py-2">
+                            <div class="flex items-center gap-2">
+                                {{ res_icon(nr.resource_key, 'w-5 h-5') }}
+                                <span class="text-slate-300 capitalize">{{ nr.resource_key | replace('_', ' ') }}</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-2 text-right font-medium text-slate-100">{{ nr.amount | format_resource }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
             {% else %}
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 text-center text-slate-500 text-sm">
-                No natural resources discovered yet.
-            </div>
+            <p class="px-4 py-6 text-center text-slate-500 text-sm">No natural resources discovered yet.</p>
             {% endif %}
         </div>
-    </div>
+
+    </div>{# /tabbed card #}
+
+    </div>{# /right column #}
+
+    </div>{# /top 2-col grid #}
 
     {# ===== ACTIONS (non-owner only) ===== #}
     {% if not is_owner %}
-    <div class="max-w-4xl mx-auto">
-        <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 flex flex-wrap gap-3">
-            <a href="{{ url_for('mail.compose', to=nation.id) }}"
-               class="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md transition-colors text-sm font-semibold">
-                <i class="fas fa-envelope"></i> Send Mail
-            </a>
-            <a href="{{ url_for('war.declare_war', nation_id=nation.id) }}"
-               class="inline-flex items-center gap-2 px-4 py-2 bg-red-800 hover:bg-red-700 text-red-100 rounded-md text-sm font-semibold transition-colors">
-                <i class="fas fa-skull-crossbones"></i> Declare War
-            </a>
-        </div>
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 flex flex-wrap gap-3">
+        <a href="{{ url_for('mail.compose', to=nation.id) }}"
+           class="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md transition-colors text-sm font-semibold">
+            <i class="fas fa-envelope"></i> Send Mail
+        </a>
+        <a href="{{ url_for('war.declare_war', nation_id=nation.id) }}"
+           class="inline-flex items-center gap-2 px-4 py-2 bg-red-800 hover:bg-red-700 text-red-100 rounded-md text-sm font-semibold transition-colors">
+            <i class="fas fa-skull-crossbones"></i> Declare War
+        </a>
     </div>
     {% endif %}
 

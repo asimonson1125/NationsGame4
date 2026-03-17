@@ -35,7 +35,7 @@ def _login_route(client, username, password='password'):
 def _login(client, nation):
     """Log in by setting the session directly (single-user tests only)."""
     with client.session_transaction() as sess:
-        sess['_user_id'] = str(nation.user_id)
+        sess['_user_id'] = f'{nation.user_id}:1'
 
 
 def _place(client, resource, order_type, quantity, price):

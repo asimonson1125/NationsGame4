@@ -43,7 +43,7 @@ def enemy_client(app, enemy):
     """Test client logged in as the enemy nation."""
     c = app.test_client()
     with c.session_transaction() as sess:
-        sess['_user_id'] = str(enemy.user_id)
+        sess['_user_id'] = f'{enemy.user_id}:1'
     return c
 
 
@@ -86,12 +86,45 @@ def _make_unit(nation_id, division_id, *, hp=50):
 
 # ── compute_war_scores ────────────────────────────────────────────────────────
 
-class TestComputeWarScores:
-    def _war(self, atk, dfn):
-        return SimpleNamespace(id=1, attacker_victories=atk, defender_victories=dfn)
+def _seed_battles(war, atk_nation_id, def_nation_id, atk_wins, def_wins):
+    """Create WarBattle+Battle DB records for the given victory counts.
 
+    Uses war-attacker deployments (side='attacker') for all battles.
+    Battle winner='attacker' → war attacker victory; 'defender' → war defender victory.
+    """
+    for _ in range(atk_wins):
+        b = Battle(
+            attacker_nation_id=atk_nation_id, defender_nation_id=def_nation_id,
+            attacker_division_name='A', defender_division_name='B',
+            attacker_nation_name='A', defender_nation_name='B',
+            battle_type='pvp', status='finished', winner='attacker',
+        )
+        db.session.add(b)
+        db.session.flush()
+        db.session.add(WarBattle(
+            war_id=war.id, battle_id=b.id,
+            attacker_nation_id=atk_nation_id, side='attacker',
+        ))
+    for _ in range(def_wins):
+        b = Battle(
+            attacker_nation_id=atk_nation_id, defender_nation_id=def_nation_id,
+            attacker_division_name='A', defender_division_name='B',
+            attacker_nation_name='A', defender_nation_name='B',
+            battle_type='pvp', status='finished', winner='defender',
+        )
+        db.session.add(b)
+        db.session.flush()
+        db.session.add(WarBattle(
+            war_id=war.id, battle_id=b.id,
+            attacker_nation_id=atk_nation_id, side='attacker',
+        ))
+    db.session.commit()
+
+
+class TestComputeWarScores:
     def test_tied_at_zero(self):
-        s = compute_war_scores(self._war(0, 0))
+        # No battles needed — empty DB gives 0 for both sides
+        s = compute_war_scores(SimpleNamespace(id=999999))
         assert s['attacker_victories'] == 0
         assert s['defender_victories'] == 0
         assert s['attacker_can_demand'] is False
@@ -99,29 +132,34 @@ class TestComputeWarScores:
         assert s['attacker_lead'] == 0
         assert s['defender_lead'] == 0
 
-    def test_attacker_below_threshold(self):
-        s = compute_war_scores(self._war(2, 0))
+    def test_attacker_below_threshold(self, app, nation, enemy, active_war):
+        _seed_battles(active_war, nation.id, enemy.id, 2, 0)
+        s = compute_war_scores(active_war)
         assert s['attacker_can_demand'] is False
         assert s['attacker_lead'] == 2
 
-    def test_attacker_at_threshold(self):
-        s = compute_war_scores(self._war(3, 0))
+    def test_attacker_at_threshold(self, app, nation, enemy, active_war):
+        _seed_battles(active_war, nation.id, enemy.id, 3, 0)
+        s = compute_war_scores(active_war)
         assert s['attacker_can_demand'] is True
         assert s['defender_can_demand'] is False
 
-    def test_defender_at_threshold(self):
-        s = compute_war_scores(self._war(1, 4))
+    def test_defender_at_threshold(self, app, nation, enemy, active_war):
+        _seed_battles(active_war, nation.id, enemy.id, 1, 4)
+        s = compute_war_scores(active_war)
         assert s['defender_can_demand'] is True
         assert s['attacker_can_demand'] is False
         assert s['defender_lead'] == 3
 
-    def test_large_lead(self):
-        s = compute_war_scores(self._war(10, 2))
+    def test_large_lead(self, app, nation, enemy, active_war):
+        _seed_battles(active_war, nation.id, enemy.id, 10, 2)
+        s = compute_war_scores(active_war)
         assert s['attacker_can_demand'] is True
         assert s['attacker_lead'] == 8
 
-    def test_equal_nonzero_scores(self):
-        s = compute_war_scores(self._war(5, 5))
+    def test_equal_nonzero_scores(self, app, nation, enemy, active_war):
+        _seed_battles(active_war, nation.id, enemy.id, 5, 5)
+        s = compute_war_scores(active_war)
         assert s['attacker_can_demand'] is False
         assert s['defender_can_demand'] is False
 
@@ -359,12 +397,18 @@ class TestCountOffensiveVictories:
 # ── Declare war route ─────────────────────────────────────────────────────────
 
 class TestDeclareWarRoute:
-    def test_get_returns_form(self, app, auth_client, enemy):
+    def test_get_returns_form(self, app, auth_client, nation, enemy):
+        nation.tier = 2
+        enemy.tier = 2
+        db.session.commit()
         resp = auth_client.get(f'/war/declare/{enemy.id}')
         assert resp.status_code == 200
         assert b'casus_belli' in resp.data
 
     def test_post_creates_war(self, app, auth_client, nation, enemy):
+        nation.tier = 2
+        enemy.tier = 2
+        db.session.commit()
         resp = auth_client.post(f'/war/declare/{enemy.id}', data={
             'war_name': 'Operation Test',
             'casus_belli': 'They crossed the border.',
@@ -373,6 +417,9 @@ class TestDeclareWarRoute:
         assert War.query.filter_by(attacker_nation_id=nation.id).count() == 1
 
     def test_sends_mail_to_both_nations(self, app, auth_client, nation, enemy):
+        nation.tier = 2
+        enemy.tier = 2
+        db.session.commit()
         auth_client.post(f'/war/declare/{enemy.id}', data={
             'war_name': 'Mail Test War',
             'casus_belli': 'Testing mail.',
@@ -381,46 +428,51 @@ class TestDeclareWarRoute:
         assert Message.query.filter_by(recipient_id=enemy.id).count() >= 1
 
     def test_blocks_duplicate_active_war(self, app, auth_client, nation, enemy, active_war):
+        nation.tier = 2
+        enemy.tier = 2
+        db.session.commit()
         resp = auth_client.post(f'/war/declare/{enemy.id}', data={
             'war_name': 'Second War',
             'casus_belli': 'Another reason.',
         })
-        trigger = json.loads(resp.headers.get('HX-Trigger', '{}'))
-        assert trigger['showMessage']['type'] == 'error'
+        assert resp.status_code == 422
         assert War.query.filter_by(attacker_nation_id=nation.id).count() == 1
 
-    def test_rejects_missing_name(self, app, auth_client, enemy):
+    def test_rejects_missing_name(self, app, auth_client, nation, enemy):
+        nation.tier = 2
+        enemy.tier = 2
+        db.session.commit()
         resp = auth_client.post(f'/war/declare/{enemy.id}', data={
             'war_name': '',
             'casus_belli': 'Reason here.',
         })
-        trigger = json.loads(resp.headers.get('HX-Trigger', '{}'))
-        assert trigger['showMessage']['type'] == 'error'
+        assert resp.status_code == 422
 
-    def test_rejects_missing_casus_belli(self, app, auth_client, enemy):
+    def test_rejects_missing_casus_belli(self, app, auth_client, nation, enemy):
+        nation.tier = 2
+        enemy.tier = 2
+        db.session.commit()
         resp = auth_client.post(f'/war/declare/{enemy.id}', data={
             'war_name': 'War Name',
             'casus_belli': '',
         })
-        trigger = json.loads(resp.headers.get('HX-Trigger', '{}'))
-        assert trigger['showMessage']['type'] == 'error'
+        assert resp.status_code == 422
 
     def test_cannot_declare_on_self(self, app, auth_client, nation):
         resp = auth_client.post(f'/war/declare/{nation.id}', data={
             'war_name': 'Self War', 'casus_belli': 'I hate myself.',
         })
-        trigger = json.loads(resp.headers.get('HX-Trigger', '{}'))
-        assert trigger['showMessage']['type'] == 'error'
+        assert resp.status_code == 422
 
     def test_blocked_below_tier_2(self, app, auth_client, nation, enemy):
         nation.tier = 1
+        enemy.tier = 2
         db.session.commit()
 
         resp = auth_client.post(f'/war/declare/{enemy.id}', data={
             'war_name': 'Tier 1 War', 'casus_belli': 'Too soon.',
         })
-        trigger = json.loads(resp.headers.get('HX-Trigger', '{}'))
-        assert trigger['showMessage']['type'] == 'error'
+        assert resp.status_code == 422
         assert War.query.count() == 0
 
     def test_allowed_at_tier_2(self, app, auth_client, nation, enemy):
@@ -441,8 +493,7 @@ class TestDeclareWarRoute:
         resp = auth_client.post(f'/war/declare/{enemy.id}', data={
             'war_name': 'Bully War', 'casus_belli': 'Easy target.',
         })
-        trigger = json.loads(resp.headers.get('HX-Trigger', '{}'))
-        assert trigger['showMessage']['type'] == 'error'
+        assert resp.status_code == 422
         assert War.query.count() == 0
 
     def test_allowed_attacking_equal_tier(self, app, auth_client, nation, enemy):
@@ -672,9 +723,7 @@ class TestSettlementRoutes:
         assert active_war.status == 'active'
 
     def test_demand_compensation_succeeds_with_lead(self, app, auth_client, nation, enemy, active_war):
-        active_war.attacker_victories = 3
-        active_war.defender_victories = 0
-        db.session.commit()
+        _seed_battles(active_war, nation.id, enemy.id, 3, 0)
 
         auth_client.post(f'/war/{active_war.id}/demand-compensation')
         db.session.refresh(active_war)
@@ -746,7 +795,7 @@ class TestSettlementRoutes:
         assert trigger['showMessage']['type'] == 'error'
 
     def test_compensation_rescinds_pending_peace_offer(self, app, auth_client, nation, enemy, active_war):
-        active_war.attacker_victories = 3
+        _seed_battles(active_war, nation.id, enemy.id, 3, 0)
         active_war.peace_offered_by = nation.id
         db.session.commit()
         Message.query.delete()

@@ -4,8 +4,8 @@ from flask import render_template, request, url_for, redirect, current_app
 from flask_login import login_required, current_user
 from sqlalchemy import or_
 
-from .. import db
-from ..models import Nation, War, WarBattle, WarDeploymentQueue, Division, Message, Battle, Unit
+from .. import db, limiter
+from ..models import Nation, War, WarBattle, WarDeploymentQueue, Division, Message, Battle, Unit, NationEvent
 from ..helpers import error_response as _error_response
 from ..game.war import (
     compute_war_scores, count_offensive_victories,
@@ -99,6 +99,7 @@ def wars_list():
 
 @war.route('/war/declare/<int:nation_id>', methods=['GET', 'POST'])
 @login_required
+@limiter.limit("10 per hour")
 def declare_war(nation_id):
     my_nation = current_user.nation
     target = Nation.query.get_or_404(nation_id)
@@ -178,6 +179,18 @@ def declare_war(nation_id):
         f'War Declared! — {name}',
         f'{my_nation.name} has declared war on you.\n\nCasus belli: {casus_belli}\n\n{link}',
     )
+    db.session.add(NationEvent(
+        nation_id=my_nation.id,
+        event_type='war_declared',
+        description=f'Declared war on {target.name} — "{name}".',
+        reference_id=new_war.id,
+    ))
+    db.session.add(NationEvent(
+        nation_id=target.id,
+        event_type='war_received',
+        description=f'{my_nation.name} declared war — "{name}".',
+        reference_id=new_war.id,
+    ))
     db.session.commit()
 
     return redirect(url_for('war.war_detail', war_id=new_war.id))
@@ -437,6 +450,13 @@ def accept_peace(war_id):
         f'White Peace Accepted — {war_obj.name}',
         f'Your white peace offer was accepted. The war is over.\n\n{link}',
     )
+    for nid in (war_obj.attacker_nation_id, war_obj.defender_nation_id):
+        db.session.add(NationEvent(
+            nation_id=nid,
+            event_type='war_ended',
+            description=f'White peace signed in {war_obj.name}.',
+            reference_id=war_obj.id,
+        ))
     db.session.commit()
 
     resp = current_app.response_class('', status=200)
@@ -490,6 +510,18 @@ def demand_compensation(war_id):
         f'War Reparations Paid \u2014 {war_obj.name}',
         f'{winner_nation.name} has claimed reparations from your nation:\n\n{resource_lines}\n\n{link}',
     )
+    db.session.add(NationEvent(
+        nation_id=winner_id,
+        event_type='war_ended',
+        description=f'Won {war_obj.name} by compensation.',
+        reference_id=war_obj.id,
+    ))
+    db.session.add(NationEvent(
+        nation_id=loser_id,
+        event_type='war_ended',
+        description=f'Lost {war_obj.name} — paid compensation.',
+        reference_id=war_obj.id,
+    ))
     db.session.commit()
 
     resp = current_app.response_class('', status=200)
@@ -553,6 +585,18 @@ def demand_annexation(war_id):
         f'Annexed \u2014 {war_obj.name}',
         f'{winner_nation.name} has annexed part of your nation:\n\n{detail_block}\n\n{link}',
     )
+    db.session.add(NationEvent(
+        nation_id=winner_id,
+        event_type='war_ended',
+        description=f'Won {war_obj.name} — annexed territory.',
+        reference_id=war_obj.id,
+    ))
+    db.session.add(NationEvent(
+        nation_id=loser_id,
+        event_type='war_ended',
+        description=f'Lost {war_obj.name} — territory annexed.',
+        reference_id=war_obj.id,
+    ))
     db.session.commit()
 
     resp = current_app.response_class('', status=200)

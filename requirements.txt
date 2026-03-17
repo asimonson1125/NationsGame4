@@ -9,5 +9,7 @@ gunicorn==23.0.0
 psycopg2-binary==2.9.10
 redis==5.2.1
 python-dotenv==1.0.1
+Flask-Limiter[redis]>=3.5
 Pillow==10.2.0
 pillow-avif-plugin==1.4.3
+Flask-Mail==0.10.0

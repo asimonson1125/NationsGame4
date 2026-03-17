@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}429 - Too Many Requests{% endblock %}
+
+{% block content %}
+<div style="padding-top: 120px; padding-bottom: 80px;" class="px-6">
+    <div class="max-w-md mx-auto text-center">
+
+        <div style="display: inline-flex; position: relative; width: 96px; height: 96px; align-items: center; justify-content: center; margin-bottom: 2rem;">
+            <div style="position: absolute; inset: 0; background: rgba(239, 68, 68, 0.1); filter: blur(24px); border-radius: 9999px;"></div>
+            <div style="position: relative; width: 80px; height: 80px; background: #1e293b; border: 1px solid #475569; border-radius: 9999px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);">
+                <i class="fas fa-gauge-high" style="font-size: 40px; color: #ef4444; display: block;"></i>
+                <div style="position: absolute; top: -2px; right: -2px; width: 28px; height: 28px; background: #0f172a; border: 1px solid #475569; border-radius: 9999px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);">
+                    <i class="fas fa-pause" style="font-size: 12px; color: #94a3b8; display: block;"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-100 tracking-tight">
+                429 <span class="text-red-500">—</span> Slow Down, Commander
+            </h1>
+            <p class="text-slate-400 text-lg leading-relaxed">
+                You've sent too many requests in a short period. Wait a moment before trying again.
+            </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 mt-10">
+            <a href="{{ url_for('main.home') }}"
+               class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg shadow-lg transition-all active:scale-95">
+                <i class="fas fa-home"></i> Return Home
+            </a>
+        </div>
+
+        <p class="text-xs text-slate-600 italic mt-12">
+            "Patience is a virtue, even in wartime."
+        </p>
+    </div>
+</div>
+{% endblock %}

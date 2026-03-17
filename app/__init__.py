@@ -5,13 +5,26 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
 from flask_caching import Cache
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_login import current_user
+from flask_mail import Mail as _Mail
 from markupsafe import Markup
 from config import config
+
+
+def _rate_limit_key():
+    if current_user.is_authenticated:
+        return f"user:{current_user.id}"
+    return get_remote_address()
+
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 csrf = CSRFProtect()
 cache = Cache()
+limiter = Limiter(key_func=_rate_limit_key)
+mailer = _Mail()
 
 
 def format_resource(value):
@@ -50,6 +63,8 @@ def create_app(config_name='default'):
     login_manager.init_app(app)
     csrf.init_app(app)
     cache.init_app(app)
+    limiter.init_app(app)
+    mailer.init_app(app)
 
     login_manager.login_view = 'auth.login'
     login_manager.login_message_category = 'info'
@@ -135,5 +150,12 @@ def create_app(config_name='default'):
     @app.errorhandler(500)
     def internal_server_error(e):
         return render_template('errors/500.html'), 500
+
+    @app.errorhandler(429)
+    def ratelimit_handler(e):
+        if request.headers.get('HX-Request'):
+            from .helpers import error_response
+            return error_response("Too many requests — slow down.")
+        return render_template('errors/429.html'), 429
 
     return app

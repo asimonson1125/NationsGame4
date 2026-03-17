@@ -26,6 +26,8 @@ MIGRATIONS = [
     'add_battle_name',
     'add_user_system_flag',
     'add_performance_indices',
+    'add_nation_events',
+    'add_email_verification',
 ]
 
 

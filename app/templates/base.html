@@ -26,9 +26,10 @@
     <title>{% block title %}Nations Engine{% endblock %} - Nations Engine</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
     <link rel="stylesheet" href="{{ static_url('css/style.css') }}">
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script defer src="{{ static_url('htmx.min.js') }}"></script>
     <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preload" href="{{ static_url('vendor/fontawesome/css/fontawesome.min.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="{{ static_url('vendor/fontawesome/css/fontawesome.min.css') }}"></noscript>
     {% block head %}{% endblock %}
 </head>
 <body class="bg-slate-950 min-h-screen text-slate-100 font-sans pt-14" x-data="{ mobileMenu: false }">
@@ -113,14 +114,16 @@
         {% endif %}
     </div>
 
-    {# Right: Version + Countdown + Auth action #}
+    {# Right: Countdown + Auth action #}
     <div class="hidden lg:flex items-center gap-3 ml-auto shrink-0">
-        <a href="{{ url_for('main.changelog_page') }}" class="text-[11px] font-mono font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/30 px-1.5 py-0.5 rounded hover:bg-amber-500/20 transition-colors">v{{ latest_update.version if latest_update else '0.0.0' }}</a>
         {% if current_user.is_authenticated %}
         <div id="turn-countdown" class="tt tt-below tt-right text-xs text-slate-400" data-tooltip="Time until next production turn"><i class="fas fa-clock mr-1"></i>--:--</div>
         <div id="day-countdown" class="tt tt-below tt-right text-xs text-slate-400" data-tooltip="Time until next game day"><i class="fas fa-calendar-day mr-1"></i>--:--:--</div>
-        <a href="{{ url_for('auth.logout') }}" class="text-slate-400 hover:text-slate-200 transition-colors text-sm" title="Logout">
-            <i class="fas fa-sign-out-alt"></i>
+        <a href="{{ url_for('main.account') }}" class="text-slate-400 hover:text-slate-200 transition-colors text-sm" title="Settings" aria-label="Settings">
+            <i class="fas fa-cog"></i> Settings
+        </a>
+        <a href="{{ url_for('auth.logout') }}" class="text-red-400 hover:text-red-300 transition-colors text-sm" title="Logout" aria-label="Logout">
+            <i class="fas fa-sign-out-alt"></i> Sign Out
         </a>
         {% else %}
         <a href="{{ url_for('auth.login') }}" class="text-slate-300 hover:text-slate-100 transition-colors text-sm font-medium">Sign In</a>
@@ -129,7 +132,7 @@
     </div>
 
     {# Mobile hamburger #}
-    <button name="menu" @click="mobileMenu = !mobileMenu" class="lg:hidden ml-auto text-slate-300 hover:text-slate-100 p-2">
+    <button name="menu" @click="mobileMenu = !mobileMenu" aria-label="Toggle navigation menu" class="lg:hidden ml-auto text-slate-300 hover:text-slate-100 p-2">
         <i class="fas fa-bars text-lg"></i>
     </button>
 </nav>
@@ -172,30 +175,51 @@
             <span id="turn-countdown-mobile"><i class="fas fa-clock mr-1"></i>--:--</span>
             <span id="day-countdown-mobile"><i class="fas fa-calendar-day mr-1"></i>--:--:--</span>
         </div>
+        <a href="{{ url_for('main.account') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-cog w-5"></i> Settings</a>
         <a href="{{ url_for('auth.logout') }}" class="block px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-slate-800 rounded-md"><i class="fas fa-sign-out-alt w-5"></i> Logout</a>
         {% else %}
         <a href="{{ url_for('auth.login') }}" class="block px-3 py-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 rounded-md"><i class="fas fa-sign-in-alt w-5"></i> Sign In</a>
         <a href="{{ url_for('auth.register') }}" class="block px-3 py-2 text-sm text-amber-400 hover:text-amber-300 hover:bg-slate-800 rounded-md"><i class="fas fa-user-plus w-5"></i> Register</a>
         {% endif %}
     </div>
-    <a href="{{ url_for('main.changelog_page') }}" class="block px-3 py-2 text-center text-xs text-slate-600 hover:text-slate-400 border-t border-slate-700 transition-colors">v{{ latest_update.version if latest_update else '0.0.0' }} (NG4)</a>
 </div>
 
+{# ===== EMAIL VERIFICATION BANNER ===== #}
+{% if current_user.is_authenticated and current_user.email and not current_user.email_verified %}
+<div class="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-sm text-amber-400 text-center">
+    <i class="fas fa-envelope mr-1"></i> Your email is unverified.
+    <a href="{{ url_for('auth.resend_verification') }}" class="underline hover:text-amber-300 ml-1">Resend verification email</a>
+</div>
+{% endif %}
+
 {# ===== MAIN CONTENT ===== #}
-<main class="pb-14 min-h-screen">
+<main class="min-h-screen">
     {% block content %}{% endblock %}
 </main>
 
-{# ===== RESOURCE FOOTER ===== #}
+{# ===== PAGE FOOTER (in document flow) ===== #}
+<footer class="border-t border-slate-800 {% if current_user.is_authenticated %}mb-10{% endif %} py-3 px-6 flex items-center justify-between">
+    <span class="text-xs text-slate-600">&copy; 2026 NationsEngine</span>
+    <div class="flex items-center gap-4 text-xs text-slate-600">
+        <a href='https://discord.gg/UNtsbdSrnp' class="hover:text-slate-400 transition-colors">Discord</a>
+        <a href='https://nations.miraheze.org/wiki/Main_Page' class="hover:text-slate-400 transition-colors">Wiki</a>
+        <a href="{{ url_for('main.tos_page') }}" class="hover:text-slate-400 transition-colors">Terms of Service</a>
+        <a href="{{ url_for('main.privacy_page') }}" class="hover:text-slate-400 transition-colors">Privacy Policy</a>
+        <span class="text-slate-800">·</span>
+        <a href="{{ url_for('main.changelog_page') }}" class="font-mono hover:text-slate-400 transition-colors">v{{ latest_update.version if latest_update else '0.0.0' }}</a>
+    </div>
+</footer>
+
+{# ===== RESOURCE FOOTER (fixed) ===== #}
 {% if current_user.is_authenticated %}
-<footer class="fixed bottom-0 left-0 right-0 bg-slate-900/60 backdrop-blur-sm border-t border-slate-700 z-40 py-1.5">
+<div class="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/60 backdrop-blur-sm border-t border-slate-700 py-1.5">
     <div id="resource-footer-content"
          hx-get="{{ url_for('main.resource_footer') }}"
          hx-trigger="load, every 60s"
          hx-target="#resource-footer-content"
          hx-swap="innerHTML">
     </div>
-</footer>
+</div>
 {% endif %}
 
 {# ===== GP BREAKDOWN MODAL ===== #}
@@ -205,6 +229,7 @@
 <div id="gp-popup"
      class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 p-5 rounded-lg shadow-2xl z-[1100] w-[90%] max-w-md overflow-y-auto max-h-[80vh]">
     <button onclick="closeGPModal()"
+            aria-label="Close modal"
             class="absolute top-2.5 right-3 text-slate-400 hover:text-slate-200 text-2xl leading-none cursor-pointer bg-transparent border-0 p-0">&times;</button>
     <h2 class="text-lg font-semibold text-slate-100 border-b border-slate-700 pb-2.5 mt-0">GP Breakdown</h2>
     <div id="gp-content" class="mt-3">

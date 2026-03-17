@@ -48,7 +48,7 @@
                 <h3 class="font-semibold text-slate-100 text-sm">
                     <i class="fas fa-flag mr-2 text-amber-400"></i>New Division
                 </h3>
-                <button @click="creating = false" class="text-slate-400 hover:text-slate-200 text-lg leading-none">&times;</button>
+                <button @click="creating = false" aria-label="Close" class="text-slate-400 hover:text-slate-200 text-lg leading-none">&times;</button>
             </div>
             <div class="p-5">
                 <form hx-post="{{ url_for('military.create_division') }}"
@@ -165,7 +165,7 @@
                         <h3 class="font-semibold text-slate-100 text-sm">
                             <i class="fas fa-paper-plane mr-2 text-amber-400"></i>Deploy — {{ div.name }}
                         </h3>
-                        <button @click="open = false" class="text-slate-400 hover:text-slate-200 text-lg leading-none">&times;</button>
+                        <button @click="open = false" aria-label="Close" class="text-slate-400 hover:text-slate-200 text-lg leading-none">&times;</button>
                     </div>
                     <div class="p-5 space-y-4">
 

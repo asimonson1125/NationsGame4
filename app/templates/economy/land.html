@@ -54,6 +54,12 @@
                         {% endfor %}
                     </div>
                 </div>
+                {% if expand_on_cooldown %}
+                <button disabled
+                    class="w-full bg-slate-700 text-slate-500 font-semibold py-2 px-4 rounded-md text-sm cursor-not-allowed">
+                    <i class="fas fa-clock mr-1"></i> Come back tomorrow!
+                </button>
+                {% else %}
                 <button
                     hx-post="{{ url_for('economy.expand_borders') }}"
                     hx-target="#expansion-results"
@@ -61,6 +67,7 @@
                     class="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
                     <i class="fas fa-expand-arrows-alt mr-1"></i> Expand Borders
                 </button>
+                {% endif %}
             </div>
 
             {# Colonists Card #}
@@ -89,6 +96,12 @@
                         {% endfor %}
                     </div>
                 </div>
+                {% if colonize_on_cooldown %}
+                <button disabled
+                    class="w-full bg-slate-700 text-slate-500 font-semibold py-2 px-4 rounded-md text-sm cursor-not-allowed">
+                    <i class="fas fa-clock mr-1"></i> Come back next Monday!
+                </button>
+                {% else %}
                 <form id="colonize-form"
                       hx-post="{{ url_for('economy.colonize') }}"
                       hx-target="#expansion-results"
@@ -99,6 +112,7 @@
                         <i class="fas fa-globe mr-1"></i> Send Colonists
                     </button>
                 </form>
+                {% endif %}
             </div>
 
             {# Buy Cleared Land Card #}

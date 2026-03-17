@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% from 'macros.html' import nation_autocomplete_input %}
+
+{% block title %}Account Settings{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-5 py-8 space-y-6">
+
+    <h1 class="text-2xl font-bold text-slate-100">
+        <i class="fas fa-cog mr-2 text-slate-400"></i>Nation Settings
+    </h1>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {# ── Account Column ── #}
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-5 space-y-5">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-700 pb-2">Account</h2>
+
+            {# Email #}
+            <div class="space-y-2">
+                <label class="block text-sm font-medium text-slate-300">
+                    Email <span class="text-slate-500 font-normal">— Private</span>
+                </label>
+                {% if current_user.email %}
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="text-slate-300 truncate">{{ current_user.email }}</span>
+                    {% if current_user.email_verified %}
+                    <span class="text-green-400 shrink-0" title="Verified"><i class="fas fa-circle-check text-xs"></i></span>
+                    {% else %}
+                    <span class="text-amber-400 text-xs shrink-0" title="Unverified"><i class="fas fa-triangle-exclamation"></i> Unverified</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% if current_user.pending_email %}
+                <div class="flex items-center justify-between gap-2 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2">
+                    <p class="text-xs text-amber-400 truncate">
+                        <i class="fas fa-clock mr-1"></i>Pending: {{ current_user.pending_email }} — check inbox
+                    </p>
+                    <button hx-post="{{ url_for('auth.cancel_email_change') }}" hx-swap="none"
+                            hx-on::after-request="if(event.detail.successful) location.reload()"
+                            class="text-xs text-slate-400 hover:text-red-400 shrink-0">Cancel</button>
+                </div>
+                {% endif %}
+                <form hx-post="{{ url_for('auth.update_email') }}" hx-swap="none" class="flex gap-2">
+                    <input type="email" name="new_email"
+                           value="{{ current_user.email or '' }}"
+                           placeholder="Enter email address"
+                           class="flex-1 min-w-0 px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm"
+                           required>
+                    <button type="submit"
+                            class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md font-semibold text-sm shrink-0">
+                        Save
+                    </button>
+                </form>
+            </div>
+
+            {# Password Change #}
+            <form hx-post="{{ url_for('auth.change_password') }}" hx-swap="none" class="space-y-2">
+                <label class="block text-sm font-medium text-slate-300">Change Password</label>
+                <input type="password" name="current_password" placeholder="Current password" autocomplete="current-password"
+                       class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm"
+                       required>
+                <input type="password" name="new_password" placeholder="New password (8+ chars)" autocomplete="new-password" minlength="8"
+                       class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm"
+                       required>
+                <input type="password" name="confirm_password" placeholder="Confirm new password" autocomplete="new-password" minlength="8"
+                       class="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-md placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 text-sm"
+                       required>
+                <button type="submit"
+                        class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md font-semibold text-sm">
+                    Update Password
+                </button>
+            </form>
+
+            {# Vacation Mode #}
+            <form hx-post="{{ url_for('auth.toggle_vacation') }}" hx-swap="none"
+                  hx-on::after-request="if(event.detail.successful) location.reload()"
+                  class="space-y-2">
+                <label class="block text-sm font-medium text-slate-300">Vacation Mode</label>
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                            <input type="checkbox" name="vacation_mode"
+                                   class="w-4 h-4 cursor-pointer rounded"
+                                   {% if current_user.vacation_mode %}checked{% endif %}
+                                   {% if vac_cooldown_remaining %}disabled{% endif %}>
+                            Enable
+                        </label>
+                        <p class="text-xs text-slate-500 mt-1">Freezes your nation. 48-hour cooldown after disabling.</p>
+                        {% if vac_cooldown_remaining %}
+                        <p class="text-xs text-amber-400 mt-1">Cooldown: {{ vac_cooldown_remaining[0] }}h {{ vac_cooldown_remaining[1] }}m remaining.</p>
+                        {% endif %}
+                    </div>
+                    <button type="submit"
+                            class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md font-semibold text-sm shrink-0"
+                            {% if vac_cooldown_remaining %}disabled{% endif %}>
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {# ── Appearance Column ── #}
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-5 space-y-5">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-700 pb-2">Appearance</h2>
+
+            {# Nation Flag #}
+            <div class="space-y-2">
+                <label class="block text-sm font-medium text-slate-300">
+                    Nation Flag <span class="text-slate-500 font-normal">— Any aspect ratio</span>
+                </label>
+                <div class="flex items-center gap-3">
+                    {% if nation and nation.flag_url %}
+                    <img src="{{ nation.flag_url }}" alt="Current flag"
+                         class="h-10 max-w-[4rem] object-contain border border-slate-600 shrink-0">
+                    {% else %}
+                    <div class="h-10 w-14 bg-slate-700 border border-slate-600 flex items-center justify-center text-slate-500 text-[10px] shrink-0">No flag</div>
+                    {% endif %}
+                    <form hx-post="{{ url_for('main.update_flag') }}" hx-encoding="multipart/form-data"
+                          hx-swap="none" hx-on::after-request="if(event.detail.successful) location.reload()"
+                          class="flex items-center gap-2 flex-1 min-w-0">
+                        <input type="file" name="flag_file" accept="image/*" required
+                               class="flex-1 min-w-0 text-sm text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 cursor-pointer">
+                        <button type="submit"
+                                class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded text-sm font-semibold shrink-0">
+                            Upload
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {# Nation Banner #}
+            <div class="space-y-2">
+                <label class="block text-sm font-medium text-slate-300">
+                    Nation Banner <span class="text-slate-500 font-normal">— 1200×400</span>
+                </label>
+                <div class="flex items-center gap-3">
+                    {% if nation and nation.banner_url %}
+                    <div class="h-10 w-20 bg-cover bg-center border border-slate-600 rounded shrink-0"
+                         style="background-image: url('{{ nation.banner_url }}')"></div>
+                    {% else %}
+                    <div class="h-10 w-20 bg-slate-700 border border-slate-600 rounded flex items-center justify-center text-slate-500 text-[10px] shrink-0">Default</div>
+                    {% endif %}
+                    <form hx-post="{{ url_for('main.update_banner') }}" hx-encoding="multipart/form-data"
+                          hx-swap="none" hx-on::after-request="if(event.detail.successful) location.reload()"
+                          class="flex items-center gap-2 flex-1 min-w-0">
+                        <input type="file" name="banner_file" accept="image/*" required
+                               class="flex-1 min-w-0 text-sm text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 cursor-pointer">
+                        <button type="submit"
+                                class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded text-sm font-semibold shrink-0">
+                            Upload
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    {% if current_user.is_admin %}
+    {# ===== ADMIN PANEL ===== #}
+    <div class="bg-slate-800 rounded-lg border-2 border-red-500 p-5"
+         x-data="nationAutocomplete('{{ url_for('main.admin_search_nations') }}', 1, function(n) {
+             htmx.ajax('GET', '/admin/nation/' + n.id, {target: '#admin-panel-content', swap: 'outerHTML'});
+         })">
+        <h2 class="text-xl font-semibold mb-4 text-red-400">Admin Panel</h2>
+        {{ nation_autocomplete_input(placeholder='Search nations by name...', accent='red', show_id=true, wrapper_class='mb-4') }}
+        <div id="admin-panel-content">
+            <p class="text-sm text-slate-500 italic">Search for a nation above to manage it.</p>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

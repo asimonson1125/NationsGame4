@@ -114,6 +114,7 @@ class Nation(db.Model):
     messages_received = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient_nation', lazy='dynamic', overlaps="recipient,recipient_nation")
     buildings = db.relationship('NationBuilding', backref='nation_ref', lazy='selectin', overlaps="nation_ref")
     building_upgrades = db.relationship('BuildingUpgradeQueue', backref='nation_ref', lazy='dynamic', overlaps="nation_ref")
+    events = db.relationship('NationEvent', backref='nation', lazy='dynamic', order_by='NationEvent.occurred_at.desc()')
 
     __table_args__ = (
         db.Index('idx_nation_name', 'name'),
@@ -177,6 +178,21 @@ class User(UserMixin, db.Model):
     banned_until = db.Column(db.DateTime(timezone=True), nullable=True)
     ban_message = db.Column(db.String(500), nullable=True)
     login_version = db.Column(db.Integer, default=1, nullable=False)
+
+    # Email verification
+    email_verified          = db.Column(db.Boolean, default=False, nullable=False)
+    email_verify_token      = db.Column(db.String(64), nullable=True, unique=True)
+    email_verify_expires_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    # Pending email change
+    pending_email            = db.Column(db.String(120), nullable=True)
+    pending_email_token      = db.Column(db.String(64), nullable=True, unique=True)
+    pending_email_expires_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    # Password reset
+    password_reset_token      = db.Column(db.String(64), nullable=True, unique=True)
+    password_reset_expires_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
     nation = db.relationship('Nation', backref='user', uselist=False, lazy=True)
 
     def get_id(self):
@@ -188,6 +204,14 @@ class User(UserMixin, db.Model):
         if self.banned_until is None:
             return False
         return datetime.now(timezone.utc) < self.banned_until
+
+    @property
+    def password_reset_expired(self):
+        return not self.password_reset_expires_at or datetime.now(timezone.utc) > self.password_reset_expires_at
+
+    @property
+    def pending_email_expired(self):
+        return not self.pending_email_expires_at or datetime.now(timezone.utc) > self.pending_email_expires_at
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -532,6 +556,17 @@ class WarDeploymentQueue(db.Model):
     status = db.Column(db.String(20), nullable=False, default='traveling')  # traveling|arrived|cancelled
 
     deploying_nation = db.relationship('Nation', foreign_keys=[deploying_nation_id])
+
+
+class NationEvent(db.Model):
+    __tablename__ = 'nation_events'
+    id           = db.Column(db.Integer, primary_key=True)
+    nation_id    = db.Column(db.Integer, db.ForeignKey('nations.id'), nullable=False, index=True)
+    event_type   = db.Column(db.String(32), nullable=False)   # founded|tier_promotion|tier_demotion|war_declared|war_received|war_ended
+    description  = db.Column(db.String(255), nullable=False)
+    reference_id = db.Column(db.Integer, nullable=True)       # e.g. war_id
+    occurred_at  = db.Column(db.DateTime(timezone=True), nullable=False,
+                             default=lambda: datetime.now(timezone.utc))
 
 
 @login_manager.user_loader
