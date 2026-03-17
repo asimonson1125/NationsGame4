@@ -1,6 +1,6 @@
 {% from 'shared/_macros.html' import res_icon %}
 <div id="industry-content"
-     x-data="{ tab: '{{ default_tab | default('collect') }}' }">
+     x-data="{ tab: '{{ default_tab | default('collect') }}', filterOutput: '' }">
 
     {# Tab Bar #}
     <div class="flex gap-0 mb-6 border-b border-slate-700">
@@ -160,6 +160,23 @@
 
     {# ===== BUILD TAB ===== #}
     <div x-show="tab === 'build'" x-cloak>
+        {# Output resource filter #}
+        <div class="flex items-center gap-3 mb-5">
+            <label class="text-sm font-medium text-slate-400">Filter by output:</label>
+            <select x-model="filterOutput" class="bg-slate-700 border border-slate-600 text-slate-100 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50">
+                <option value="">All</option>
+                <option value="food">Food</option>
+                <option value="power">Power</option>
+                <option value="building_materials">Building Materials</option>
+                <option value="consumer_goods">Consumer Goods</option>
+                <option value="metal">Metal</option>
+                <option value="ammunition">Ammunition</option>
+                <option value="fuel">Fuel</option>
+                <option value="uranium">Uranium</option>
+                <option value="whz">WHZ</option>
+                <option value="money">Money</option>
+            </select>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {% for key, fdef in factory_defs.items() %}
             {% set nf = factory_map.get(key) %}
@@ -168,6 +185,7 @@
                     qty: 1,
                     fmt: window.fmtHtml
                  }"
+                 :class='{ "hidden": filterOutput && !{{ fdef.outputs | tojson }}.hasOwnProperty(filterOutput) }'
                  class="bg-slate-800 rounded-lg border border-slate-700 p-5">
                 <form hx-post="{{ url_for('economy.build_factory') }}"
                       hx-include="closest form"

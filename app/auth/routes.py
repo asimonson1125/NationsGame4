@@ -1,6 +1,6 @@
 import json
 import secrets
-from flask import render_template, redirect, url_for, flash, request, current_app
+from flask import render_template, redirect, url_for, flash, request, current_app, get_flashed_messages
 from flask_login import login_user, logout_user, login_required, current_user
 from datetime import date, datetime, timezone, timedelta
 from .. import db, limiter
@@ -19,6 +19,7 @@ VALID_CONTINENTS = set(CONTINENTS)
 @limiter.limit("10 per minute; 50 per hour", key_func=get_remote_address)
 def login():
     if current_user.is_authenticated:
+        get_flashed_messages()  # discard any stale flashes from pre-login flows
         return redirect(url_for('main.home'))
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
@@ -254,7 +255,6 @@ def resend_verification():
     db.session.commit()
     link = url_for('auth.verify_email', token=current_user.email_verify_token, _external=True)
     send_verification_email(current_user, link)
-    flash('Verification email resent — check your inbox.', 'info')
     return redirect(url_for('auth.verify_email_sent'))
 
 

@@ -80,8 +80,14 @@ def _pick_weighted(weights):
 
 
 def _apply_variance(amounts, sigma=0.1):
-    """Apply gaussian variance (σ=10%) to each value, ensuring non-negative ints."""
-    return {k: max(0, int(v * random.gauss(1.0, sigma))) for k, v in amounts.items() if v > 0}
+    """Apply gaussian variance (σ=10%) to each value, returning only positive ints."""
+    result = {}
+    for k, v in amounts.items():
+        if v > 0:
+            val = int(v * random.gauss(1.0, sigma))
+            if val > 0:
+                result[k] = val
+    return result
 
 
 RESOURCE_TYPES = {
