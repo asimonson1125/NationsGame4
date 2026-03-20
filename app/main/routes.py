@@ -200,11 +200,9 @@ def robots_txt():
         'User-agent: *',
         'Allow: /$',
         'Allow: /changelog',
-        'Allow: /login',
         'Allow: /register',
-        'Allow: /nation/',
-        'Allow: /alliance/',
-        'Allow: /leaderboard$',
+        'Allow: /tos',
+        'Allow: /privacy',
         'Disallow: /',
         '',
         f'Sitemap: {url_for("main.sitemap_xml", _external=True)}',
@@ -217,17 +215,20 @@ def robots_txt():
 @cache.cached(timeout=3600)
 def sitemap_xml():
     """Serve sitemap.xml for search engine discovery."""
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
     pages = [
-        (url_for('main.index', _external=True), '1.0', 'weekly'),
-        (url_for('main.changelog_page', _external=True), '0.5', 'weekly'),
-        (url_for('auth.login', _external=True), '0.3', 'monthly'),
-        (url_for('auth.register', _external=True), '0.6', 'monthly'),
+        (url_for('main.index', _external=True), '1.0', 'weekly', today),
+        (url_for('main.changelog_page', _external=True), '0.5', 'weekly', today),
+        (url_for('auth.register', _external=True), '0.6', 'monthly', today),
+        (url_for('main.tos_page', _external=True), '0.1', 'yearly', today),
+        (url_for('main.privacy_page', _external=True), '0.1', 'yearly', today),
     ]
     xml_parts = ['<?xml version="1.0" encoding="UTF-8"?>']
     xml_parts.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
-    for loc, priority, changefreq in pages:
+    for loc, priority, changefreq, lastmod in pages:
         xml_parts.append('  <url>')
         xml_parts.append(f'    <loc>{loc}</loc>')
+        xml_parts.append(f'    <lastmod>{lastmod}</lastmod>')
         xml_parts.append(f'    <priority>{priority}</priority>')
         xml_parts.append(f'    <changefreq>{changefreq}</changefreq>')
         xml_parts.append('  </url>')

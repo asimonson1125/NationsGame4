@@ -113,7 +113,9 @@ def roll_expansion(continent, population):
     total_gained = sum(new_land.values())
 
     resource_weights = RESOURCE_WEIGHTS.get(continent, DEFAULT_RESOURCE_WEIGHTS)
-    discovered = _apply_variance(_weighted_distribute(resource_weights, total_gained // 10))
+    weight_sum = sum(resource_weights.values())
+    discovery_total = int(weight_sum * 3.75 * (population / 1000000))
+    discovered = _apply_variance(_weighted_distribute(resource_weights, discovery_total))
 
     return new_land, discovered, total_gained
 
@@ -125,6 +127,8 @@ def roll_colonization(target_continent, population):
     total_gained = sum(new_land.values())
 
     resource_weights = RESOURCE_WEIGHTS.get(target_continent, DEFAULT_RESOURCE_WEIGHTS)
-    discovered = _apply_variance(_weighted_distribute(resource_weights, total_gained // 2))
+    weight_sum = sum(resource_weights.values())
+    discovery_total = int(weight_sum * 3.75 * (population / 1000000))
+    discovered = _apply_variance(_weighted_distribute(resource_weights, discovery_total))
 
     return new_land, discovered, total_gained

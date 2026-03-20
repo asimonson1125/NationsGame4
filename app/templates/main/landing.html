@@ -1,10 +1,11 @@
 {% extends layout %}
 
-{% block title %}About{% endblock %}
+{% block title %}Nations Engine - Free Country Simulator Game{% endblock %}
 
-{% block meta_description %}Nations Engine — a free multiplayer strategy game. Build your nation, expand borders across five continents, develop industry, raise armies, and trade on a player-driven global market.{% endblock %}
-{% block og_title %}Nations Engine — Build, Expand, Conquer{% endblock %}
-{% block og_description %}A free multiplayer nation-building strategy game. Expand borders, develop industry, raise armies, and trade on the global market.{% endblock %}
+{% block meta_description %}Nations Engine is a free country simulator game where you can build your own nation, develop complex economies, and command armies in a multiplayer strategy world. Explore five unique continents and dominate the global market today.{% endblock %}
+{% block meta_keywords %}country simulator game, nation simulator, free multiplayer strategy, online political game, economic simulator game, war strategy game, nations engine{% endblock %}
+{% block og_title %}Nations Engine — Ultimate Country Simulator Game{% endblock %}
+{% block og_description %}Build, expand, and conquer in the most detailed country simulator game. Join thousands of players in a free multiplayer strategy experience.{% endblock %}
 
 {% block head %}
 <style>
@@ -26,20 +27,69 @@
     }
 </style>
 <script type="application/ld+json">
+[
 {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "Nations Engine",
-    "description": "A free multiplayer nation-building strategy game. Expand borders, develop industry, raise armies, and trade on a player-driven global market.",
+    "url": "{{ request.url_root }}",
+    "description": "The ultimate country simulator game. Build your nation, develop industry, raise armies, and trade on a player-driven global market in this free multiplayer strategy game.",
     "applicationCategory": "Game",
-    "genre": "Strategy",
+    "genre": "Strategy, Simulator, Political, Economic",
     "operatingSystem": "Any",
     "offers": {
         "@type": "Offer",
         "price": "0",
         "priceCurrency": "USD"
     }
+},
+{
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+        {
+            "@type": "Question",
+            "name": "What is Nations Engine?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Nations Engine is a free multiplayer country simulator game where you build and manage your own nation. You expand territory, develop an industrial economy with over 60 factory types, raise armies, and trade on a player-driven global market."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "Is Nations Engine free to play?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, Nations Engine is completely free to play. Every feature is accessible through gameplay with no paywalls."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "What kind of economic simulation does Nations Engine offer?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Nations Engine features over 60 factory types with complex supply chains. You manage raw resources like iron, coal, and oil to produce advanced goods, then trade on a player-driven global market."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "Can I play Nations Engine on mobile?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Nations Engine is fully browser-based and responsive — no app download required. You can manage your nation, collect from factories, and review battles from any smartphone or tablet."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "How does the military system work?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "You recruit units, organise them into divisions, and equip them with gear from loot crates. Divisions can be deployed in PvP wars against other players or in PvE missions for rewards. Detailed combat logs show every round of battle."
+            }
+        }
+    ]
 }
+]
 </script>
 {% endblock %}
 
@@ -81,11 +131,11 @@
     <div class="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-transparent"></div>
     <div class="relative max-w-5xl mx-auto px-6 pt-20 pb-16 text-center">
         <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Nations Engine logo" class="w-20 h-20 mx-auto mb-6">
-        <h1 class="text-7xl sm:text-7xl text-amber-500 mb-4 tracking-tight" style="font-family: Palatino, 'Palatino Linotype', 'Palatino LT STD', 'Book Antiqua', Georgia, serif;">Nations Engine</h1>
+        <h1 class="text-7xl sm:text-7xl text-amber-500 mb-2 tracking-tight" style="font-family: Palatino, 'Palatino Linotype', 'Palatino LT STD', 'Book Antiqua', Georgia, serif;">Nations Engine</h1>
+        <h2 class="text-2xl text-slate-400 font-light mb-6">The Ultimate Country Simulator Game</h2>
         <p class="text-lg text-slate-300 max-w-2xl mx-auto mb-8">
-            Build your nation from the ground up. Expand your borders, develop industry,
-            raise armies, and trade on the global market. Compete with players worldwide
-            for dominance across five unique continents.
+            Build your nation from the ground up in this immersive country simulator. Expand your borders, develop complex industries,
+            raise powerful armies, and trade on the global market. Compete with players worldwide for dominance across five unique continents.
         </p>
         {% if not current_user.is_authenticated %}
         <div class="flex flex-wrap justify-center gap-4">
@@ -207,7 +257,7 @@
             <div class="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
                 <i class="fas fa-map text-emerald-400 text-lg"></i>
             </div>
-            <h2 class="text-base font-semibold text-slate-100 mb-2">Explore &amp; Expand</h3>
+            <h2 class="text-base font-semibold text-slate-100 mb-2">Explore &amp; Expand</h2>
             <p class="text-sm text-slate-400">
                 Claim territory across five continents &mdash; from the frozen peaks of Tind
                 to the deserts of Zaheria. Each region offers unique terrain and natural resources.
@@ -218,7 +268,7 @@
             <div class="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center mb-4">
                 <i class="fas fa-industry text-amber-400 text-lg"></i>
             </div>
-            <h2 class="text-base font-semibold text-slate-100 mb-2">Build Your Economy</h3>
+            <h2 class="text-base font-semibold text-slate-100 mb-2">Build Your Economy</h2>
             <p class="text-sm text-slate-400">
                 Construct over 60 types of factories. Manage supply chains from raw materials
                 to advanced goods. Balance inputs, outputs, and production capacity.
@@ -229,7 +279,7 @@
             <div class="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center mb-4">
                 <i class="fas fa-shield-alt text-red-400 text-lg"></i>
             </div>
-            <h2 class="text-base font-semibold text-slate-100 mb-2">Military &amp; Combat</h3>
+            <h2 class="text-base font-semibold text-slate-100 mb-2">Military &amp; Combat</h2>
             <p class="text-sm text-slate-400">
                 Recruit units, organise divisions, and equip them with randomised loot-crate gear.
                 Battle other players or fight PvE encounters for rewards.
@@ -240,7 +290,7 @@
             <div class="w-10 h-10 bg-sky-500/10 rounded-lg flex items-center justify-center mb-4">
                 <i class="fas fa-exchange-alt text-sky-400 text-lg"></i>
             </div>
-            <h2 class="text-base font-semibold text-slate-100 mb-2">Global Market</h3>
+            <h2 class="text-base font-semibold text-slate-100 mb-2">Global Market</h2>
             <p class="text-sm text-slate-400">
                 Trade commodities and natural resources on a player-driven market.
                 Set buy and sell orders, track price history, and profit from the spread.
@@ -251,7 +301,7 @@
             <div class="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mb-4">
                 <i class="fas fa-users text-purple-400 text-lg"></i>
             </div>
-            <h2 class="text-base font-semibold text-slate-100 mb-2">Alliances</h3>
+            <h2 class="text-base font-semibold text-slate-100 mb-2">Alliances</h2>
             <p class="text-sm text-slate-400">
                 Join forces with other nations. Form alliances for mutual defence,
                 coordinate strategy, and climb the leaderboards together.
@@ -262,7 +312,7 @@
             <div class="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center mb-4">
                 <i class="fas fa-trophy text-amber-400 text-lg"></i>
             </div>
-            <h2 class="text-base font-semibold text-slate-100 mb-2">Compete &amp; Rise</h3>
+            <h2 class="text-base font-semibold text-slate-100 mb-2">Compete &amp; Rise</h2>
             <p class="text-sm text-slate-400">
                 Earn Greatness Points from population, land, factories, buildings, and military.
                 Compete on global and continental leaderboards.
@@ -301,5 +351,39 @@
         </div>
     </div>
 </div>
+
+
+{# ===== WHY CHOOSE NATIONS ENGINE? (SEO SECTION) ===== #}
+<div class="max-w-5xl mx-auto px-6 pb-20 mt-16">
+    <div class="text-center mb-12">
+        <h2 class="text-3xl font-bold text-slate-100 mb-4">Why Nations Engine is the Best Country Simulator Game</h2>
+        <p class="text-slate-400 max-w-2xl mx-auto">Experience the most comprehensive free-to-play nation simulator on the web. From deep economic strategy to tactical military command, Nations Engine offers a unique multiplayer experience.</p>
+    </div>
+    <br /><hr><br />
+    
+    <div class="grid md:grid-cols-2 gap-8 text-sm">
+        <div class="space-y-4">
+            <div>
+                <h3 class="font-semibold text-amber-500 mb-1">Deep Economic Simulation</h3>
+                <p class="text-slate-400 leading-relaxed">Unlike other nation games, our economic simulator features over 60 factory types with complex supply chains. Manage raw resources like iron, coal, and oil to produce advanced goods and dominate the global market.</p>
+            </div>
+            <div>
+                <h3 class="font-semibold text-amber-500 mb-1">Authentic Political Simulator Experience</h3>
+                <p class="text-slate-400 leading-relaxed">Form powerful alliances, engage in international diplomacy, and coordinate with other players. Your decisions shape the political landscape of five unique continents.</p>
+            </div>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <h3 class="font-semibold text-amber-500 mb-1">Tactical War Game Mechanics</h3>
+                <p class="text-slate-400 leading-relaxed">Organize your military into divisions and equip them with specialized gear. Our combat simulator provides detailed logs, allowing you to refine your strategy for every PvP and PvE encounter.</p>
+            </div>
+            <div>
+                <h3 class="font-semibold text-amber-500 mb-1">Completely Free Multiplayer Strategy</h3>
+                <p class="text-slate-400 leading-relaxed">Nations Engine is a free online game designed for longevity. Every feature is accessible through gameplay, making it the perfect choice for fans of country simulator games and strategy enthusiasts.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 {% endblock %}

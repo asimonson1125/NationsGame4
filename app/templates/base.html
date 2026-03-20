@@ -10,20 +10,21 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Nations Engine">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/icon-192.png') }}">
-    <meta name="description" content="{% block meta_description %}Build your nation from the ground up. Expand borders, develop industry, raise armies, and trade on the global market in this multiplayer strategy game.{% endblock %}">
+    <meta name="description" content="{% block meta_description %}Nations Engine is the ultimate country simulator game. Build your nation from the ground up, expand borders, develop industry, raise armies, and trade on the global market in this free multiplayer strategy game.{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}country simulator game, nation simulator, multiplayer strategy game, political simulator, war game, economic simulator, free online game{% endblock %}">
     <meta name="robots" content="{% block meta_robots %}index, follow{% endblock %}">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Nations Engine">
     <meta property="og:title" content="{% block og_title %}{{ self.title() }} - Nations Engine{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}Build your nation from the ground up. Expand borders, develop industry, raise armies, and trade on the global market.{% endblock %}">
-    <meta property="og:image" content="{{ url_for('static', filename='images/logo.svg', _external=True) }}">
-    {% block og_url %}<meta property="og:url" content="{{ request.url }}">{% endblock %}
-    <meta name="twitter:card" content="summary">
+    <meta property="og:description" content="{% block og_description %}The ultimate country simulator game. Build, expand, and conquer in this free multiplayer strategy world.{% endblock %}">
+    <meta property="og:image" content="{{ url_for('static', filename='images/icon-512.png', _external=True) }}">
+    {% block og_url %}<meta property="og:url" content="{{ request.base_url }}">{% endblock %}
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ self.og_title() }}">
     <meta name="twitter:description" content="{{ self.og_description() }}">
-    <meta name="twitter:image" content="{{ url_for('static', filename='images/logo.svg', _external=True) }}">
-    {% block canonical %}<link rel="canonical" href="{{ request.url }}">{% endblock %}
-    <title>{% block title %}Nations Engine{% endblock %} - Nations Engine</title>
+    <meta name="twitter:image" content="{{ url_for('static', filename='images/icon-512.png', _external=True) }}">
+    {% block canonical %}<link rel="canonical" href="{{ request.base_url }}">{% endblock %}
+    <title>{% block title %}Nations Engine{% endblock %} - Country Simulator Game</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
     <link rel="stylesheet" href="{{ static_url('css/style.css') }}">
     <script defer src="{{ static_url('htmx.min.js') }}"></script>
@@ -198,21 +199,21 @@
 </main>
 
 {# ===== PAGE FOOTER (in document flow) ===== #}
-<footer class="border-t border-slate-800 {% if current_user.is_authenticated %}mb-10{% endif %} py-3 px-6 flex items-center justify-between">
-    <span class="text-xs text-slate-600">&copy; 2026 NationsEngine</span>
-    <div class="flex items-center gap-4 text-xs text-slate-600">
+<footer class="border-t border-slate-800 py-6 px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <span class="text-xs text-slate-600 order-2 sm:order-1">&copy; 2026 NationsEngine</span>
+    <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-slate-600 order-1 sm:order-2">
         <a href='https://discord.gg/UNtsbdSrnp' class="hover:text-slate-400 transition-colors">Discord</a>
         <a href='https://nations.miraheze.org/wiki/Main_Page' class="hover:text-slate-400 transition-colors">Wiki</a>
         <a href="{{ url_for('main.tos_page') }}" class="hover:text-slate-400 transition-colors">Terms of Service</a>
         <a href="{{ url_for('main.privacy_page') }}" class="hover:text-slate-400 transition-colors">Privacy Policy</a>
-        <span class="text-slate-800">·</span>
+        <span class="hidden sm:inline text-slate-800">·</span>
         <a href="{{ url_for('main.changelog_page') }}" class="font-mono hover:text-slate-400 transition-colors">v{{ latest_update.version if latest_update else '0.0.0' }}</a>
     </div>
 </footer>
 
-{# ===== RESOURCE FOOTER (fixed) ===== #}
+{# ===== RESOURCE FOOTER (sticky) ===== #}
 {% if current_user.is_authenticated %}
-<div class="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/60 backdrop-blur-sm border-t border-slate-700 py-1.5">
+<div class="sticky bottom-0 z-40 bg-slate-900/60 backdrop-blur-sm border-t border-slate-700 py-1.5">
     <div id="resource-footer-content"
          hx-get="{{ url_for('main.resource_footer') }}"
          hx-trigger="load, every 60s"

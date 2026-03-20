@@ -6,6 +6,16 @@ Add newest entries at the TOP of the list.
 
 CHANGELOG = [
     {
+        'version': '0.3.3-beta',
+        'title': 'v0.3.3 Beta Release',
+        'date': '2026-03-20',
+        'body': (
+            'Welcome to NationsEngine beta.  This version introduces '
+            'dramatically increased resource volumes from land exploration '
+            'and some minor UI improvements.'
+        ),
+    },
+    {
         'version': '0.3.2-beta',
         'title': 'v0.3.2 Beta Release',
         'date': '2026-03-17',
