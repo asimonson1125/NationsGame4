@@ -1,3 +1,5 @@
+import math
+
 # Population effects per capita per hour.
 # Positive = nation gains resources; negative = nation loses resources.
 # Rates expressed as 1/N where N = people per unit per hour.
@@ -37,8 +39,17 @@ def get_population_effects(population):
     effects = {}
     for res, rate in POPULATION_RATES.items():
         if res == 'consumer_goods':
-            effects[res] = max((pop - CG_POPULATION_THRESHOLD) * rate, 0)
+            # Consumer goods consumption only if population > threshold
+            if pop > CG_POPULATION_THRESHOLD:
+                # Round up consumption magnitude (e.g. -0.0002 -> -1)
+                effects[res] = math.floor((pop - CG_POPULATION_THRESHOLD) * rate)
+            else:
+                effects[res] = 0
+        elif rate < 0:
+            # Resource consumption: round up magnitude (e.g. -50.1 -> -51)
+            effects[res] = math.floor(pop * rate)
         else:
+            # Resource income: stay as float
             effects[res] = pop * rate
     return effects
 
@@ -69,7 +80,7 @@ def food_abundance_multiplier(population, food_stockpile):
     if pop <= 0:
         return 1.0  # no consumption, no constraint
 
-    hourly_consumption = pop * abs(POPULATION_RATES['food'])
+    hourly_consumption = math.ceil(pop * abs(POPULATION_RATES['food']))
     daily_consumption = hourly_consumption * 24
     if daily_consumption <= 0:
         return 1.0
@@ -90,7 +101,8 @@ def get_food_days(population, food_stockpile):
     food = food_stockpile or 0
     if pop <= 0:
         return 999.0
-    daily_consumption = pop * abs(POPULATION_RATES['food']) * 24
+    hourly_consumption = math.ceil(pop * abs(POPULATION_RATES['food']))
+    daily_consumption = hourly_consumption * 24
     if daily_consumption <= 0:
         return 999.0
     return food / daily_consumption
@@ -125,7 +137,7 @@ def estimate_pop_delta(nation, rate_override=None):
     urban = nation.urban_areas or 0
 
     # Calculate hourly food consumption for population
-    food_needed = pop * abs(POPULATION_RATES['food'])
+    food_needed = math.ceil(pop * abs(POPULATION_RATES['food']))
 
     # Starvation when food can't cover population consumption
     if food_needed > 0 and food < food_needed:
