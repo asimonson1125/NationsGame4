@@ -11,7 +11,7 @@ DEFAULT_LAND_WEIGHTS = {'cleared_land': 10, 'forest': 20, 'mountain': 20, 'river
 
 RESOURCE_WEIGHTS = {
     'Westberg': {
-        'apple_tree': 3, 'mulberry': 1, 'herbs': 3, 'tobacco_plant': 3, 'cotton': 3, 'oak_tree': 5, 'rubber_tree': 1,
+        'apple_tree': 5, 'mulberry': 1, 'herbs': 3, 'tobacco_plant': 3, 'cotton': 3, 'oak_tree': 5, 'rubber_tree': 1,
         'grapevine': 3, 'hops': 1, 'kingwood': 5, 'hemp': 3, 'beehive': 250, 'goat': 250, 'cow': 500, 'sheep': 250,
         'boar': 200, 'yak': 100, 'buffalo': 250, 'elephant': 100, 'fox': 250, 'clam': 500, 'shrimp': 500, 'bass': 500,
         'cod': 500, 'mackerel': 500, 'salmon': 500, 'piranha': 100, 'dolphin': 250, 'shark': 100, 'whale': 250,
@@ -20,7 +20,7 @@ RESOURCE_WEIGHTS = {
         'silicon': 300, 'crude_deep_sea_oil': 250
     },
     'Amarino': {
-        'apple_tree': 5, 'mulberry': 3, 'coffea': 5, 'herbs': 5, 'tobacco_plant': 5, 'cotton': 1, 'oak_tree': 3,
+        'apple_tree': 7, 'mulberry': 3, 'coffea': 5, 'herbs': 5, 'tobacco_plant': 5, 'cotton': 1, 'oak_tree': 3,
         'rubber_tree': 5, 'cocoa': 5, 'grapevine': 5, 'hops': 3, 'kingwood': 3, 'hemp': 3, 'beehive': 200, 'cow': 500,
         'sheep': 500, 'elephant': 100, 'fox': 500, 'panther': 500, 'clam': 500, 'shrimp': 500, 'bass': 500, 'cod': 500,
         'mackerel': 500, 'salmon': 500, 'piranha': 500, 'dolphin': 250, 'shark': 500, 'whale': 250, 'marble': 400,
@@ -28,7 +28,7 @@ RESOURCE_WEIGHTS = {
         'petroleum': 25, 'gemstone': 250, 'stonesilver': 299, 'silicon': 500, 'crude_deep_sea_oil': 25
     },
     'San Sebastian': {
-        'apple_tree': 1, 'cactus': 1, 'mulberry': 1, 'herbs': 3, 'tobacco_plant': 3, 'cotton': 3, 'oak_tree': 13,
+        'apple_tree': 5, 'cactus': 1, 'mulberry': 1, 'herbs': 3, 'tobacco_plant': 3, 'cotton': 3, 'oak_tree': 13,
         'rubber_tree': 1, 'grapevine': 3, 'hops': 5, 'kingwood': 13, 'hemp': 3, 'beehive': 100, 'goat': 100, 'cow': 250,
         'sheep': 250, 'boar': 150, 'yak': 75, 'buffalo': 250, 'elephant': 100, 'fox': 500, 'clam': 250, 'shrimp': 250,
         'bass': 250, 'cod': 250, 'mackerel': 250, 'salmon': 250, 'piranha': 250, 'dolphin': 100, 'shark': 250,
@@ -37,7 +37,7 @@ RESOURCE_WEIGHTS = {
         'silicon': 300, 'crude_deep_sea_oil': 25
     },
     'Tind': {
-        'apple_tree': 1, 'mulberry': 1, 'herbs': 1, 'cotton': 1, 'oak_tree': 1, 'grapevine': 1, 'hops': 1, 'kingwood': 3,
+        'apple_tree': 3, 'mulberry': 1, 'herbs': 1, 'cotton': 1, 'oak_tree': 1, 'grapevine': 1, 'hops': 1, 'kingwood': 3,
         'hemp': 1, 'goat': 500, 'cow': 250, 'sheep': 100, 'boar': 500, 'yak': 500, 'buffalo': 100, 'elephant': 100,
         'fox': 100, 'clam': 100, 'shrimp': 100, 'bass': 100, 'cod': 100, 'mackerel': 100, 'salmon': 100, 'dolphin': 50,
         'whale': 50, 'coal': 1000, 'iron': 1139, 'marble': 200, 'bauxite': 500, 'copper': 750, 'lead': 750, 'gold': 250,

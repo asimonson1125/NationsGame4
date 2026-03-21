@@ -36,8 +36,8 @@ def get_population_effects(population):
     pop = population or 0
     effects = {}
     for res, rate in POPULATION_RATES.items():
-        if res == 'consumer_goods' and pop <= CG_POPULATION_THRESHOLD:
-            effects[res] = 0
+        if res == 'consumer_goods':
+            effects[res] = max((pop - CG_POPULATION_THRESHOLD) * rate, 0)
         else:
             effects[res] = pop * rate
     return effects
