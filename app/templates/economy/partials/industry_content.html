@@ -106,7 +106,9 @@
                             </div>
                             <div class="flex flex-wrap gap-x-3 gap-y-1">
                                 {% for res, rate in fdef.inputs.items() %}
-                                <div class="flex items-center gap-1.5 text-sm text-slate-300">
+                                {% set stock = stock_map.get(res, 0) %}
+                                <div class="flex items-center gap-1.5 text-sm"
+                                     :class="displayHrs * {{ nf.count }} * {{ rate }} > {{ stock }} ? 'text-red-400 font-semibold' : 'text-slate-300'">
                                     {{ res_icon(res) }}
                                     <span><span x-text="fmt(displayHrs * {{ nf.count }} * {{ rate }})"></span></span>
                                 </div>

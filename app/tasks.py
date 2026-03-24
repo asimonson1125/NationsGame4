@@ -79,11 +79,15 @@ def tick_nation(nation, *, skip_military=False):
     from .models import Unit
     from .game.population import (get_population_effects, process_growth,
                                   process_starvation, compute_tier,
-                                  compute_population_gp)
+                                  compute_population_gp, compute_tax_multiplier)
     from .helpers import compute_total_upkeep
     from . import db
 
     effects = get_population_effects(nation.population)
+
+    # Apply tax penalty for insufficient power or consumer goods (checked before consumption)
+    tax_mult = compute_tax_multiplier(nation, effects)
+    effects['money'] = effects.get('money', 0) * tax_mult
 
     # 1. Non-food resource effects
     for res, amount in effects.items():

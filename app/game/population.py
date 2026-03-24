@@ -28,9 +28,28 @@ TIER_THRESHOLDS = [
 GROWTH_MULTIPLIER = 0.05       # base hourly growth factor
 FOOD_PER_CITIZEN = 0.025          # food cost per new citizen
 LAND_PER_POPULATION = 1000      # 1 tile per 1,000 new pop
-STARVATION_RATE = 0.01          # 1% population loss per hour when starving
+STARVATION_RATE = 0.0025          # 0.25% population loss per hour when starving
 FOOD_STOCKPILE_MIN_DAYS = 3    # no growth below this many days of food
 FOOD_STOCKPILE_MAX_DAYS = 30   # max growth at or above this many days of food
+
+
+def compute_tax_multiplier(nation, effects):
+    """Return tax income multiplier based on food/power/CG deficits.
+
+    Tax is halved for each resource the nation cannot cover with its current
+    stockpile: no power → x0.5, no CG → x0.5, neither → x0.25.
+    """
+    multiplier = 1.0
+    food_needed = abs(effects.get('food', 0))
+    power_needed = abs(effects.get('power', 0))
+    cg_needed = abs(effects.get('consumer_goods', 0))
+    if food_needed > 0 and (nation.food or 0) < food_needed:
+        multiplier *= 0.25
+    if power_needed > 0 and (nation.power or 0) < power_needed:
+        multiplier *= 0.5
+    if cg_needed > 0 and (nation.consumer_goods or 0) < cg_needed:
+        multiplier *= 0.5
+    return multiplier
 
 
 def get_population_effects(population):

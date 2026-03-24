@@ -9,7 +9,8 @@ from ..models import Nation, NationFactory, NaturalResource, Alliance, Division,
 from ..helpers import error_response as _error_response, compute_total_upkeep, htmx_response
 from ..game.population import (get_population_effects, estimate_pop_delta, FOOD_PER_CITIZEN,
                                 food_abundance_multiplier, get_food_days,
-                                FOOD_STOCKPILE_MIN_DAYS, FOOD_STOCKPILE_MAX_DAYS)
+                                FOOD_STOCKPILE_MIN_DAYS, FOOD_STOCKPILE_MAX_DAYS,
+                                compute_tax_multiplier)
 from ..game.factories import FACTORY_DEFS
 from ..game.units import UNIT_DEFS
 from . import main
@@ -357,6 +358,8 @@ def resource_footer():
     resource_data = []
     if nation:
         pop_effects = get_population_effects(nation.population)
+        tax_mult = compute_tax_multiplier(nation, pop_effects)
+        pop_effects['money'] = pop_effects.get('money', 0) * tax_mult
         unit_upkeep = _get_cached_upkeep(nation.id)
         delta = estimate_pop_delta(nation)
         growth_food = max(0, delta) * FOOD_PER_CITIZEN

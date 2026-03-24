@@ -238,7 +238,7 @@ TIER_THRESHOLDS = [
 GROWTH_MULTIPLIER = 0.05       # base hourly growth factor
 FOOD_PER_CITIZEN = 0.025          # food cost per new citizen
 LAND_PER_POPULATION = 1000      # 1 tile per 1,000 new pop
-STARVATION_RATE = 0.01          # 1% population loss per hour when starving
+STARVATION_RATE = 0.0025          # 0.25% population loss per hour when starving
 ```
 
 ---
