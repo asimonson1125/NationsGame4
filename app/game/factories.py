@@ -141,12 +141,12 @@ FACTORY_DEFS: Dict[str, FactoryDef] = {
     # ── TIER 2 ─────────────────────────────────────────────────────────────
     'hydro_plant': _fd(
         'Hydro Plant', 2,
-        inp={_M: 7}, out={_P: 10},
+        inp={_M: 14}, out={_P: 20},
         cost={_M: 5000, _BM: 500, _ME: 100}, land={'river': 5},
     ),
     'hydro_dam': _fd(
         'Hydro Dam', 2,
-        inp={_M: 7}, out={_P: 10},
+        inp={_M: 14}, out={_P: 20},
         cost={_M: 5000, _BM: 500, _ME: 100}, land={'lake': 5},
     ),
     'coffee_plantation': _fd(
