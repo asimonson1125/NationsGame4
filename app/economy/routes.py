@@ -573,6 +573,62 @@ def upgrade_building():
     return resp
 
 
+@economy.route('/industry/destroy', methods=['POST'])
+@login_required
+def destroy_factory():
+    from ..models import NationFactory
+    nation = current_user.nation
+    if not nation:
+        return _error_response('No nation found.')
+
+    factory_key = request.form.get('factory_key', '').strip()
+    fdef = FACTORY_DEFS.get(factory_key)
+    if not fdef:
+        return _error_response('Unknown factory type.')
+
+    try:
+        qty = int(request.form.get('amount', 1))
+    except (ValueError, TypeError):
+        return _error_response('Invalid amount.')
+    if qty < 1:
+        return _error_response('Amount must be at least 1.')
+
+    nf = NationFactory.query.filter_by(
+        nation_id=nation.id, factory_key=factory_key
+    ).with_for_update().first()
+    if not nf or nf.count == 0:
+        return _error_response('You do not have this factory.')
+    if qty > nf.count:
+        return _error_response(f'Cannot destroy more than you own ({nf.count}).')
+
+    # Return 100% of land to original land types
+    for land_type, per_factory in fdef.land_required.items():
+        nation.add_resource(land_type, qty * per_factory)
+    nation.used_land = max(0, (nation.used_land or 0) - qty * sum(fdef.land_required.values()))
+
+    # Return 50% of build cost
+    for res, cost_per in fdef.build_cost.items():
+        nation.add_resource(res, int(qty * cost_per * 0.5))
+
+    nf.count -= qty
+    nation.factory_gp = max(0, (nation.factory_gp or 0) - qty * fdef.gp_value)
+
+    db.session.commit()
+
+    resp_html = render_template(
+        'economy/partials/industry_content.html',
+        nation=nation,
+        default_tab='collect',
+        **_industry_context(nation),
+    )
+    resp = current_app.response_class(resp_html, status=200, mimetype='text/html')
+    resp.headers['HX-Trigger'] = json.dumps({
+        'showMessage': {'message': f'Destroyed {qty}x {fdef.name}.', 'type': 'success'},
+        'refreshResourceFooter': True,
+    })
+    return resp
+
+
 @economy.route('/industry/collect/<factory_key>', methods=['POST'])
 @login_required
 def collect_factory(factory_key):
