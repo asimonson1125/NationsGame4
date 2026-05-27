@@ -1,14 +1,14 @@
 # NationsEngine (NationsGame 4 - NG4)
 
-A browser-based nation-building simulator. Players manage resources, industry, land, and military across five continents.
+A browser-based nation-building simulator based on Stian Bakkane's original NationsGame design. Players manage resources, industry, land, and military across five continents.
+
+Work is paused indefinitely because coping is not my strong suit.  Project is in a pretty clean state though, if nothing else I have a good representation of the game that we used to enjoy.
 
 TODO:
 - Events (a la 2.0)
-- Rate Limiting
 - Pushing calculations and displays to client JS
 - DB-compulted columns (like land_gp)
 - Economics balancing
-- Email verification on registration and "Forgot password?"
 - Daily Missions
 - 1.0 release
 
