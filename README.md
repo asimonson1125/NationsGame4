@@ -4,6 +4,46 @@ A browser-based nation-building simulator based on Stian Bakkane's original Nati
 
 Work is paused indefinitely because coping is not my strong suit.  Project is in a pretty clean state though, if nothing else I have a good representation of the game that we used to enjoy.
 
+---
+
+## What is Nations Engine?
+
+You create a nation on one of five continents, then grow it over time by expanding land, building industry, raising armies, and trading with other players.
+
+<img src="app/static/sample_nationpage.avif" alt="Nation page" width="700">
+
+**The core loop:**
+1. **Expand** — claim territory to gain land tiles and discover natural resources (coal, iron, oil, etc.) unique to your continent.
+2. **Industrialize** — build factories that convert resources into goods. Over 60 factory types span 10 tiers, from basic farms and windmills up to nuclear reactors and arms manufacturers. Factories fill a production capacity meter over time; you collect when ready.
+3. **Grow your population** — food, power, and consumer goods sustain population growth. Population drives your *tier* (1–6), which unlocks higher-level factories, units, and buildings.
+4. **Build your military** — recruit infantry, armour, air, and special forces units; organize them into divisions; and equip them from randomized loot crates. Fight PvE missions for rewards or declare war on other players.
+5. **Trade** — buy and sell resources on a player-driven global market with open buy/sell orders.
+6. **Compete** — earn Greatness Points from population, land, factories, buildings, and military strength. Climb global and continental leaderboards solo or as part of an alliance.
+
+**The five continents** each have distinct terrain and resource distributions:
+
+| Continent | Character |
+|---|---|
+| Westberg | Forested; strong flora resources |
+| Amarino | Dense jungle; exotic natural resources |
+| San Sebastian | Balanced mixed terrain |
+| Tind | Mountains and tundra; rich in mined resources |
+| Zaheria | Vast desert; petroleum and arid resources |
+
+**Resources** include money, food, power, building materials, consumer goods, metal, ammunition, fuel, uranium, and WHZ (a rare high-tier material). Natural resources like coal, iron, and crude oil are discovered on expansion and consumed as factory inputs.
+
+<img src="app/static/sample_industry.avif" alt="Industry page" width="700">
+
+**Greatness Points** are the score: population GP + land GP + factory GP + building GP + military GP. The leaderboard ranks nations and alliances globally and per continent.
+
+<img src="app/static/sample_leaderboard.avif" alt="Leaderboard" width="700">
+
+Battles are resolved in turn-by-turn rounds with a full combat log showing every strike and outcome.
+
+<img src="app/static/sample_battle.avif" alt="Battle results" width="700">
+
+---
+
 TODO:
 - Events (a la 2.0)
 - Pushing calculations and displays to client JS
